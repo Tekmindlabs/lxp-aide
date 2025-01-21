@@ -2,7 +2,7 @@ import { DefaultRoles } from "@/utils/permissions";
 import { DashboardFeature } from "@/types/dashboard";
 
 export const DashboardFeatures: Record<keyof typeof DefaultRoles, DashboardFeature[]> = {
-  [DefaultRoles.SUPER_ADMIN]: [
+  "SUPER_ADMIN": [
     'system-metrics',
     'user-management',
     'role-management',

@@ -9,13 +9,13 @@ import { DashboardFeatures } from "./features/DashboardFeatures";
 
 export const DashboardContent = ({ role }: { role: keyof typeof DefaultRoles }) => {
   const { data: session } = useSession();
-  // Convert the role to uppercase to match the RoleLayouts keys
-  const normalizedRole = role.toUpperCase() as keyof typeof DefaultRoles;
-  const layout = RoleLayouts[normalizedRole];
-  const features = DashboardFeatures[normalizedRole];
+  const layout = RoleLayouts[role];
+  const features = DashboardFeatures[role];
 
   if (!layout || !features) {
-    console.error(`No layout or features configuration found for role: ${normalizedRole}`);
+    console.error(`No layout or features configuration found for role: ${role}`);
+    console.log('Available layouts:', Object.keys(RoleLayouts));
+    console.log('Available features:', Object.keys(DashboardFeatures));
     return <div>Dashboard configuration not found for this role.</div>;
   }
 

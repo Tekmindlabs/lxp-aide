@@ -9,7 +9,10 @@ export type DashboardFeature =
   | 'class-management'
   | 'student-progress'
   | 'assignments'
-  | 'grading';
+  | 'grading'
+  | 'academic-calendar'
+  | 'timetable-management'
+  | 'classroom-management';
 
 export interface DashboardComponent {
   component: React.ComponentType<any>;

@@ -10,22 +10,23 @@ export default async function RoleDashboard({
   params: { role: string };
 }) {
   const session = await getServerSession(authOptions);
-  const normalizedRole = params.role.toUpperCase();
   
-  // Add debugging
+  // Normalize the role to uppercase and replace hyphens with underscores
+  const normalizedRole = params.role.toUpperCase().replace(/-/g, '_');
+
   console.log({
     sessionExists: !!session,
     userRoles: session?.user?.roles,
-    currentRole: params.role
+    currentRole: normalizedRole,
   });
 
-  if (!session?.user) {
-    redirect("/auth/signin");
+  if (!session) {
+    redirect('/auth/signin');
   }
 
-  // Make role check case insensitive
-  if (!session.user.roles.map(r => r.toLowerCase())
-      .includes(params.role.toLowerCase())) {
+  // Check if user has the required role (case-insensitive)
+  const userRoles = session.user.roles.map(role => role.toLowerCase());
+  if (!userRoles.includes(params.role.toLowerCase())) {
     redirect(`/dashboard/${session.user.roles[0]}`);
   }
 
