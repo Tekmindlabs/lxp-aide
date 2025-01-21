@@ -7,23 +7,26 @@ export default function DashboardLayout({
 	children: React.ReactNode;
 	params: { role: string };
   }) {
-	console.log("Current role:", params.role);
-	console.log("Role comparison:", {
-	  role: params.role,
-	  isLowerCase: params.role.toLowerCase(),
-	  matches: params.role.toLowerCase() === "super-admin"
+	console.log("Layout Role:", {
+	  original: params.role,
+	  normalized: params.role.toLowerCase().replace(/-/g, '_')
 	});
-	
-	const sidebar = params.role.toLowerCase() === "super-admin" ? (
+  
+	try {
+	  const sidebar = params.role.toLowerCase().replace(/-/g, '_') === "super_admin" ? (
 		<div className="flex w-64 flex-col border-r">
 		  <SuperAdminSidebar />
 		</div>
 	  ) : null;
   
-	return (
-	  <div className="flex min-h-screen">
-		{sidebar}
-		<div className="flex-1">{children}</div>
-	  </div>
-	);
+	  return (
+		<div className="flex min-h-screen">
+		  {sidebar}
+		  <div className="flex-1">{children}</div>
+		</div>
+	  );
+	} catch (error) {
+	  console.error("Error in DashboardLayout:", error);
+	  return <div>Error loading dashboard</div>;
+	}
   }
