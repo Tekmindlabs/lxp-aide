@@ -14,6 +14,7 @@ import { timetableRouter } from "./routers/timetable";
 import { classroomRouter } from "./routers/classroom";
 import { messageRouter } from "./routers/message";
 import { notificationRouter } from "./routers/notification";
+import { classActivityRouter } from "./routers/class-activity";
 
 export const appRouter = createTRPCRouter({
   user: userRouter,
@@ -31,6 +32,7 @@ export const appRouter = createTRPCRouter({
   classroom: classroomRouter,
   message: messageRouter,
   notification: notificationRouter,
+  classActivity: classActivityRouter,
 });
 
 export type AppRouter = typeof appRouter;

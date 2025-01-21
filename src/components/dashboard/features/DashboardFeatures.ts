@@ -10,30 +10,36 @@ export const DashboardFeatures: Record<keyof typeof DefaultRoles, DashboardFeatu
     'advanced-settings',
     'academic-calendar',
     'timetable-management',
-    'classroom-management'
+    'classroom-management',
+    'class-activity-management'
   ],
-  "ADMIN": [  // Changed from [DefaultRoles.ADMIN] to "ADMIN"
+  "ADMIN": [
     'user-management',
     'audit-logs',
     'timetable-management',
-    'classroom-management'
+    'classroom-management',
+    'class-activity-management'
   ],
   "PROGRAM_COORDINATOR": [
     'class-management',
     'student-progress',
-    'timetable-management'
+    'timetable-management',
+    'class-activity-management'
   ],
   "TEACHER": [
     'class-management',
     'student-progress',
     'assignments',
-    'grading'
+    'grading',
+    'class-activity-management'
   ],
   "STUDENT": [
     'assignments',
-    'student-progress'
+    'student-progress',
+    'class-activities'
   ],
   "PARENT": [
-    'student-progress'
+    'student-progress',
+    'class-activities'
   ]
 };
