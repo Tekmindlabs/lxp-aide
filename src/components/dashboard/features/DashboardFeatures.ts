@@ -12,28 +12,28 @@ export const DashboardFeatures: Record<keyof typeof DefaultRoles, DashboardFeatu
     'timetable-management',
     'classroom-management'
   ],
-  [DefaultRoles.ADMIN]: [
+  "ADMIN": [  // Changed from [DefaultRoles.ADMIN] to "ADMIN"
     'user-management',
     'audit-logs',
     'timetable-management',
     'classroom-management'
   ],
-  [DefaultRoles.PROGRAM_COORDINATOR]: [
+  "PROGRAM_COORDINATOR": [
     'class-management',
     'student-progress',
     'timetable-management'
   ],
-  [DefaultRoles.TEACHER]: [
+  "TEACHER": [
     'class-management',
     'student-progress',
     'assignments',
     'grading'
   ],
-  [DefaultRoles.STUDENT]: [
+  "STUDENT": [
     'assignments',
     'student-progress'
   ],
-  [DefaultRoles.PARENT]: [
+  "PARENT": [
     'student-progress'
   ]
 };

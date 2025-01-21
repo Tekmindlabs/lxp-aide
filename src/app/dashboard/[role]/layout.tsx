@@ -7,9 +7,10 @@ export default function DashboardLayout({
 	children: React.ReactNode;
 	params: { role: string };
   }) {
-	// Remove hidden class and add debugging
-	const sidebar = params.role === "super-admin" ? (
-	  <div className="md:flex md:w-64 md:flex-col border-r">  {/* Added border-r for visibility */}
+	console.log("Current role:", params.role); // Debug log
+	
+	const sidebar = params.role.toLowerCase() === "super-admin" ? (
+	  <div className="flex w-64 flex-col border-r">
 		<SuperAdminSidebar />
 	  </div>
 	) : null;

@@ -27,7 +27,7 @@ export default function RootLayout({
           precedence="high"
         />
       </head>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <Providers>
           {children}
           <ConsentBanner />

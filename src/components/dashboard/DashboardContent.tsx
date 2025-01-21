@@ -26,10 +26,10 @@ export const DashboardContent = ({ role }: { role: keyof typeof DefaultRoles }) 
   });
 
   // Convert role string to title case with spaces
-  const roleTitle = normalizedRole
+  const roleTitle = role
     .toLowerCase()
     .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
   return (
