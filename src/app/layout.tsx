@@ -1,9 +1,9 @@
-// src/app/layout.tsx
 import '@/app/globals.css' 
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { Providers } from '@/components/providers'
 import { ConsentBanner } from '@/components/gdpr/consent-banner'
+import { TRPCProvider } from "./providers";
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -29,7 +29,9 @@ export default function RootLayout({
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <Providers>
-          {children}
+          <TRPCProvider>
+            {children}
+          </TRPCProvider>
           <ConsentBanner />
         </Providers>
       </body>
