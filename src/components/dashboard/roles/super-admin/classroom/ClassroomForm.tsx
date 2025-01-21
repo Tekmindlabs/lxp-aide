@@ -1,8 +1,10 @@
+"use client";
+
 import { type FC, useState, type ChangeEvent } from "react";
 import { api } from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast"; 
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -20,7 +22,13 @@ interface ClassroomFormProps {
 	onCancel: () => void;
 }
 
-const ClassroomForm: FC<ClassroomFormProps> = ({ onCancel }) => {
+interface Props {
+
+	onCancel: () => void;
+  
+  }
+
+const ClassroomForm: FC<Props> = ({ onCancel }) => {
 	const { toast } = useToast();
 	const utils = api.useContext();
 	const [resources, setResources] = useState<string[]>([]);

@@ -1,3 +1,6 @@
+"use client";
+
+
 import { type FC, useState } from "react";
 import { api } from "@/utils/api";
 import { Button } from "@/components/ui/button";
