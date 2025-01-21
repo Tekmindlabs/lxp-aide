@@ -19,7 +19,7 @@ export const studentRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const { classId, parentId, guardianInfo, ...userData } = input;
 
-			const student = await ctx.db.user.create({
+			const student = await ctx.prisma.user.create({
 				data: {
 					...userData,
 					userType: UserType.STUDENT,
@@ -79,7 +79,7 @@ export const studentRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const { id, classId, parentId, guardianInfo, dateOfBirth, ...updateData } = input;
 
-			const updatedStudent = await ctx.db.user.update({
+			const updatedStudent = await ctx.prisma.user.update({
 				where: { id },
 				data: {
 					...updateData,
@@ -125,7 +125,7 @@ export const studentRouter = createTRPCRouter({
 	deleteStudent: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.user.delete({
+			return ctx.prisma.user.delete({
 				where: { id: input },
 			});
 		}),
@@ -133,7 +133,7 @@ export const studentRouter = createTRPCRouter({
 	getStudent: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.user.findUnique({
+			return ctx.prisma.user.findUnique({
 				where: { id: input },
 				include: {
 					studentProfile: {
@@ -174,7 +174,7 @@ export const studentRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const { search, classId, programId, status } = input;
 
-			return ctx.db.user.findMany({
+			return ctx.prisma.user.findMany({
 				where: {
 					userType: UserType.STUDENT,
 					...(search && {
@@ -230,7 +230,7 @@ export const studentRouter = createTRPCRouter({
 	getStudentPerformance: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			const student = await ctx.db.studentProfile.findUnique({
+			const student = await ctx.prisma.studentProfile.findUnique({
 				where: { userId: input },
 				include: {
 					activities: {

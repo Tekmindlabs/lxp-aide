@@ -15,7 +15,7 @@ export const subjectRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const { classGroupIds, teacherIds, ...subjectData } = input;
 			
-			const subject = await ctx.db.subject.create({
+			const subject = await ctx.prisma.subject.create({
 				data: {
 					...subjectData,
 					...(classGroupIds && {
@@ -39,7 +39,7 @@ export const subjectRouter = createTRPCRouter({
 			});
 
 			if (teacherIds && teacherIds.length > 0) {
-				await ctx.db.teacherSubject.createMany({
+				await ctx.prisma.teacherSubject.createMany({
 					data: teacherIds.map(teacherId => ({
 						subjectId: subject.id,
 						teacherId,
@@ -64,7 +64,7 @@ export const subjectRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const { id, classGroupIds, teacherIds, ...data } = input;
 
-			const subject = await ctx.db.subject.update({
+			const subject = await ctx.prisma.subject.update({
 				where: { id },
 				data: {
 					...data,
@@ -90,13 +90,13 @@ export const subjectRouter = createTRPCRouter({
 
 			if (teacherIds) {
 				// Remove existing teacher assignments
-				await ctx.db.teacherSubject.deleteMany({
+				await ctx.prisma.teacherSubject.deleteMany({
 					where: { subjectId: id },
 				});
 
 				// Add new teacher assignments
 				if (teacherIds.length > 0) {
-					await ctx.db.teacherSubject.createMany({
+					await ctx.prisma.teacherSubject.createMany({
 						data: teacherIds.map(teacherId => ({
 							subjectId: id,
 							teacherId,
@@ -112,7 +112,7 @@ export const subjectRouter = createTRPCRouter({
 	deleteSubject: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.subject.delete({
+			return ctx.prisma.subject.delete({
 				where: { id: input },
 			});
 		}),
@@ -120,7 +120,7 @@ export const subjectRouter = createTRPCRouter({
 	getSubject: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.subject.findUnique({
+			return ctx.prisma.subject.findUnique({
 				where: { id: input },
 				include: {
 					classGroups: {
@@ -158,7 +158,7 @@ export const subjectRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const { search, classGroupId, programId, status, teacherId } = input;
 
-			return ctx.db.subject.findMany({
+			return ctx.prisma.subject.findMany({
 				where: {
 					...(search && {
 						OR: [
@@ -208,7 +208,7 @@ export const subjectRouter = createTRPCRouter({
 
 	getAvailableTeachers: protectedProcedure
 		.query(async ({ ctx }) => {
-			return ctx.db.teacherProfile.findMany({
+			return ctx.prisma.teacherProfile.findMany({
 				where: {
 					user: {
 						status: Status.ACTIVE,

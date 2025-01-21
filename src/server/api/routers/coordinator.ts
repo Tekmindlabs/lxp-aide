@@ -13,7 +13,7 @@ export const coordinatorRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const { programIds, responsibilities, ...userData } = input;
 
-			const coordinator = await ctx.db.user.create({
+			const coordinator = await ctx.prisma.user.create({
 				data: {
 					...userData,
 					userType: UserType.COORDINATOR,
@@ -50,7 +50,7 @@ export const coordinatorRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const { id, programIds, responsibilities, ...updateData } = input;
 
-			const coordinatorProfile = await ctx.db.coordinatorProfile.findUnique({
+			const coordinatorProfile = await ctx.prisma.coordinatorProfile.findUnique({
 				where: { userId: id },
 			});
 
@@ -59,7 +59,7 @@ export const coordinatorRouter = createTRPCRouter({
 			}
 
 			if (programIds) {
-				await ctx.db.coordinatorProfile.update({
+				await ctx.prisma.coordinatorProfile.update({
 					where: { id: coordinatorProfile.id },
 					data: {
 						programs: {
@@ -69,7 +69,7 @@ export const coordinatorRouter = createTRPCRouter({
 				});
 			}
 
-			const updatedCoordinator = await ctx.db.user.update({
+			const updatedCoordinator = await ctx.prisma.user.update({
 				where: { id },
 				data: updateData,
 				include: {
@@ -87,7 +87,7 @@ export const coordinatorRouter = createTRPCRouter({
 	deleteCoordinator: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.user.delete({
+			return ctx.prisma.user.delete({
 				where: { id: input },
 			});
 		}),
@@ -95,7 +95,7 @@ export const coordinatorRouter = createTRPCRouter({
 	getCoordinator: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.user.findUnique({
+			return ctx.prisma.user.findUnique({
 				where: { id: input },
 				include: {
 					coordinatorProfile: {
@@ -116,7 +116,7 @@ export const coordinatorRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const { search, programId, status } = input;
 
-			return ctx.db.user.findMany({
+			return ctx.prisma.user.findMany({
 				where: {
 					userType: UserType.COORDINATOR,
 					...(search && {

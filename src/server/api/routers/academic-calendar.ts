@@ -19,7 +19,7 @@ export const academicCalendarRouter = createTRPCRouter({
 			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).default(Status.ACTIVE),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.academicYear.create({
+			return ctx.prisma.academicYear.create({
 				data: input,
 			});
 		}),
@@ -34,7 +34,7 @@ export const academicCalendarRouter = createTRPCRouter({
 		}))
 		.mutation(async ({ ctx, input }) => {
 			const { id, ...data } = input;
-			return ctx.db.academicYear.update({
+			return ctx.prisma.academicYear.update({
 				where: { id },
 				data,
 			});
@@ -43,7 +43,7 @@ export const academicCalendarRouter = createTRPCRouter({
 	deleteAcademicYear: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.academicYear.delete({
+			return ctx.prisma.academicYear.delete({
 				where: { id: input },
 			});
 		}),
@@ -51,7 +51,7 @@ export const academicCalendarRouter = createTRPCRouter({
 	getAcademicYear: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.academicYear.findUnique({
+			return ctx.prisma.academicYear.findUnique({
 				where: { id: input },
 				include: {
 					events: true,
@@ -62,7 +62,7 @@ export const academicCalendarRouter = createTRPCRouter({
 
 	getAllAcademicYears: protectedProcedure
 		.query(async ({ ctx }) => {
-			return ctx.db.academicYear.findMany({
+			return ctx.prisma.academicYear.findMany({
 				include: {
 					events: true,
 					terms: true,
@@ -86,7 +86,7 @@ export const academicCalendarRouter = createTRPCRouter({
 			const { recurrencePattern, ...eventData } = input;
       
 			if (!recurrencePattern) {
-				return ctx.db.event.create({
+				return ctx.prisma.event.create({
 					data: eventData,
 				});
 			}
@@ -104,7 +104,7 @@ export const academicCalendarRouter = createTRPCRouter({
 					endDate: new Date(currentDate.getTime() + duration),
 				};
         
-				events.push(ctx.db.event.create({ data: event }));
+				events.push(ctx.prisma.event.create({ data: event }));
 
 				// Calculate next occurrence
 				switch (frequency) {
@@ -135,7 +135,7 @@ export const academicCalendarRouter = createTRPCRouter({
 		}))
 		.mutation(async ({ ctx, input }) => {
 			const { id, ...data } = input;
-			return ctx.db.event.update({
+			return ctx.prisma.event.update({
 				where: { id },
 				data,
 			});
@@ -144,7 +144,7 @@ export const academicCalendarRouter = createTRPCRouter({
 	deleteEvent: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.event.delete({
+			return ctx.prisma.event.delete({
 				where: { id: input },
 			});
 		}),
@@ -152,7 +152,7 @@ export const academicCalendarRouter = createTRPCRouter({
 	getEvent: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.event.findUnique({
+			return ctx.prisma.event.findUnique({
 				where: { id: input },
 			});
 		}),
@@ -167,7 +167,7 @@ export const academicCalendarRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const { academicYearId, eventType, startDate, endDate } = input;
       
-			return ctx.db.event.findMany({
+			return ctx.prisma.event.findMany({
 				where: {
 					academicYearId,
 					...(eventType && { eventType }),

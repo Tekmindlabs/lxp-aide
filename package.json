@@ -11,7 +11,9 @@
     "prisma:push": "prisma db push",
     "test": "jest",
     "type-check": "tsc --noEmit",
-    "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
+    "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "seed:demo": "ts-node --project tsconfig.seed.json prisma/demo-seed.ts"
+
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

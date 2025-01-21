@@ -20,7 +20,7 @@ export const messageRouter = createTRPCRouter({
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
-			const conversation = await ctx.db.conversation.create({
+			const conversation = await ctx.prisma.conversation.create({
 				data: {
 					title: input.title,
 					type: input.type,
@@ -81,7 +81,7 @@ export const messageRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Check if user is participant
-			const participant = await ctx.db.conversationParticipant.findFirst({
+			const participant = await ctx.prisma.conversationParticipant.findFirst({
 				where: {
 					conversationId: input.conversationId,
 					userId: ctx.session.user.id,
@@ -96,7 +96,7 @@ export const messageRouter = createTRPCRouter({
 				});
 			}
 
-			const message = await ctx.db.message.create({
+			const message = await ctx.prisma.message.create({
 				data: {
 					content: input.content,
 					senderId: ctx.session.user.id,
@@ -117,7 +117,7 @@ export const messageRouter = createTRPCRouter({
 		}),
 
 	getConversations: protectedProcedure.query(async ({ ctx }) => {
-		return ctx.db.conversation.findMany({
+		return ctx.prisma.conversation.findMany({
 			where: {
 				participants: {
 					some: {
@@ -151,7 +151,7 @@ export const messageRouter = createTRPCRouter({
 	getConversation: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			const conversation = await ctx.db.conversation.findUnique({
+			const conversation = await ctx.prisma.conversation.findUnique({
 				where: { id: input },
 				include: {
 					participants: {
@@ -196,7 +196,7 @@ export const messageRouter = createTRPCRouter({
 	markAsRead: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			await ctx.db.messageRecipient.updateMany({
+			await ctx.prisma.messageRecipient.updateMany({
 				where: {
 					message: {
 						conversationId: input,
@@ -219,7 +219,7 @@ export const messageRouter = createTRPCRouter({
 			})
 		)
 		.query(async ({ ctx, input }) => {
-			return ctx.db.message.findMany({
+			return ctx.prisma.message.findMany({
 				where: {
 					conversation: {
 						participants: {

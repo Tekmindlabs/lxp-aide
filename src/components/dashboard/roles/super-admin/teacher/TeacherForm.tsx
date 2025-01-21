@@ -171,7 +171,7 @@ export const TeacherForm = ({ selectedTeacher, subjects, classes, onSuccess }: T
   )}
 />
 
-// For subjectIds field
+
 <FormField
   control={form.control}
   name="subjectIds"

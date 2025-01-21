@@ -1,4 +1,4 @@
-import { createTRPCNext } from '@trpc/next';
+import { createTRPCReact } from '@trpc/react-query';
 import { httpBatchLink } from '@trpc/client';
 import type { AppRouter } from '@/server/api/root';
 import { type inferRouterInputs, type inferRouterOutputs } from '@trpc/server';
@@ -12,19 +12,7 @@ function getBaseUrl() {
   return 'http://localhost:3000';
 }
 
-export const api = createTRPCNext<AppRouter>({
-  config() {
-    return {
-      transformer: superjson,
-      links: [
-        httpBatchLink({
-          url: `${getBaseUrl()}/api/trpc`,
-        }),
-      ],
-    };
-  },
-  ssr: false,
-});
+export const api = createTRPCReact<AppRouter>();
 
 export type RouterInputs = inferRouterInputs<AppRouter>;
 export type RouterOutputs = inferRouterOutputs<AppRouter>;

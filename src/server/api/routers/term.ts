@@ -12,7 +12,7 @@ export const termRouter = createTRPCRouter({
 			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).default(Status.ACTIVE),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.term.create({
+			return ctx.prisma.term.create({
 				data: input,
 				include: {
 					academicYear: true,
@@ -31,7 +31,7 @@ export const termRouter = createTRPCRouter({
 		}))
 		.mutation(async ({ ctx, input }) => {
 			const { id, ...data } = input;
-			return ctx.db.term.update({
+			return ctx.prisma.term.update({
 				where: { id },
 				data,
 				include: {
@@ -44,7 +44,7 @@ export const termRouter = createTRPCRouter({
 	deleteTerm: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.term.delete({
+			return ctx.prisma.term.delete({
 				where: { id: input },
 			});
 		}),
@@ -52,7 +52,7 @@ export const termRouter = createTRPCRouter({
 	getTerm: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.term.findUnique({
+			return ctx.prisma.term.findUnique({
 				where: { id: input },
 				include: {
 					academicYear: true,
@@ -68,7 +68,7 @@ export const termRouter = createTRPCRouter({
 	getTermsByAcademicYear: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.term.findMany({
+			return ctx.prisma.term.findMany({
 				where: { academicYearId: input },
 				include: {
 					timetables: {

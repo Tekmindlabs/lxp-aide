@@ -22,7 +22,7 @@ export const timetableRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Check for existing timetable
-			const existingTimetable = await ctx.db.timetable.findFirst({
+			const existingTimetable = await ctx.prisma.timetable.findFirst({
 				where: {
 					OR: [
 						{ classGroupId: input.classGroupId },
@@ -40,7 +40,7 @@ export const timetableRouter = createTRPCRouter({
 
 			// Check for period conflicts
 			for (const period of input.periods) {
-				const conflictingPeriod = await ctx.db.period.findFirst({
+				const conflictingPeriod = await ctx.prisma.period.findFirst({
 					where: {
 						OR: [
 							{
@@ -96,7 +96,7 @@ export const timetableRouter = createTRPCRouter({
 				}
 			}
 
-			return ctx.db.timetable.create({
+			return ctx.prisma.timetable.create({
 				data: {
 					termId: input.termId,
 					classGroupId: input.classGroupId,
@@ -112,7 +112,7 @@ export const timetableRouter = createTRPCRouter({
 		}),
 
 	getAll: protectedProcedure.query(({ ctx }) => {
-		return ctx.db.timetable.findMany({
+		return ctx.prisma.timetable.findMany({
 			include: {
 				periods: {
 					include: {
@@ -129,7 +129,7 @@ export const timetableRouter = createTRPCRouter({
 	getById: protectedProcedure
 		.input(z.string())
 		.query(({ ctx, input }) => {
-			return ctx.db.timetable.findUnique({
+			return ctx.prisma.timetable.findUnique({
 				where: { id: input },
 				include: {
 					periods: {
@@ -162,12 +162,12 @@ export const timetableRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Delete existing periods
-			await ctx.db.period.deleteMany({
+			await ctx.prisma.period.deleteMany({
 				where: { timetableId: input.id },
 			});
 
 			// Create new periods
-			return ctx.db.timetable.update({
+			return ctx.prisma.timetable.update({
 				where: { id: input.id },
 				data: {
 					periods: {
@@ -188,7 +188,7 @@ export const timetableRouter = createTRPCRouter({
 	delete: protectedProcedure
 		.input(z.string())
 		.mutation(({ ctx, input }) => {
-			return ctx.db.timetable.delete({
+			return ctx.prisma.timetable.delete({
 				where: { id: input },
 			});
 		}),

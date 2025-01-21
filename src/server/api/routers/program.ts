@@ -12,7 +12,7 @@ export const programRouter = createTRPCRouter({
 			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).default(Status.ACTIVE),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.program.create({
+			return ctx.prisma.program.create({
 				data: input,
 				include: {
 					coordinator: {
@@ -35,7 +35,7 @@ export const programRouter = createTRPCRouter({
 		}))
 		.mutation(async ({ ctx, input }) => {
 			const { id, ...data } = input;
-			return ctx.db.program.update({
+			return ctx.prisma.program.update({
 				where: { id },
 				data,
 				include: {
@@ -51,7 +51,7 @@ export const programRouter = createTRPCRouter({
 	deleteProgram: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.program.delete({
+			return ctx.prisma.program.delete({
 				where: { id: input },
 			});
 		}),
@@ -59,7 +59,7 @@ export const programRouter = createTRPCRouter({
 	getProgram: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.program.findUnique({
+			return ctx.prisma.program.findUnique({
 				where: { id: input },
 				include: {
 					coordinator: {
@@ -74,7 +74,7 @@ export const programRouter = createTRPCRouter({
 
 	getAllPrograms: protectedProcedure
 		.query(async ({ ctx }) => {
-			return ctx.db.program.findMany({
+			return ctx.prisma.program.findMany({
 				include: {
 					coordinator: {
 						include: {
@@ -88,7 +88,7 @@ export const programRouter = createTRPCRouter({
 
 	getAvailableCoordinators: protectedProcedure
 		.query(async ({ ctx }) => {
-			return ctx.db.coordinatorProfile.findMany({
+			return ctx.prisma.coordinatorProfile.findMany({
 				include: {
 					user: true,
 				},
@@ -107,7 +107,7 @@ export const programRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const { search, level, status, academicYearId, sortBy = 'name', sortOrder = 'asc' } = input;
 			
-			return ctx.db.program.findMany({
+			return ctx.prisma.program.findMany({
 				where: {
 					...(search && {
 						OR: [
@@ -142,8 +142,8 @@ export const programRouter = createTRPCRouter({
 
 			// First, verify both program and academic year exist
 			const [program, academicYear] = await Promise.all([
-				ctx.db.program.findUnique({ where: { id: programId } }),
-				ctx.db.academicYear.findUnique({ where: { id: academicYearId } }),
+				ctx.prisma.program.findUnique({ where: { id: programId } }),
+				ctx.prisma.academicYear.findUnique({ where: { id: academicYearId } }),
 			]);
 
 			if (!program || !academicYear) {
@@ -151,7 +151,7 @@ export const programRouter = createTRPCRouter({
 			}
 
 			// Create terms for the program's academic year
-			await ctx.db.term.create({
+			await ctx.prisma.term.create({
 				data: {
 					name: "Default Term",
 					academicYearId,
@@ -167,7 +167,7 @@ export const programRouter = createTRPCRouter({
 	getProgramWithAcademicDetails: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.program.findUnique({
+			return ctx.prisma.program.findUnique({
 				where: { id: input },
 				include: {
 					coordinator: {

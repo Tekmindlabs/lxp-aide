@@ -14,7 +14,7 @@ export const classRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const { teacherIds, ...classData } = input;
 			
-			const newClass = await ctx.db.class.create({
+			const newClass = await ctx.prisma.class.create({
 				data: {
 					...classData,
 					...(teacherIds && {
@@ -64,13 +64,13 @@ export const classRouter = createTRPCRouter({
 
 			if (teacherIds) {
 				// Remove existing teacher assignments
-				await ctx.db.teacherClass.deleteMany({
+				await ctx.prisma.teacherClass.deleteMany({
 					where: { classId: id },
 				});
 
 				// Add new teacher assignments
 				if (teacherIds.length > 0) {
-					await ctx.db.teacherClass.createMany({
+					await ctx.prisma.teacherClass.createMany({
 						data: teacherIds.map(teacherId => ({
 							classId: id,
 							teacherId,
@@ -80,7 +80,7 @@ export const classRouter = createTRPCRouter({
 				}
 			}
 
-			return ctx.db.class.update({
+			return ctx.prisma.class.update({
 				where: { id },
 				data,
 				include: {
@@ -106,7 +106,7 @@ export const classRouter = createTRPCRouter({
 	deleteClass: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.class.delete({
+			return ctx.prisma.class.delete({
 				where: { id: input },
 			});
 		}),
@@ -114,7 +114,7 @@ export const classRouter = createTRPCRouter({
 	getClass: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.class.findUnique({
+			return ctx.prisma.class.findUnique({
 				where: { id: input },
 				include: {
 					classGroup: {
@@ -152,7 +152,7 @@ export const classRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const { search, classGroupId, teacherId, status } = input;
 
-			return ctx.db.class.findMany({
+			return ctx.prisma.class.findMany({
 				where: {
 					...(search && {
 						OR: [

@@ -11,7 +11,7 @@ export const classGroupRouter = createTRPCRouter({
 			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).default(Status.ACTIVE),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.classGroup.create({
+			return ctx.prisma.classGroup.create({
 				data: input,
 				include: {
 					program: true,
@@ -31,7 +31,7 @@ export const classGroupRouter = createTRPCRouter({
 		}))
 		.mutation(async ({ ctx, input }) => {
 			const { id, ...data } = input;
-			return ctx.db.classGroup.update({
+			return ctx.prisma.classGroup.update({
 				where: { id },
 				data,
 				include: {
@@ -45,7 +45,7 @@ export const classGroupRouter = createTRPCRouter({
 	deleteClassGroup: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			return ctx.db.classGroup.delete({
+			return ctx.prisma.classGroup.delete({
 				where: { id: input },
 			});
 		}),
@@ -53,7 +53,7 @@ export const classGroupRouter = createTRPCRouter({
 	getClassGroup: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.classGroup.findUnique({
+			return ctx.prisma.classGroup.findUnique({
 				where: { id: input },
 				include: {
 					program: true,
@@ -69,7 +69,7 @@ export const classGroupRouter = createTRPCRouter({
 			programId: z.string().optional(),
 		}).optional())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.classGroup.findMany({
+			return ctx.prisma.classGroup.findMany({
 				where: input ? { programId: input.programId } : undefined,
 				include: {
 					program: true,
@@ -88,7 +88,7 @@ export const classGroupRouter = createTRPCRouter({
 			subjectIds: z.array(z.string()),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			const classGroup = await ctx.db.classGroup.update({
+			const classGroup = await ctx.prisma.classGroup.update({
 				where: { id: input.classGroupId },
 				data: {
 					subjects: {
@@ -108,7 +108,7 @@ export const classGroupRouter = createTRPCRouter({
 			subjectIds: z.array(z.string()),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			const classGroup = await ctx.db.classGroup.update({
+			const classGroup = await ctx.prisma.classGroup.update({
 				where: { id: input.classGroupId },
 				data: {
 					subjects: {
@@ -125,7 +125,7 @@ export const classGroupRouter = createTRPCRouter({
 	getClassGroupWithDetails: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.db.classGroup.findUnique({
+			return ctx.prisma.classGroup.findUnique({
 				where: { id: input },
 				include: {
 					program: {
@@ -189,7 +189,7 @@ export const classGroupRouter = createTRPCRouter({
 			const { classGroupId, subjectIds } = input;
 
 			// Add subjects to class group
-			const classGroup = await ctx.db.classGroup.update({
+			const classGroup = await ctx.prisma.classGroup.update({
 				where: { id: classGroupId },
 				data: {
 					subjects: {
@@ -202,7 +202,7 @@ export const classGroupRouter = createTRPCRouter({
 			});
 
 			// Inherit subjects to all classes in the group
-			const classes = await ctx.db.class.findMany({
+			const classes = await ctx.prisma.class.findMany({
 				where: { classGroupId },
 			});
 
@@ -212,7 +212,7 @@ export const classGroupRouter = createTRPCRouter({
 					// Update periods with new subjects
 					// This is a simplified version - in reality, you'd need more complex logic
 					// to handle existing periods and scheduling
-					await ctx.db.period.createMany({
+					await ctx.prisma.period.createMany({
 						data: subjectIds.map(subjectId => ({
 							timetableId: cls.timetable!.id,
 							subjectId,
@@ -238,7 +238,7 @@ export const classGroupRouter = createTRPCRouter({
 			const { classGroupId, subjectIds } = input;
 
 			// Remove subjects from class group
-			return ctx.db.classGroup.update({
+			return ctx.prisma.classGroup.update({
 				where: { id: classGroupId },
 				data: {
 					subjects: {
@@ -260,7 +260,7 @@ export const classGroupRouter = createTRPCRouter({
 			const { classGroupId, academicYearId } = input;
 
 			// Get the academic year and its terms
-			const academicYear = await ctx.db.academicYear.findUnique({
+			const academicYear = await ctx.prisma.academicYear.findUnique({
 				where: { id: academicYearId },
 				include: {
 					terms: true,
@@ -277,14 +277,14 @@ export const classGroupRouter = createTRPCRouter({
 				throw new Error("No terms found in academic year");
 			}
 
-			const timetable = await ctx.db.timetable.create({
+			const timetable = await ctx.prisma.timetable.create({
 				data: {
 					termId: term.id,
 					classGroupId,
 				},
 			});
 
-			return ctx.db.classGroup.findUnique({
+			return ctx.prisma.classGroup.findUnique({
 				where: { id: classGroupId },
 				include: {
 					timetable: {

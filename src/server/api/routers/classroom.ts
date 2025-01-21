@@ -11,13 +11,13 @@ export const classroomRouter = createTRPCRouter({
 			})
 		)
 		.mutation(({ ctx, input }) => {
-			return ctx.db.classroom.create({
+			return ctx.prisma.classroom.create({
 				data: input,
 			});
 		}),
 
 	getAll: protectedProcedure.query(({ ctx }) => {
-		return ctx.db.classroom.findMany({
+		return ctx.prisma.classroom.findMany({
 			include: {
 				periods: {
 					include: {
@@ -37,7 +37,7 @@ export const classroomRouter = createTRPCRouter({
 	getById: protectedProcedure
 		.input(z.string())
 		.query(({ ctx, input }) => {
-			return ctx.db.classroom.findUnique({
+			return ctx.prisma.classroom.findUnique({
 				where: { id: input },
 				include: {
 					periods: {
@@ -66,7 +66,7 @@ export const classroomRouter = createTRPCRouter({
 		)
 		.mutation(({ ctx, input }) => {
 			const { id, ...data } = input;
-			return ctx.db.classroom.update({
+			return ctx.prisma.classroom.update({
 				where: { id },
 				data,
 			});
@@ -75,7 +75,7 @@ export const classroomRouter = createTRPCRouter({
 	delete: protectedProcedure
 		.input(z.string())
 		.mutation(({ ctx, input }) => {
-			return ctx.db.classroom.delete({
+			return ctx.prisma.classroom.delete({
 				where: { id: input },
 			});
 		}),
@@ -88,7 +88,7 @@ export const classroomRouter = createTRPCRouter({
 			})
 		)
 		.query(async ({ ctx, input }) => {
-			const periods = await ctx.db.period.findMany({
+			const periods = await ctx.prisma.period.findMany({
 				where: {
 					classroomId: input.classroomId,
 					dayOfWeek: input.date.getDay() || 7, // Convert Sunday (0) to 7

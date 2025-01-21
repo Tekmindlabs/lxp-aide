@@ -4,7 +4,7 @@ import { type FC, useState } from "react";
 import { api } from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import ClassroomForm from './ClassroomForm';
+import ClassroomForm from "./ClassroomForm";
 import ClassroomView from "./ClassroomView";
 import { type RouterOutputs } from "@/utils/api";
 

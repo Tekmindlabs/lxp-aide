@@ -21,7 +21,7 @@ export const notificationRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Check user permissions based on role
-			const user = await ctx.db.user.findUnique({
+			const user = await ctx.prisma.user.findUnique({
 				where: { id: ctx.session.user.id },
 				include: {
 					userRoles: {
@@ -53,7 +53,7 @@ export const notificationRouter = createTRPCRouter({
 
 			// Add users from programs (if user is admin or coordinator of these programs)
 			if (input.recipients.programIds) {
-				const programs = await ctx.db.program.findMany({
+				const programs = await ctx.prisma.program.findMany({
 					where: {
 						id: { in: input.recipients.programIds },
 						OR: [
@@ -96,7 +96,7 @@ export const notificationRouter = createTRPCRouter({
 
 			// Add users from class groups
 			if (input.recipients.classGroupIds) {
-				const classGroups = await ctx.db.classGroup.findMany({
+				const classGroups = await ctx.prisma.classGroup.findMany({
 					where: {
 						id: { in: input.recipients.classGroupIds },
 						program: user.coordinatorProfile
@@ -127,7 +127,7 @@ export const notificationRouter = createTRPCRouter({
 
 			// Add users from classes
 			if (input.recipients.classIds) {
-				const classes = await ctx.db.class.findMany({
+				const classes = await ctx.prisma.class.findMany({
 					where: {
 						id: { in: input.recipients.classIds },
 						teachers: user.teacherProfile
@@ -151,7 +151,7 @@ export const notificationRouter = createTRPCRouter({
 			}
 
 			// Create the notification
-			const notification = await ctx.db.notification.create({
+			const notification = await ctx.prisma.notification.create({
 				data: {
 					title: input.title,
 					content: input.content,
@@ -192,7 +192,7 @@ export const notificationRouter = createTRPCRouter({
 		)
 		.query(async ({ ctx, input }) => {
 			if (input.type === "SENT") {
-				return ctx.db.notification.findMany({
+				return ctx.prisma.notification.findMany({
 					where: {
 						senderId: ctx.session.user.id,
 						type: input.filters?.type,
@@ -215,7 +215,7 @@ export const notificationRouter = createTRPCRouter({
 				});
 			}
 
-			return ctx.db.notification.findMany({
+			return ctx.prisma.notification.findMany({
 				where: {
 					recipients: {
 						some: {
@@ -246,7 +246,7 @@ export const notificationRouter = createTRPCRouter({
 	markAsRead: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			await ctx.db.notificationRecipient.updateMany({
+			await ctx.prisma.notificationRecipient.updateMany({
 				where: {
 					notificationId: input,
 					recipientId: ctx.session.user.id,
@@ -261,7 +261,7 @@ export const notificationRouter = createTRPCRouter({
 	delete: protectedProcedure
 		.input(z.string())
 		.mutation(async ({ ctx, input }) => {
-			const notification = await ctx.db.notification.findUnique({
+			const notification = await ctx.prisma.notification.findUnique({
 				where: { id: input },
 			});
 
@@ -279,7 +279,7 @@ export const notificationRouter = createTRPCRouter({
 				});
 			}
 
-			await ctx.db.notification.delete({
+			await ctx.prisma.notification.delete({
 				where: { id: input },
 			});
 		}),
