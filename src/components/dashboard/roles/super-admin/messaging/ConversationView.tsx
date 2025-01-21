@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
-import { LuArrowLeft, LuPaperclip, LuSend } from "react-icons/lu";
+import { LuArrowLeft, LuPaperclip, LuSend, LuHeart, LuSmile, LuThumbsUp, LuCheck, LuCheckCheck } from "react-icons/lu";
 
 type ConversationViewProps = {
 	conversationId: string;
@@ -18,7 +18,9 @@ export default function ConversationView({
 	onBack,
 }: ConversationViewProps) {
 	const [newMessage, setNewMessage] = useState("");
+	const [attachments, setAttachments] = useState<File[]>([]);
 	const scrollRef = useRef<HTMLDivElement>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	const { data: conversation, isLoading } = api.message.getConversation.useQuery(
 		conversationId
@@ -61,12 +63,31 @@ export default function ConversationView({
 		conversation.title ||
 		otherParticipants.map((p) => p.user.name).join(", ");
 
-	const handleSend = () => {
-		if (newMessage.trim()) {
+	const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (e.target.files) {
+			setAttachments(Array.from(e.target.files));
+		}
+	};
+
+	const handleSend = async () => {
+		if (newMessage.trim() || attachments.length > 0) {
+			const uploadedFiles = await Promise.all(
+				attachments.map(async (file) => {
+					// TODO: Implement file upload logic
+					const url = "temporary-url"; // Replace with actual upload
+					return {
+						type: file.type.includes("image") ? "IMAGE" : "DOCUMENT",
+						url,
+					};
+				})
+			);
+
 			sendMessage.mutate({
 				conversationId,
 				content: newMessage.trim(),
+				attachments: uploadedFiles,
 			});
+			setAttachments([]);
 		}
 	};
 
@@ -102,51 +123,67 @@ export default function ConversationView({
 			<ScrollArea ref={scrollRef} className="flex-1 p-4">
 				<div className="space-y-4">
 					{conversation.messages.map((message) => (
-						<div
-							key={message.id}
-							className={`flex ${
-								message.sender.id === "current-user-id"
-									? "justify-end"
-									: "justify-start"
-							}`}
-						>
-							<div className="flex gap-2 max-w-[70%]">
-								{message.sender.id !== "current-user-id" && (
-									<Avatar>
-										<AvatarImage
-											src={message.sender.image}
-											alt={message.sender.name}
-										/>
-										<AvatarFallback>
-											{message.sender.name?.[0].toUpperCase()}
-										</AvatarFallback>
-									</Avatar>
-								)}
-								<div>
-									<Card
-										className={`p-3 ${
-											message.sender.id === "current-user-id"
-												? "bg-primary text-primary-foreground"
-												: ""
-										}`}
-									>
-										<p>{message.content}</p>
-										{message.attachments?.map((attachment) => (
-											<a
-												key={attachment.id}
-												href={attachment.url}
-												target="_blank"
-												rel="noopener noreferrer"
-												className="block mt-2 text-sm text-blue-500 hover:underline"
-											>
-												{attachment.type.toLowerCase()} attachment
-											</a>
-										))}
-									</Card>
-									<div className="mt-1 text-xs text-muted-foreground">
-										{format(new Date(message.createdAt), "MMM d, h:mm a")}
+						<div key={message.id} className="flex flex-col gap-1">
+							<div className="flex items-start gap-2">
+								<div className="flex gap-2 max-w-[70%]">
+									{message.sender.id !== "current-user-id" && (
+										<Avatar>
+											<AvatarImage
+												src={message.sender.image}
+												alt={message.sender.name}
+											/>
+											<AvatarFallback>
+												{message.sender.name?.[0].toUpperCase()}
+											</AvatarFallback>
+										</Avatar>
+									)}
+									<div className="flex flex-col gap-1">
+										<Card
+											className={`p-3 ${
+												message.sender.id === "current-user-id"
+													? "bg-primary text-primary-foreground"
+													: ""
+											}`}
+										>
+											<p>{message.content}</p>
+											{message.attachments?.map((attachment) => (
+												<div key={attachment.id} className="mt-2">
+													{attachment.type === "IMAGE" ? (
+														<img src={attachment.url} alt="attachment" className="max-w-xs rounded" />
+													) : (
+														<a href={attachment.url} className="flex items-center gap-2 text-sm hover:underline">
+															<LuPaperclip className="h-4 w-4" />
+															Download attachment
+														</a>
+													)}
+												</div>
+											))}
+										</Card>
+										<div className="flex items-center gap-2 text-xs text-muted-foreground">
+											<span>{format(new Date(message.createdAt), "MMM d, h:mm a")}</span>
+											{message.sender.id === "current-user-id" && (
+												<span className="flex items-center">
+													{message.recipients?.every((r) => r.read) ? (
+														<LuCheckCheck className="h-3 w-3" />
+													) : (
+														<LuCheck className="h-3 w-3" />
+													)}
+												</span>
+											)}
+										</div>
 									</div>
 								</div>
+							</div>
+							<div className="flex items-center gap-1 ml-12">
+								<Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+									<LuThumbsUp className="h-3 w-3" />
+								</Button>
+								<Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+									<LuHeart className="h-3 w-3" />
+								</Button>
+								<Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+									<LuSmile className="h-3 w-3" />
+								</Button>
 							</div>
 						</div>
 					))}
@@ -154,36 +191,61 @@ export default function ConversationView({
 			</ScrollArea>
 
 			<div className="p-4 border-t">
-				<div className="flex gap-2">
-					<Input
-						value={newMessage}
-						onChange={(e) => setNewMessage(e.target.value)}
-						placeholder="Type a message..."
-						onKeyDown={(e) => {
-							if (e.key === "Enter" && !e.shiftKey) {
-								e.preventDefault();
-								handleSend();
-							}
-						}}
-					/>
-					<Button
-						size="icon"
-						variant="ghost"
-						className="shrink-0"
-						onClick={() => {
-							// TODO: Implement file attachment
-						}}
-					>
-						<LuPaperclip className="h-4 w-4" />
-					</Button>
-					<Button
-						size="icon"
-						className="shrink-0"
-						onClick={handleSend}
-						disabled={!newMessage.trim() || sendMessage.isLoading}
-					>
-						<LuSend className="h-4 w-4" />
-					</Button>
+				<div className="flex flex-col gap-2">
+					{attachments.length > 0 && (
+						<div className="flex flex-wrap gap-2">
+							{attachments.map((file, index) => (
+								<div key={index} className="flex items-center gap-2 p-2 bg-secondary rounded">
+									<LuPaperclip className="h-4 w-4" />
+									<span className="text-sm">{file.name}</span>
+									<Button
+										variant="ghost"
+										size="sm"
+										className="h-6 w-6 p-0"
+										onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
+									>
+										×
+									</Button>
+								</div>
+							))}
+						</div>
+					)}
+					<div className="flex gap-2">
+						<Input
+							value={newMessage}
+							onChange={(e) => setNewMessage(e.target.value)}
+							placeholder="Type a message..."
+							onKeyDown={(e) => {
+								if (e.key === "Enter" && !e.shiftKey) {
+									e.preventDefault();
+									handleSend();
+								}
+							}}
+						/>
+						<input
+							type="file"
+							ref={fileInputRef}
+							className="hidden"
+							multiple
+							onChange={handleFileSelect}
+						/>
+						<Button
+							size="icon"
+							variant="ghost"
+							className="shrink-0"
+							onClick={() => fileInputRef.current?.click()}
+						>
+							<LuPaperclip className="h-4 w-4" />
+						</Button>
+						<Button
+							size="icon"
+							className="shrink-0"
+							onClick={handleSend}
+							disabled={(!newMessage.trim() && attachments.length === 0) || sendMessage.isLoading}
+						>
+							<LuSend className="h-4 w-4" />
+						</Button>
+					</div>
 				</div>
 			</div>
 		</div>

@@ -1,3 +1,5 @@
+"use client";
+
 import { format } from "date-fns";
 import { api } from "@/utils/api";
 import { Card } from "@/components/ui/card";

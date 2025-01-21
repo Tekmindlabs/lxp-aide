@@ -187,32 +187,32 @@ export const ClassForm = ({ selectedClass, classGroups, teachers, onSuccess }: C
 					render={({ field }) => (
 						<FormItem>
 							<FormLabel>Teachers</FormLabel>
-							<Select
-								onValueChange={(value) => {
-									const currentValues = field.value || [];
-									const newValues = currentValues.includes(value)
-										? currentValues.filter((v) => v !== value)
-										: [...currentValues, value];
-									field.onChange(newValues);
-								}}
-							>
-								<FormControl>
-									<SelectTrigger>
-										<SelectValue placeholder="Select teachers" />
-									</SelectTrigger>
-								</FormControl>
-								<SelectContent>
-									{teachers.map((teacher) => (
-										<SelectItem key={teacher.id} value={teacher.id}>
-											{teacher.user.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							<div className="flex flex-wrap gap-2">
+								{teachers.map((teacher) => (
+									<div
+										key={teacher.id}
+										className={`cursor-pointer rounded-md px-3 py-1 text-sm ${
+											field.value?.includes(teacher.id)
+												? 'bg-primary text-primary-foreground'
+												: 'bg-secondary'
+										}`}
+										onClick={() => {
+											const currentValues = field.value || [];
+											const newValues = currentValues.includes(teacher.id)
+												? currentValues.filter((v) => v !== teacher.id)
+												: [...currentValues, teacher.id];
+											field.onChange(newValues);
+										}}
+									>
+										{teacher.user.name || 'Unnamed Teacher'}
+									</div>
+								))}
+							</div>
 							<FormMessage />
 						</FormItem>
 					)}
 				/>
+
 
 				<Button type="submit" disabled={isSubmitting}>
 					{selectedClass ? "Update" : "Create"} Class

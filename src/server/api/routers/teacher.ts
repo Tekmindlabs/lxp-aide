@@ -13,7 +13,7 @@ export const teacherRouter = createTRPCRouter({
 			classIds: z.array(z.string()).optional(),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			const { subjectIds, classIds, ...userData } = input;
+			const { subjectIds, classIds, specialization, availability, ...userData } = input;
 
 			// Create user with teacher profile
 			const user = await ctx.prisma.user.create({
@@ -22,8 +22,8 @@ export const teacherRouter = createTRPCRouter({
 					userType: UserType.TEACHER,
 					teacherProfile: {
 						create: {
-							specialization: userData.specialization,
-							availability: userData.availability,
+							specialization,
+							availability,
 							...(subjectIds && {
 								subjects: {
 									create: subjectIds.map(subjectId => ({

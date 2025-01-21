@@ -283,4 +283,114 @@ export const notificationRouter = createTRPCRouter({
 				where: { id: input },
 			});
 		}),
+
+	getSettings: protectedProcedure.query(async ({ ctx }) => {
+		return ctx.prisma.notificationSettings.upsert({
+			where: { userId: ctx.session.user.id },
+			update: {},
+			create: { userId: ctx.session.user.id },
+		});
+	}),
+
+	updateSettings: protectedProcedure
+		.input(
+			z.object({
+				emailNotifications: z.boolean().optional(),
+				pushNotifications: z.boolean().optional(),
+				timetableChanges: z.boolean().optional(),
+				assignmentUpdates: z.boolean().optional(),
+				gradeUpdates: z.boolean().optional(),
+				systemUpdates: z.boolean().optional(),
+				doNotDisturb: z.boolean().optional(),
+				doNotDisturbStart: z.date().optional(),
+				doNotDisturbEnd: z.date().optional(),
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			return ctx.prisma.notificationSettings.upsert({
+				where: { userId: ctx.session.user.id },
+				update: input,
+				create: { userId: ctx.session.user.id, ...input },
+			});
+		}),
+
+	createSystemNotification: protectedProcedure
+		.input(
+			z.object({
+				title: z.string(),
+				content: z.string(),
+				type: z.enum(["ANNOUNCEMENT", "ASSIGNMENT", "GRADE", "REMINDER", "SYSTEM"]),
+				entityType: z.string(),
+				entityId: z.string(),
+				metadata: z.record(z.any()).optional(),
+				recipientIds: z.array(z.string()),
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Verify sender has permission
+			const user = await ctx.prisma.user.findUnique({
+				where: { id: ctx.session.user.id },
+				include: { userRoles: { include: { role: true } } },
+			});
+
+			if (!user || user.userType !== "ADMIN") {
+				throw new TRPCError({
+					code: "UNAUTHORIZED",
+					message: "Only admins can create system notifications",
+				});
+			}
+
+			// Filter recipients based on their notification settings
+			const recipientsWithSettings = await ctx.prisma.notificationSettings.findMany({
+				where: {
+					userId: { in: input.recipientIds },
+					OR: [
+						{ doNotDisturb: false },
+						{
+							AND: [
+								{ doNotDisturb: true },
+								{ doNotDisturbStart: { gt: new Date() } },
+								{ doNotDisturbEnd: { lt: new Date() } },
+							],
+						},
+					],
+				},
+			});
+
+			const eligibleRecipients = recipientsWithSettings.filter((settings) => {
+				switch (input.entityType) {
+					case "TIMETABLE":
+						return settings.timetableChanges;
+					case "ASSIGNMENT":
+						return settings.assignmentUpdates;
+					case "GRADE":
+						return settings.gradeUpdates;
+					case "SYSTEM":
+						return settings.systemUpdates;
+					default:
+						return true;
+				}
+			});
+
+			return ctx.prisma.notification.create({
+				data: {
+					title: input.title,
+					content: input.content,
+					type: input.type,
+					entityType: input.entityType,
+					entityId: input.entityId,
+					metadata: input.metadata,
+					senderId: ctx.session.user.id,
+					recipients: {
+						create: eligibleRecipients.map((settings) => ({
+							recipientId: settings.userId,
+						})),
+					},
+				},
+				include: {
+					sender: true,
+					recipients: { include: { recipient: true } },
+				},
+			});
+		}),
 });

@@ -32,6 +32,7 @@ model User {
   teacherProfile    TeacherProfile?
   coordinatorProfile CoordinatorProfile?
   parentProfile     ParentProfile?
+  notificationSettings NotificationSettings?
 
   // Communication Relations
   sentNotifications     Notification[]  @relation("SentNotifications")
@@ -39,6 +40,7 @@ model User {
   sentMessages         Message[]       @relation("SentMessages")
   receivedMessages     MessageRecipient[]
   conversations        ConversationParticipant[]
+  messageReactions     MessageReaction[]
   
   // Activity Tracking
   activityLogs     ActivityLog[]
@@ -327,6 +329,9 @@ model Notification {
   sender      User      @relation("SentNotifications", fields: [senderId], references: [id])
   senderId    String
   recipients  NotificationRecipient[]
+  entityType  String?   // e.g., "TIMETABLE", "ASSIGNMENT", "GRADE"
+  entityId    String?   // Reference to the entity that triggered the notification
+  metadata    Json?     // Additional context about the notification
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
@@ -354,6 +359,7 @@ model Message {
   conversation  Conversation @relation(fields: [conversationId], references: [id])
   conversationId String
   attachments   MessageAttachment[]
+  reactions     MessageReaction[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
@@ -382,6 +388,19 @@ model MessageAttachment {
   updatedAt   DateTime  @updatedAt
 }
 
+model MessageReaction {
+  id          String    @id @default(cuid())
+  message     Message   @relation(fields: [messageId], references: [id])
+  messageId   String
+  user        User      @relation(fields: [userId], references: [id])
+  userId      String
+  type        String    // e.g., "THUMBS_UP", "HEART", "SMILE"
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([messageId, userId, type])
+}
+
 model Conversation {
   id          String    @id @default(cuid())
   title       String?
@@ -390,6 +409,23 @@ model Conversation {
   participants ConversationParticipant[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+model NotificationSettings {
+  id                    String    @id @default(cuid())
+  user                  User      @relation(fields: [userId], references: [id])
+  userId                String    @unique
+  emailNotifications    Boolean   @default(true)
+  pushNotifications     Boolean   @default(true)
+  timetableChanges      Boolean   @default(true)
+  assignmentUpdates     Boolean   @default(true)
+  gradeUpdates         Boolean   @default(true)
+  systemUpdates        Boolean   @default(true)
+  doNotDisturb         Boolean   @default(false)
+  doNotDisturbStart    DateTime?
+  doNotDisturbEnd      DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 model ConversationParticipant {

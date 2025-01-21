@@ -110,6 +110,11 @@ export const messageRouter = createTRPCRouter({
 				include: {
 					sender: true,
 					attachments: true,
+					reactions: {
+						include: {
+							user: true,
+						},
+					},
 				},
 			});
 
@@ -243,6 +248,74 @@ export const messageRouter = createTRPCRouter({
 				orderBy: {
 					createdAt: "desc",
 				},
+			});
+		}),
+
+	addReaction: protectedProcedure
+		.input(z.object({
+			messageId: z.string(),
+			type: z.string(),
+		}))
+		.mutation(async ({ ctx, input }) => {
+			// Check if user is participant in the conversation
+			const message = await ctx.prisma.message.findUnique({
+				where: { id: input.messageId },
+				include: { conversation: { include: { participants: true } } },
+			});
+
+			if (!message) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Message not found",
+				});
+			}
+
+			const isParticipant = message.conversation.participants.some(
+				(p) => p.userId === ctx.session.user.id && !p.leftAt
+			);
+
+			if (!isParticipant) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "You are not a participant in this conversation",
+				});
+			}
+
+			// Upsert reaction (add if not exists, remove if exists)
+			const existingReaction = await ctx.prisma.messageReaction.findUnique({
+				where: {
+					messageId_userId_type: {
+						messageId: input.messageId,
+						userId: ctx.session.user.id,
+						type: input.type,
+					},
+				},
+			});
+
+			if (existingReaction) {
+				await ctx.prisma.messageReaction.delete({
+					where: { id: existingReaction.id },
+				});
+				return { action: "removed" };
+			}
+
+			await ctx.prisma.messageReaction.create({
+				data: {
+					messageId: input.messageId,
+					userId: ctx.session.user.id,
+					type: input.type,
+				},
+			});
+
+			return { action: "added" };
+		}),
+
+	getReactions: protectedProcedure
+		.input(z.string())
+		.query(async ({ ctx, input }) => {
+			return ctx.prisma.messageReaction.findMany({
+				where: { messageId: input },
+				include: { user: true },
 			});
 		}),
 });

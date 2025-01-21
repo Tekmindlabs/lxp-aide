@@ -173,62 +173,68 @@ export const TeacherForm = ({ selectedTeacher, subjects, classes, onSuccess }: T
 
 
 <FormField
-  control={form.control}
-  name="subjectIds"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Subjects</FormLabel>
-      <Select
-        onValueChange={(value) => {
-          if (!value) return;
-          const currentValues = field.value || [];
-          const newValues = currentValues.includes(value)
-            ? currentValues.filter((v) => v !== value)
-            : [...currentValues, value];
-          field.onChange(newValues);
-        }}
-        value={field.value?.[0] || undefined}  // Add this line
-      >
-        <FormControl>
-          <SelectTrigger>
-            <SelectValue placeholder="Select subjects" />
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent>
-          {subjects.map((subject) => (
-            <SelectItem key={subject.id} value={subject.id || "_empty"}>
-              {subject.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <FormMessage />
-    </FormItem>
-  )}
+	control={form.control}
+	name="subjectIds"
+	render={({ field }) => (
+		<FormItem>
+			<FormLabel>Subjects</FormLabel>
+			<div className="flex flex-wrap gap-2">
+				{subjects.map((subject) => (
+					<div
+						key={subject.id}
+						className={`cursor-pointer rounded-md px-3 py-1 text-sm ${
+							field.value?.includes(subject.id)
+								? 'bg-primary text-primary-foreground'
+								: 'bg-secondary'
+						}`}
+						onClick={() => {
+							const currentValues = field.value || [];
+							const newValues = currentValues.includes(subject.id)
+								? currentValues.filter((v) => v !== subject.id)
+								: [...currentValues, subject.id];
+							field.onChange(newValues);
+						}}
+					>
+						{subject.name}
+					</div>
+				))}
+			</div>
+			<FormMessage />
+		</FormItem>
+	)}
 />
 
+
 <FormField
-  control={form.control}
-  name="classIds"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Classes</FormLabel>
-      <Select
-        value={field.value?.[0] || ''} // Add this line
-        onValueChange={(value) => {
-          if (!value) return; // Add this check
-          const currentValues = field.value || [];
-          const newValues = currentValues.includes(value)
-            ? currentValues.filter((v) => v !== value)
-            : [...currentValues, value];
-          field.onChange(newValues);
-        }}
-      >
-        {/* Rest of the code remains the same */}
-      </Select>
-      <FormMessage />
-    </FormItem>
-  )}
+	control={form.control}
+	name="classIds"
+	render={({ field }) => (
+		<FormItem>
+			<FormLabel>Classes</FormLabel>
+			<div className="flex flex-wrap gap-2">
+				{classes.map((cls) => (
+					<div
+						key={cls.id}
+						className={`cursor-pointer rounded-md px-3 py-1 text-sm ${
+							field.value?.includes(cls.id)
+								? 'bg-primary text-primary-foreground'
+								: 'bg-secondary'
+						}`}
+						onClick={() => {
+							const currentValues = field.value || [];
+							const newValues = currentValues.includes(cls.id)
+								? currentValues.filter((v) => v !== cls.id)
+								: [...currentValues, cls.id];
+							field.onChange(newValues);
+						}}
+					>
+						{`${cls.classGroup.name} - ${cls.name}`}
+					</div>
+				))}
+			</div>
+			<FormMessage />
+		</FormItem>
+	)}
 />
 				<Button type="submit" disabled={isSubmitting}>
 					{selectedTeacher ? "Update" : "Create"} Teacher
