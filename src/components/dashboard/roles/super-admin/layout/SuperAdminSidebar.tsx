@@ -12,7 +12,7 @@ import {
   LuSettings, 
   LuBookOpen, 
   LuClock, 
-  LuHomeIcon, 
+  LuHouse, 
   LuMessageSquare, 
   LuBell 
 } from "react-icons/lu";
@@ -63,7 +63,7 @@ const menuItems: MenuItem[] = [
   {
     title: "Classrooms",
     href: "/dashboard/super-admin/classroom",
-    icon: LuHomeIcon,
+    icon: LuHouse,
   },
   {
     title: "User Management",

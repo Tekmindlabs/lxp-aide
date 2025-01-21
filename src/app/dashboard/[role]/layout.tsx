@@ -1,4 +1,4 @@
-import { SuperAdminSidebar } from "@/components/dashboard/roles/super-admin/layout/SuperAdminSidebar";
+import SuperAdminSidebar from "@/components/dashboard/roles/super-admin/layout/SuperAdminSidebar";
 
 export default function DashboardLayout({
 	children,
