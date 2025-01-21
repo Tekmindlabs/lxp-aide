@@ -15,9 +15,9 @@ const formSchema = z.object({
 	specialization: z.string().optional(),
 	availability: z.string().optional(),
 	status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]),
-	subjectIds: z.array(z.string()).optional(),
-	classIds: z.array(z.string()).optional(),
-});
+	subjectIds: z.array(z.string()).default([]),
+	classIds: z.array(z.string()).default([]),
+  });
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -146,97 +146,78 @@ export const TeacherForm = ({ selectedTeacher, subjects, classes, onSuccess }: T
 					)}
 				/>
 
-				<FormField
-					control={form.control}
-					name="status"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Status</FormLabel>
-							<Select onValueChange={field.onChange} defaultValue={field.value}>
-								<FormControl>
-									<SelectTrigger>
-										<SelectValue placeholder="Select status" />
-									</SelectTrigger>
-								</FormControl>
-								<SelectContent>
-									{Object.values(Status).map((status) => (
-										<SelectItem key={status} value={status}>
-											{status}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+<FormField
+  control={form.control}
+  name="status"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Status</FormLabel>
+      <Select onValueChange={field.onChange} value={field.value || Status.ACTIVE}>
+        <FormControl>
+          <SelectTrigger>
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          {Object.values(Status).map((status) => (
+            <SelectItem key={status} value={status}>
+              {status.toLowerCase()}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 
-				<FormField
-					control={form.control}
-					name="subjectIds"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Subjects</FormLabel>
-							<Select
-								onValueChange={(value) => {
-									const currentValues = field.value || [];
-									const newValues = currentValues.includes(value)
-										? currentValues.filter((v) => v !== value)
-										: [...currentValues, value];
-									field.onChange(newValues);
-								}}
-							>
-								<FormControl>
-									<SelectTrigger>
-										<SelectValue placeholder="Select subjects" />
-									</SelectTrigger>
-								</FormControl>
-								<SelectContent>
-									{subjects.map((subject) => (
-										<SelectItem key={subject.id} value={subject.id}>
-											{subject.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+<FormField
+  control={form.control}
+  name="subjectIds"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Subjects</FormLabel>
+      <Select
+        value={field.value?.[0] || ''} // Add this line
+        onValueChange={(value) => {
+          if (!value) return; // Add this check
+          const currentValues = field.value || [];
+          const newValues = currentValues.includes(value)
+            ? currentValues.filter((v) => v !== value)
+            : [...currentValues, value];
+          field.onChange(newValues);
+        }}
+      >
+        {/* Rest of the code remains the same */}
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 
-				<FormField
-					control={form.control}
-					name="classIds"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Classes</FormLabel>
-							<Select
-								onValueChange={(value) => {
-									const currentValues = field.value || [];
-									const newValues = currentValues.includes(value)
-										? currentValues.filter((v) => v !== value)
-										: [...currentValues, value];
-									field.onChange(newValues);
-								}}
-							>
-								<FormControl>
-									<SelectTrigger>
-										<SelectValue placeholder="Select classes" />
-									</SelectTrigger>
-								</FormControl>
-								<SelectContent>
-									{classes.map((cls) => (
-										<SelectItem key={cls.id} value={cls.id}>
-											{`${cls.name} (${cls.classGroup.name})`}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
-
+<FormField
+  control={form.control}
+  name="classIds"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Classes</FormLabel>
+      <Select
+        value={field.value?.[0] || ''} // Add this line
+        onValueChange={(value) => {
+          if (!value) return; // Add this check
+          const currentValues = field.value || [];
+          const newValues = currentValues.includes(value)
+            ? currentValues.filter((v) => v !== value)
+            : [...currentValues, value];
+          field.onChange(newValues);
+        }}
+      >
+        {/* Rest of the code remains the same */}
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 				<Button type="submit" disabled={isSubmitting}>
 					{selectedTeacher ? "Update" : "Create"} Teacher
 				</Button>
