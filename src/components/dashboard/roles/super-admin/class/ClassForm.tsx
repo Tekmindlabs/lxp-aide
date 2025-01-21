@@ -98,7 +98,6 @@ export const ClassForm = ({ selectedClass, classGroups, teachers, onSuccess }: C
 					)}
 				/>
 
-// For classGroupId field
 <FormField
   control={form.control}
   name="classGroupId"
@@ -107,7 +106,7 @@ export const ClassForm = ({ selectedClass, classGroups, teachers, onSuccess }: C
       <FormLabel>Class Group</FormLabel>
       <Select 
         onValueChange={field.onChange} 
-        value={field.value || undefined}  // Changed from defaultValue
+        value={field.value || undefined}  // Ensures an undefined value shows the placeholder
       >
         <FormControl>
           <SelectTrigger>
@@ -115,17 +114,23 @@ export const ClassForm = ({ selectedClass, classGroups, teachers, onSuccess }: C
           </SelectTrigger>
         </FormControl>
         <SelectContent>
-          {classGroups.map((group) => (
-            <SelectItem key={group.id} value={group.id || "_empty"}>  // Added fallback
-              {group.name}
-            </SelectItem>
-          ))}
+          {classGroups.map((group) => {
+            // Ensure group.id is not an empty string
+            const groupId = group.id || 'undefined'; // Replace 'undefined' with a suitable placeholder
+            return (
+              <SelectItem key={groupId} value={groupId}>
+                {group.name}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
       <FormMessage />
     </FormItem>
   )}
 />
+
+
 
 
 				<FormField

@@ -159,7 +159,7 @@ export const StudentForm = ({ selectedStudent, classes, onSuccess }: StudentForm
       <FormLabel>Class</FormLabel>
       <Select 
         onValueChange={field.onChange} 
-        value={field.value || undefined}  // Changed from defaultValue
+        value={field.value || undefined}
       >
         <FormControl>
           <SelectTrigger>
@@ -168,7 +168,8 @@ export const StudentForm = ({ selectedStudent, classes, onSuccess }: StudentForm
         </FormControl>
         <SelectContent>
           {classes.map((cls) => (
-            <SelectItem key={cls.id} value={cls.id || "_empty"}>
+            // Remove the "_empty" fallback and ensure cls.id is not empty
+            <SelectItem key={cls.id} value={cls.id}>
               {`${cls.name} (${cls.classGroup.name})`}
             </SelectItem>
           ))}
