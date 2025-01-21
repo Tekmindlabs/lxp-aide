@@ -1,3 +1,6 @@
+'use client';
+
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/utils/api";

@@ -8,108 +8,161 @@ import { Status } from "@prisma/client";
 import { api } from "@/utils/api";
 import { TeacherList } from "./TeacherList";
 import { TeacherForm } from "./TeacherForm";
+import { UserType } from "@/types/user";
+
+// Define interfaces for the component
+interface Subject {
+  id: string;
+  name: string;
+}
+
+interface Class {
+  id: string;
+  name: string;
+  classGroup: {
+    name: string;
+  };
+}
+
+interface TeacherProfile {
+  specialization: string | null;
+  availability: string | null;
+  subjects: {
+    subject: {
+      id: string;
+      name: string;
+    };
+  }[];
+  classes: {
+    class: {
+      id: string;
+      name: string;
+      classGroup: {
+        name: string;
+      };
+    };
+  }[];
+}
+
+interface Teacher extends UserType {
+  teacherProfile: TeacherProfile;
+}
 
 interface SearchFilters {
-	search: string;
-	subjectId?: string;
-	classId?: string;
-	status?: Status;
+  search: string;
+  subjectId?: string;
+  classId?: string;
+  status?: Status;
 }
 
 export const TeacherManagement = () => {
-	const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
-	const [filters, setFilters] = useState<SearchFilters>({
-		search: "",
-	});
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
+  const [filters, setFilters] = useState<SearchFilters>({
+    search: "",
+    subjectId: "all",
+    classId: "all",
+    status: undefined
+  });
 
-	const { data: teachers, isLoading } = api.teacher.searchTeachers.useQuery(filters);
-	const { data: subjects } = api.subject.searchSubjects.useQuery({});
-	const { data: classes } = api.class.searchClasses.useQuery({});
+  // Process filters before making API calls
+  const processedFilters = {
+    search: filters.search,
+    subjectId: filters.subjectId === "all" ? undefined : filters.subjectId,
+    classId: filters.classId === "all" ? undefined : filters.classId,
+    status: filters.status === "all" ? undefined : filters.status,
+  };
 
-	if (isLoading) {
-		return <div>Loading...</div>;
-	}
+  // API queries with proper typing
+  const { data: teachers, isLoading } = api.teacher.searchTeachers.useQuery(processedFilters);
+  const { data: subjects } = api.subject.searchSubjects.useQuery({});
+  const { data: classes } = api.class.searchClasses.useQuery({});
 
-	return (
-		<div className="space-y-4">
-			<Card>
-				<CardHeader>
-					<CardTitle>Teacher Management</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div className="mb-6 space-y-4">
-						<div className="flex space-x-4">
-							<Input
-								placeholder="Search teachers..."
-								value={filters.search}
-								onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-								className="max-w-sm"
-							/>
-							<Select
-								value={filters.subjectId}
-								onValueChange={(value) => setFilters({ ...filters, subjectId: value })}
-							>
-								<SelectTrigger className="w-[200px]">
-									<SelectValue placeholder="Filter by Subject" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="">All Subjects</SelectItem>
-									{subjects?.map((subject) => (
-										<SelectItem key={subject.id} value={subject.id}>
-											{subject.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<Select
-								value={filters.classId}
-								onValueChange={(value) => setFilters({ ...filters, classId: value })}
-							>
-								<SelectTrigger className="w-[200px]">
-									<SelectValue placeholder="Filter by Class" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="">All Classes</SelectItem>
-									{classes?.map((cls) => (
-										<SelectItem key={cls.id} value={cls.id}>
-											{cls.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<Select
-								value={filters.status}
-								onValueChange={(value) => setFilters({ ...filters, status: value as Status })}
-							>
-								<SelectTrigger className="w-[180px]">
-									<SelectValue placeholder="Status" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="">All Status</SelectItem>
-									{Object.values(Status).map((status) => (
-										<SelectItem key={status} value={status}>
-											{status}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					</div>
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
-					<div className="space-y-4">
-						<TeacherList 
-							teachers={teachers || []} 
-							onSelect={setSelectedTeacherId}
-						/>
-						<TeacherForm 
-							selectedTeacher={teachers?.find(t => t.id === selectedTeacherId)}
-							subjects={subjects || []}
-							classes={classes || []}
-							onSuccess={() => setSelectedTeacherId(null)}
-						/>
-					</div>
-				</CardContent>
-			</Card>
-		</div>
-	);
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Teacher Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-6 space-y-4">
+            <div className="flex space-x-4">
+              <Input
+                placeholder="Search teachers..."
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                className="max-w-sm"
+              />
+              <Select
+                value={filters.subjectId}
+                onValueChange={(value) => setFilters({ ...filters, subjectId: value })}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filter by Subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Subjects</SelectItem>
+                  {subjects?.map((subject: Subject) => (
+                    <SelectItem key={subject.id} value={subject.id}>
+                      {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={filters.classId}
+                onValueChange={(value) => setFilters({ ...filters, classId: value })}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filter by Class" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Classes</SelectItem>
+                  {classes?.map((cls: Class) => (
+                    <SelectItem key={cls.id} value={cls.id}>
+                      {cls.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={filters.status}
+                onValueChange={(value) => setFilters({ ...filters, status: value as Status })}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  {Object.values(Status).map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <TeacherList 
+              teachers={teachers || []} 
+              onSelect={setSelectedTeacherId}
+            />
+            <TeacherForm 
+              selectedTeacher={teachers?.find((t: Teacher) => t.id === selectedTeacherId)}
+              subjects={subjects || []}
+              classes={classes || []}
+              onSuccess={() => setSelectedTeacherId(null)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
+
+export default TeacherManagement;
