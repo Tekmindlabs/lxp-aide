@@ -1,3 +1,5 @@
+'use client';
+
 import { useSession } from "next-auth/react";
 import { DefaultRoles } from "@/utils/permissions";
 import { DashboardFeature } from "@/types/dashboard";
@@ -7,8 +9,15 @@ import { DashboardFeatures } from "./features/DashboardFeatures";
 
 export const DashboardContent = ({ role }: { role: keyof typeof DefaultRoles }) => {
   const { data: session } = useSession();
-  const layout = RoleLayouts[role];
-  const features = DashboardFeatures[role];
+  // Convert the role to uppercase to match the RoleLayouts keys
+  const normalizedRole = role.toUpperCase() as keyof typeof DefaultRoles;
+  const layout = RoleLayouts[normalizedRole];
+  const features = DashboardFeatures[normalizedRole];
+
+  if (!layout || !features) {
+    console.error(`No layout or features configuration found for role: ${normalizedRole}`);
+    return <div>Dashboard configuration not found for this role.</div>;
+  }
 
   // Filter components based on features
   const allowedComponents = layout.components.filter(component => {
@@ -17,7 +26,7 @@ export const DashboardContent = ({ role }: { role: keyof typeof DefaultRoles }) 
   });
 
   // Convert role string to title case with spaces
-  const roleTitle = role.toString()
+  const roleTitle = normalizedRole
     .toLowerCase()
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))

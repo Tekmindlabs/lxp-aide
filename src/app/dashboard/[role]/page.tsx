@@ -10,6 +10,7 @@ export default async function RoleDashboard({
   params: { role: string };
 }) {
   const session = await getServerSession(authOptions);
+  const normalizedRole = params.role.toUpperCase();
   
   // Add debugging
   console.log({
@@ -28,5 +29,5 @@ export default async function RoleDashboard({
     redirect(`/dashboard/${session.user.roles[0]}`);
   }
 
-  return <DashboardContent role={params.role as keyof typeof DefaultRoles} />;
+  return <DashboardContent role={normalizedRole as keyof typeof DefaultRoles} />;
 }
