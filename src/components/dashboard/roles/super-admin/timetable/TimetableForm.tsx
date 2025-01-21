@@ -1,14 +1,42 @@
+'use client'
+
 import { useState } from "react";
 import { api } from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+
+
+type Term = {
+	id: string;
+	name: string;
+  };
+  
+  type ClassGroup = {
+	id: string;
+	name: string;
+  };
+  
+  type Class = {
+	id: string;
+	name: string;
+  };
+  
+  type Subject = {
+	id: string;
+	name: string;
+  };
+  
+  type Classroom = {
+	id: string;
+	name: string;
+  };
 
 const periodSchema = z.object({
 	startTime: z.string(),
@@ -35,11 +63,11 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 
 	const [periods, setPeriods] = useState<z.infer<typeof periodSchema>[]>([]);
 
-	const { data: terms } = api.term.getAll.useQuery();
-	const { data: classGroups } = api.classGroup.getAll.useQuery();
-	const { data: classes } = api.class.getAll.useQuery();
-	const { data: subjects } = api.subject.getAll.useQuery();
-	const { data: classrooms } = api.classroom.getAll.useQuery();
+	const { data: terms } = api.term.list.useQuery();
+	const { data: classGroups } = api.classGroup.list.useQuery();
+	const { data: classes } = api.class.list.useQuery();
+	const { data: subjects } = api.subject.list.useQuery();
+	const { data: classrooms } = api.classroom.list.useQuery();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -85,19 +113,22 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 
 	const onSubmit = (data: z.infer<typeof formSchema>) => {
 		const formData = {
-			...data,
-			classGroupId: data.classGroupId === "none" ? undefined : data.classGroupId,
-			classId: data.classId === "none" ? undefined : data.classId,
-			periods: periods.map(period => ({
-				...period,
-				startTime: new Date(`1970-01-01T${period.startTime}`),
-				endTime: new Date(`1970-01-01T${period.endTime}`),
-				subjectId: period.subjectId === "none" ? undefined : period.subjectId,
-				classroomId: period.classroomId === "none" ? undefined : period.classroomId,
+		  ...data,
+		  classGroupId: data.classGroupId === "none" ? undefined : data.classGroupId,
+		  classId: data.classId === "none" ? undefined : data.classId,
+		  periods: periods
+			.filter(period => period.subjectId !== "none" && period.classroomId !== "none")
+			.map(period => ({
+			  ...period,
+			  startTime: new Date(`1970-01-01T${period.startTime}`),
+			  endTime: new Date(`1970-01-01T${period.endTime}`),
+			  subjectId: period.subjectId,
+			  classroomId: period.classroomId,
+			  dayOfWeek: period.dayOfWeek,
 			})),
 		};
 		createTimetable.mutate(formData);
-	};
+	  };
 
 	return (
 		<Form {...form}>
@@ -112,11 +143,16 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 								onValueChange={field.onChange}
 								defaultValue={field.value}
 							>
-								{terms?.map((term) => (
-									<option key={term.id} value={term.id}>
-										{term.name}
-									</option>
-								))}
+								<SelectTrigger>
+									<SelectValue placeholder="Select term" />
+								</SelectTrigger>
+								<SelectContent>
+									{terms?.map((term: Term) => (
+										<SelectItem key={term.id} value={term.id}>
+											{term.name}
+										</SelectItem>
+									))}
+								</SelectContent>
 							</Select>
 						</FormItem>
 					)}
@@ -132,12 +168,17 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 								onValueChange={field.onChange}
 								defaultValue={field.value}
 							>
-								<option value="none">Select Class Group</option>
-								{classGroups?.map((group) => (
-									<option key={group.id} value={group.id}>
-										{group.name}
-									</option>
-								))}
+								<SelectTrigger>
+									<SelectValue placeholder="Select class group" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">Select Class Group</SelectItem>
+									{classGroups?.map((group: ClassGroup) => (
+										<SelectItem key={group.id} value={group.id}>
+											{group.name}
+										</SelectItem>
+									))}
+								</SelectContent>
 							</Select>
 						</FormItem>
 					)}
@@ -153,12 +194,17 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 								onValueChange={field.onChange}
 								defaultValue={field.value}
 							>
-								<option value="none">Select Class</option>
-								{classes?.map((cls) => (
-									<option key={cls.id} value={cls.id}>
-										{cls.name}
-									</option>
-								))}
+								<SelectTrigger>
+									<SelectValue placeholder="Select class" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="none">Select Class</SelectItem>
+									{classes?.map((cls: Class) => (
+										<SelectItem key={cls.id} value={cls.id}>
+											{cls.name}
+										</SelectItem>
+									))}
+								</SelectContent>
 							</Select>
 						</FormItem>
 					)}
@@ -231,12 +277,17 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 											setPeriods(newPeriods);
 										}}
 									>
-										<option value="none">Select Subject</option>
-										{subjects?.map((subject) => (
-											<option key={subject.id} value={subject.id}>
-												{subject.name}
-											</option>
-										))}
+										<SelectTrigger>
+											<SelectValue placeholder="Select subject" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="none">Select Subject</SelectItem>
+											{subjects?.map((subject: Subject) => (
+												<SelectItem key={subject.id} value={subject.id}>
+													{subject.name}
+												</SelectItem>
+											))}
+										</SelectContent>
 									</Select>
 								</FormItem>
 
@@ -250,12 +301,17 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 											setPeriods(newPeriods);
 										}}
 									>
-										<option value="none">Select Classroom</option>
-										{classrooms?.map((classroom) => (
-											<option key={classroom.id} value={classroom.id}>
-												{classroom.name}
-											</option>
-										))}
+										<SelectTrigger>
+											<SelectValue placeholder="Select classroom" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="none">Select Classroom</SelectItem>
+											{classrooms?.map((classroom: Classroom) => (
+												<SelectItem key={classroom.id} value={classroom.id}>
+													{classroom.name}
+												</SelectItem>
+											))}
+										</SelectContent>
 									</Select>
 								</FormItem>
 
@@ -275,9 +331,9 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 					<Button type="button" variant="outline" onClick={onCancel}>
 						Cancel
 					</Button>
-					<Button type="submit" disabled={createTimetable.isLoading}>
-						Create Timetable
-					</Button>
+					<Button type="submit" disabled={createTimetable.isPending}>
+  Create Timetable
+</Button>
 				</div>
 			</form>
 		</Form>
