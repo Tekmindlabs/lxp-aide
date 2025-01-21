@@ -41,6 +41,11 @@ const menuItems: MenuItem[] = [
     icon: LuCalendar,
   },
   {
+    title: "Class Groups",
+    href: "/dashboard/super-admin/class-group", // Adjust this path as needed
+    icon: LuUsers, // You can choose an appropriate icon
+  },
+  {
     title: "Teachers",
     href: "/dashboard/super-admin/teacher",
     icon: LuUsers,
