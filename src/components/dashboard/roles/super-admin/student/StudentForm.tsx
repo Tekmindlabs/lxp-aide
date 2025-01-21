@@ -11,19 +11,22 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/utils/api";
 
+// First, modify the form schema to handle the date properly
 const formSchema = z.object({
 	name: z.string().min(1, "Name is required"),
 	email: z.string().email("Invalid email address"),
-	dateOfBirth: z.string().transform((str) => new Date(str)),
+	// Change this line to handle the date string first, then transform
+	dateOfBirth: z.string().min(1, "Date of birth is required"),
 	classId: z.string().optional(),
 	parentId: z.string().optional(),
 	guardianInfo: z.object({
-		name: z.string(),
-		relationship: z.string(),
-		contact: z.string(),
+	  name: z.string(),
+	  relationship: z.string(),
+	  contact: z.string(),
 	}).optional(),
 	status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]),
-});
+  });
+  
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -50,13 +53,16 @@ export const StudentForm = ({ selectedStudent, classes, onSuccess }: StudentForm
 	const form = useForm<FormValues>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
-			name: selectedStudent?.name || "",
-			email: selectedStudent?.email || "",
-			dateOfBirth: selectedStudent?.studentProfile.dateOfBirth.toISOString().split('T')[0] || "",
-			classId: selectedStudent?.studentProfile.class?.id || "",
-			status: selectedStudent?.status || Status.ACTIVE,
+		  name: selectedStudent?.name || "",
+		  email: selectedStudent?.email || "",
+		  // Format the date string properly
+		  dateOfBirth: selectedStudent?.studentProfile.dateOfBirth 
+			? new Date(selectedStudent.studentProfile.dateOfBirth).toISOString().split('T')[0] 
+			: "",
+		  classId: selectedStudent?.studentProfile.class?.id || "",
+		  status: selectedStudent?.status || Status.ACTIVE,
 		},
-	});
+	  });
 
 	const createStudent = api.student.createStudent.useMutation({
 		onSuccess: () => {
@@ -76,18 +82,23 @@ export const StudentForm = ({ selectedStudent, classes, onSuccess }: StudentForm
 	const onSubmit = async (values: FormValues) => {
 		setIsSubmitting(true);
 		try {
-			if (selectedStudent) {
-				await updateStudent.mutateAsync({
-					id: selectedStudent.id,
-					...values,
-				});
-			} else {
-				await createStudent.mutateAsync(values);
-			}
+		  const formData = {
+			...values,
+			dateOfBirth: new Date(values.dateOfBirth), // Transform to Date object here
+		  };
+	  
+		  if (selectedStudent) {
+			await updateStudent.mutateAsync({
+			  id: selectedStudent.id,
+			  ...formData,
+			});
+		  } else {
+			await createStudent.mutateAsync(formData);
+		  }
 		} finally {
-			setIsSubmitting(false);
+		  setIsSubmitting(false);
 		}
-	};
+	  };
 
 	return (
 		<Form {...form}>
@@ -120,44 +131,53 @@ export const StudentForm = ({ selectedStudent, classes, onSuccess }: StudentForm
 					)}
 				/>
 
-				<FormField
-					control={form.control}
-					name="dateOfBirth"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Date of Birth</FormLabel>
-							<FormControl>
-								<Input {...field} type="date" />
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+<FormField
+	control={form.control}
+	name="dateOfBirth"
+	render={({ field }) => (
+	  <FormItem>
+		<FormLabel>Date of Birth</FormLabel>
+		<FormControl>
+		  <Input 
+			type="date"
+			value={field.value}
+			onChange={field.onChange}
+			onBlur={field.onBlur}
+			name={field.name}
+		  />
+		</FormControl>
+		<FormMessage />
+	  </FormItem>
+	)}
+  />
 
-				<FormField
-					control={form.control}
-					name="classId"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Class</FormLabel>
-							<Select onValueChange={field.onChange} defaultValue={field.value}>
-								<FormControl>
-									<SelectTrigger>
-										<SelectValue placeholder="Select a class" />
-									</SelectTrigger>
-								</FormControl>
-								<SelectContent>
-									{classes.map((cls) => (
-										<SelectItem key={cls.id} value={cls.id}>
-											{`${cls.name} (${cls.classGroup.name})`}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+<FormField
+  control={form.control}
+  name="classId"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Class</FormLabel>
+      <Select 
+        onValueChange={field.onChange} 
+        value={field.value || undefined}  // Changed from defaultValue
+      >
+        <FormControl>
+          <SelectTrigger>
+            <SelectValue placeholder="Select a class" />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          {classes.map((cls) => (
+            <SelectItem key={cls.id} value={cls.id || "_empty"}>
+              {`${cls.name} (${cls.classGroup.name})`}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
 
 				<FormField
 					control={form.control}

@@ -171,6 +171,7 @@ export const TeacherForm = ({ selectedTeacher, subjects, classes, onSuccess }: T
   )}
 />
 
+// For subjectIds field
 <FormField
   control={form.control}
   name="subjectIds"
@@ -178,17 +179,28 @@ export const TeacherForm = ({ selectedTeacher, subjects, classes, onSuccess }: T
     <FormItem>
       <FormLabel>Subjects</FormLabel>
       <Select
-        value={field.value?.[0] || ''} // Add this line
         onValueChange={(value) => {
-          if (!value) return; // Add this check
+          if (!value) return;
           const currentValues = field.value || [];
           const newValues = currentValues.includes(value)
             ? currentValues.filter((v) => v !== value)
             : [...currentValues, value];
           field.onChange(newValues);
         }}
+        value={field.value?.[0] || undefined}  // Add this line
       >
-        {/* Rest of the code remains the same */}
+        <FormControl>
+          <SelectTrigger>
+            <SelectValue placeholder="Select subjects" />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          {subjects.map((subject) => (
+            <SelectItem key={subject.id} value={subject.id || "_empty"}>
+              {subject.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
       </Select>
       <FormMessage />
     </FormItem>

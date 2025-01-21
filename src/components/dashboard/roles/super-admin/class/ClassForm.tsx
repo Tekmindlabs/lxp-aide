@@ -98,30 +98,35 @@ export const ClassForm = ({ selectedClass, classGroups, teachers, onSuccess }: C
 					)}
 				/>
 
-				<FormField
-					control={form.control}
-					name="classGroupId"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Class Group</FormLabel>
-							<Select onValueChange={field.onChange} defaultValue={field.value}>
-								<FormControl>
-									<SelectTrigger>
-										<SelectValue placeholder="Select a class group" />
-									</SelectTrigger>
-								</FormControl>
-								<SelectContent>
-									{classGroups.map((group) => (
-										<SelectItem key={group.id} value={group.id}>
-											{group.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+// For classGroupId field
+<FormField
+  control={form.control}
+  name="classGroupId"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Class Group</FormLabel>
+      <Select 
+        onValueChange={field.onChange} 
+        value={field.value || undefined}  // Changed from defaultValue
+      >
+        <FormControl>
+          <SelectTrigger>
+            <SelectValue placeholder="Select a class group" />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          {classGroups.map((group) => (
+            <SelectItem key={group.id} value={group.id || "_empty"}>  // Added fallback
+              {group.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
 
 				<FormField
 					control={form.control}
@@ -141,30 +146,35 @@ export const ClassForm = ({ selectedClass, classGroups, teachers, onSuccess }: C
 					)}
 				/>
 
-				<FormField
-					control={form.control}
-					name="status"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Status</FormLabel>
-							<Select onValueChange={field.onChange} defaultValue={field.value}>
-								<FormControl>
-									<SelectTrigger>
-										<SelectValue placeholder="Select status" />
-									</SelectTrigger>
-								</FormControl>
-								<SelectContent>
-									{Object.values(Status).map((status) => (
-										<SelectItem key={status} value={status}>
-											{status}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
+// For status field
+<FormField
+  control={form.control}
+  name="status"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Status</FormLabel>
+      <Select 
+        onValueChange={field.onChange} 
+        value={field.value || Status.ACTIVE}  // Changed from defaultValue
+      >
+        <FormControl>
+          <SelectTrigger>
+            <SelectValue placeholder="Select status" />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          {Object.values(Status).map((status) => (
+            <SelectItem key={status} value={status}>
+              {status}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
 
 				<FormField
 					control={form.control}
