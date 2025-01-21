@@ -25,7 +25,7 @@ export const ClassGroupForm = ({ selectedClassGroup, programs, onSuccess }: Clas
 	const [formData, setFormData] = useState<ClassGroupFormData>(() => ({
 		name: selectedClassGroup?.name || "",
 		description: selectedClassGroup?.description || "",
-		programId: selectedClassGroup?.programId || "",
+		programId: selectedClassGroup?.programId || "none",
 		status: selectedClassGroup?.status || Status.ACTIVE,
 	}));
 
@@ -51,20 +51,25 @@ export const ClassGroupForm = ({ selectedClassGroup, programs, onSuccess }: Clas
 		setFormData({
 			name: "",
 			description: "",
-			programId: "",
+			programId: "none",
 			status: Status.ACTIVE,
 		});
 	};
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+		const submissionData = {
+			...formData,
+			programId: formData.programId === "none" ? undefined : formData.programId,
+		};
+
 		if (selectedClassGroup) {
 			updateMutation.mutate({
 				id: selectedClassGroup.id,
-				...formData,
+				...submissionData,
 			});
 		} else {
-			createMutation.mutate(formData);
+			createMutation.mutate(submissionData);
 		}
 	};
 
@@ -98,7 +103,7 @@ export const ClassGroupForm = ({ selectedClassGroup, programs, onSuccess }: Clas
 					className="w-full border p-2 rounded"
 					required
 				>
-					<option value="">Select Program</option>
+					<option value="none">Select Program</option>
 					{programs.map((program) => (
 						<option key={program.id} value={program.id}>
 							{program.name}

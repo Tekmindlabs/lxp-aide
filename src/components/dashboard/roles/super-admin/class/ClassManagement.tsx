@@ -46,14 +46,14 @@ export const ClassManagement = () => {
 								className="max-w-sm"
 							/>
 							<Select
-								value={filters.classGroupId}
-								onValueChange={(value) => setFilters({ ...filters, classGroupId: value })}
+								value={filters.classGroupId || "all"}
+								onValueChange={(value) => setFilters({ ...filters, classGroupId: value === "all" ? undefined : value })}
 							>
 								<SelectTrigger className="w-[200px]">
 									<SelectValue placeholder="Filter by Class Group" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">All Class Groups</SelectItem>
+									<SelectItem value="all">All Class Groups</SelectItem>
 									{classGroups?.map((group) => (
 										<SelectItem key={group.id} value={group.id}>
 											{group.name}
@@ -62,14 +62,14 @@ export const ClassManagement = () => {
 								</SelectContent>
 							</Select>
 							<Select
-								value={filters.teacherId}
-								onValueChange={(value) => setFilters({ ...filters, teacherId: value })}
+								value={filters.teacherId || "all"}
+								onValueChange={(value) => setFilters({ ...filters, teacherId: value === "all" ? undefined : value })}
 							>
 								<SelectTrigger className="w-[200px]">
 									<SelectValue placeholder="Filter by Teacher" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">All Teachers</SelectItem>
+									<SelectItem value="all">All Teachers</SelectItem>
 									{teachers?.map((teacher) => (
 										<SelectItem key={teacher.id} value={teacher.id}>
 											{teacher.user.name}
@@ -78,14 +78,14 @@ export const ClassManagement = () => {
 								</SelectContent>
 							</Select>
 							<Select
-								value={filters.status}
-								onValueChange={(value) => setFilters({ ...filters, status: value as Status })}
+								value={filters.status || "all"}
+								onValueChange={(value) => setFilters({ ...filters, status: value === "all" ? undefined : value as Status })}
 							>
 								<SelectTrigger className="w-[180px]">
 									<SelectValue placeholder="Status" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">All Status</SelectItem>
+									<SelectItem value="all">All Status</SelectItem>
 									{Object.values(Status).map((status) => (
 										<SelectItem key={status} value={status}>
 											{status}

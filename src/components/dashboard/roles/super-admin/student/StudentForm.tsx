@@ -15,17 +15,17 @@ import { api } from "@/utils/api";
 const formSchema = z.object({
 	name: z.string().min(1, "Name is required"),
 	email: z.string().email("Invalid email address"),
-	// Change this line to handle the date string first, then transform
 	dateOfBirth: z.string().min(1, "Date of birth is required"),
-	classId: z.string().optional(),
+	classId: z.string().transform(val => val === "none" ? undefined : val),
 	parentId: z.string().optional(),
 	guardianInfo: z.object({
-	  name: z.string(),
-	  relationship: z.string(),
-	  contact: z.string(),
+		name: z.string(),
+		relationship: z.string(),
+		contact: z.string(),
 	}).optional(),
 	status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]),
-  });
+});
+
   
 
 type FormValues = z.infer<typeof formSchema>;
@@ -152,32 +152,32 @@ export const StudentForm = ({ selectedStudent, classes, onSuccess }: StudentForm
   />
 
 <FormField
-  control={form.control}
-  name="classId"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Class</FormLabel>
-      <Select 
-        onValueChange={field.onChange} 
-        value={field.value || undefined}
-      >
-        <FormControl>
-          <SelectTrigger>
-            <SelectValue placeholder="Select a class" />
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent>
-          {classes.map((cls) => (
-            // Remove the "_empty" fallback and ensure cls.id is not empty
-            <SelectItem key={cls.id} value={cls.id}>
-              {`${cls.name} (${cls.classGroup.name})`}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <FormMessage />
-    </FormItem>
-  )}
+	control={form.control}
+	name="classId"
+	render={({ field }) => (
+		<FormItem>
+			<FormLabel>Class</FormLabel>
+			<Select 
+				onValueChange={field.onChange} 
+				value={field.value || "none"}
+			>
+				<FormControl>
+					<SelectTrigger>
+						<SelectValue placeholder="Select a class" />
+					</SelectTrigger>
+				</FormControl>
+				<SelectContent>
+					<SelectItem value="none">No Class</SelectItem>
+					{classes.map((cls) => (
+						<SelectItem key={cls.id} value={cls.id}>
+							{`${cls.name} (${cls.classGroup.name})`}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+			<FormMessage />
+		</FormItem>
+	)}
 />
 
 				<FormField
@@ -186,7 +186,7 @@ export const StudentForm = ({ selectedStudent, classes, onSuccess }: StudentForm
 					render={({ field }) => (
 						<FormItem>
 							<FormLabel>Status</FormLabel>
-							<Select onValueChange={field.onChange} defaultValue={field.value}>
+							<Select onValueChange={field.onChange} value={field.value}>
 								<FormControl>
 									<SelectTrigger>
 										<SelectValue placeholder="Select status" />

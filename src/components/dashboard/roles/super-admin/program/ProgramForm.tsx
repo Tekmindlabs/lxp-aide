@@ -28,7 +28,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 		name: selectedProgram?.name || "",
 		description: selectedProgram?.description || "",
 		level: selectedProgram?.level || "",
-		coordinatorId: selectedProgram?.coordinatorId || "",
+		coordinatorId: selectedProgram?.coordinatorId || "none",
 		status: selectedProgram?.status || Status.ACTIVE,
 	}));
 
@@ -55,20 +55,25 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 			name: "",
 			description: "",
 			level: "",
-			coordinatorId: "",
+			coordinatorId: "none",
 			status: Status.ACTIVE,
 		});
 	};
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+		const submissionData = {
+			...formData,
+			coordinatorId: formData.coordinatorId === "none" ? undefined : formData.coordinatorId,
+		};
+
 		if (selectedProgram) {
 			updateMutation.mutate({
 				id: selectedProgram.id,
-				...formData,
+				...submissionData,
 			});
 		} else {
-			createMutation.mutate(formData);
+			createMutation.mutate(submissionData);
 		}
 	};
 
@@ -111,7 +116,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 					onChange={(e) => setFormData({ ...formData, coordinatorId: e.target.value })}
 					className="w-full border p-2 rounded"
 				>
-					<option value="">Select Coordinator</option>
+					<option value="none">Select Coordinator</option>
 					{coordinators.map((coordinator) => (
 						<option key={coordinator.id} value={coordinator.id}>
 							{coordinator.user.name}

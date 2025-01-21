@@ -44,14 +44,14 @@ export const CoordinatorManagement = () => {
 								className="max-w-sm"
 							/>
 							<Select
-								value={filters.programId}
-								onValueChange={(value) => setFilters({ ...filters, programId: value })}
+								value={filters.programId || "all"}
+								onValueChange={(value) => setFilters({ ...filters, programId: value === "all" ? undefined : value })}
 							>
 								<SelectTrigger className="w-[200px]">
 									<SelectValue placeholder="Filter by Program" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">All Programs</SelectItem>
+									<SelectItem value="all">All Programs</SelectItem>
 									{programs?.map((program) => (
 										<SelectItem key={program.id} value={program.id}>
 											{program.name}
@@ -60,14 +60,14 @@ export const CoordinatorManagement = () => {
 								</SelectContent>
 							</Select>
 							<Select
-								value={filters.status}
-								onValueChange={(value) => setFilters({ ...filters, status: value as Status })}
+								value={filters.status || "all"}
+								onValueChange={(value) => setFilters({ ...filters, status: value === "all" ? undefined : value as Status })}
 							>
 								<SelectTrigger className="w-[180px]">
 									<SelectValue placeholder="Status" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="">All Status</SelectItem>
+									<SelectItem value="all">All Status</SelectItem>
 									{Object.values(Status).map((status) => (
 										<SelectItem key={status} value={status}>
 											{status}

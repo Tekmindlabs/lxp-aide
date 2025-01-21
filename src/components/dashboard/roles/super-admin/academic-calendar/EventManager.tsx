@@ -40,7 +40,7 @@ export const EventManager = ({ academicYears, filteredEvents }: EventManagerProp
 		eventType: EventType.ACADEMIC,
 		startDate: new Date(),
 		endDate: new Date(),
-		academicYearId: "",
+		academicYearId: "none",
 		status: Status.ACTIVE,
 		isRecurring: false,
 	  });
@@ -72,7 +72,7 @@ export const EventManager = ({ academicYears, filteredEvents }: EventManagerProp
 			eventType: EventType.ACADEMIC,
 			startDate: new Date(),
 			endDate: new Date(),
-			academicYearId: "",
+			academicYearId: "none",
 			status: Status.ACTIVE,
 			isRecurring: false,
 		});
@@ -111,11 +111,16 @@ export const EventManager = ({ academicYears, filteredEvents }: EventManagerProp
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+		const submissionData = {
+			...formData,
+			academicYearId: formData.academicYearId === "none" ? undefined : formData.academicYearId,
+		};
+
 		if (formData.isRecurring && formData.recurrencePattern) {
-			const events = generateRecurringEvents(formData);
+			const events = generateRecurringEvents(submissionData);
 			events.forEach(event => createMutation.mutate(event));
 		} else {
-			createMutation.mutate(formData);
+			createMutation.mutate(submissionData);
 		}
 	};
 
@@ -157,7 +162,7 @@ export const EventManager = ({ academicYears, filteredEvents }: EventManagerProp
 								className="w-full border p-2 rounded"
 								required
 							  >
-								<option value="">Select Academic Year</option>
+								<option value="none">Select Academic Year</option>
 								{academicYears.map((year) => (
 								  <option key={year.id} value={year.id}>
 									{year.name}

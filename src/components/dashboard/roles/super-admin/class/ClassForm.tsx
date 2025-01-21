@@ -151,7 +151,7 @@ export const ClassForm = ({ selectedClass, classGroups, teachers, onSuccess }: C
 					)}
 				/>
 
-// For status field
+
 <FormField
   control={form.control}
   name="status"

@@ -50,10 +50,10 @@ export default function NotificationDashboard() {
 									onChange={setDateRange}
 								/>
 								<Select
-									value={type}
-									onValueChange={(value) => setType(value as any)}
+									value={type || "all"}
+									onValueChange={(value) => setType(value === "all" ? undefined : value as any)}
 								>
-									<option value="">All Types</option>
+									<option value="all">All Types</option>
 									<option value="ANNOUNCEMENT">Announcements</option>
 									<option value="ASSIGNMENT">Assignments</option>
 									<option value="GRADE">Grades</option>

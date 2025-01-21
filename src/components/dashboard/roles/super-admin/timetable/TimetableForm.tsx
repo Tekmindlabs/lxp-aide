@@ -73,8 +73,8 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 				startTime: "",
 				endTime: "",
 				dayOfWeek: 1,
-				subjectId: "",
-				classroomId: "",
+				subjectId: "none",
+				classroomId: "none",
 			},
 		]);
 	};
@@ -84,14 +84,19 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 	};
 
 	const onSubmit = (data: z.infer<typeof formSchema>) => {
-		createTimetable.mutate({
+		const formData = {
 			...data,
+			classGroupId: data.classGroupId === "none" ? undefined : data.classGroupId,
+			classId: data.classId === "none" ? undefined : data.classId,
 			periods: periods.map(period => ({
 				...period,
 				startTime: new Date(`1970-01-01T${period.startTime}`),
 				endTime: new Date(`1970-01-01T${period.endTime}`),
+				subjectId: period.subjectId === "none" ? undefined : period.subjectId,
+				classroomId: period.classroomId === "none" ? undefined : period.classroomId,
 			})),
-		});
+		};
+		createTimetable.mutate(formData);
 	};
 
 	return (
@@ -127,7 +132,7 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 								onValueChange={field.onChange}
 								defaultValue={field.value}
 							>
-								<option value="">Select Class Group</option>
+								<option value="none">Select Class Group</option>
 								{classGroups?.map((group) => (
 									<option key={group.id} value={group.id}>
 										{group.name}
@@ -148,7 +153,7 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 								onValueChange={field.onChange}
 								defaultValue={field.value}
 							>
-								<option value="">Select Class</option>
+								<option value="none">Select Class</option>
 								{classes?.map((cls) => (
 									<option key={cls.id} value={cls.id}>
 										{cls.name}
@@ -226,7 +231,7 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 											setPeriods(newPeriods);
 										}}
 									>
-										<option value="">Select Subject</option>
+										<option value="none">Select Subject</option>
 										{subjects?.map((subject) => (
 											<option key={subject.id} value={subject.id}>
 												{subject.name}
@@ -245,7 +250,7 @@ export default function TimetableForm({ onCancel }: TimetableFormProps) {
 											setPeriods(newPeriods);
 										}}
 									>
-										<option value="">Select Classroom</option>
+										<option value="none">Select Classroom</option>
 										{classrooms?.map((classroom) => (
 											<option key={classroom.id} value={classroom.id}>
 												{classroom.name}
