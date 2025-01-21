@@ -7,13 +7,18 @@ export default function DashboardLayout({
 	children: React.ReactNode;
 	params: { role: string };
   }) {
-	console.log("Current role:", params.role); // Debug log
+	console.log("Current role:", params.role);
+	console.log("Role comparison:", {
+	  role: params.role,
+	  isLowerCase: params.role.toLowerCase(),
+	  matches: params.role.toLowerCase() === "super-admin"
+	});
 	
 	const sidebar = params.role.toLowerCase() === "super-admin" ? (
-	  <div className="flex w-64 flex-col border-r">
-		<SuperAdminSidebar />
-	  </div>
-	) : null;
+		<div className="flex w-64 flex-col border-r">
+		  <SuperAdminSidebar />
+		</div>
+	  ) : null;
   
 	return (
 	  <div className="flex min-h-screen">
