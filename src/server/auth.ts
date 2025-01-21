@@ -163,5 +163,8 @@ export const authOptions: NextAuthOptions = {
 
 export const getServerAuthSession = async () => {
   const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    throw new Error("Unauthorized");
+  }
   return session;
 };

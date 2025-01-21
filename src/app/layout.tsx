@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { Providers } from '@/components/providers'
 import { ConsentBanner } from '@/components/gdpr/consent-banner'
+import { getServerAuthSession } from '@/server/auth'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -11,11 +12,13 @@ export const metadata: Metadata = {
   description: 'A scalable and type-safe RBAC system built with modern web technologies',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await getServerAuthSession();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -27,7 +30,7 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className} suppressHydrationWarning>
-        <Providers>
+        <Providers session={session}>
           {children}
           <ConsentBanner />
         </Providers>

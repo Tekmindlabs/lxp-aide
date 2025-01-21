@@ -5,13 +5,20 @@ import { getServerAuthSession } from "@/server/auth";
 import { prisma } from "@/server/db";
 
 export const createTRPCContext = async (opts: { req: Request }) => {
-  const session = await getServerAuthSession();
-
-  return {
-    prisma,
-    session,
-  };
+  try {
+    const session = await getServerAuthSession();
+    return {
+      prisma,
+      session,
+    };
+  } catch (error) {
+    return {
+      prisma,
+      session: null,
+    };
+  }
 };
+
 
 
 const t = initTRPC.context<typeof createTRPCContext>().create({
