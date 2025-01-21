@@ -1,0 +1,129 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Status } from "@prisma/client";
+import { api } from "@/utils/api";
+import { StudentList } from "./StudentList";
+import { StudentForm } from "./StudentForm";
+import { StudentDetails } from "./StudentDetails";
+
+interface SearchFilters {
+	search: string;
+	classId?: string;
+	programId?: string;
+	status?: Status;
+}
+
+export const StudentManagement = () => {
+	const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+	const [showDetails, setShowDetails] = useState(false);
+	const [filters, setFilters] = useState<SearchFilters>({
+		search: "",
+	});
+
+	const { data: students, isLoading } = api.student.searchStudents.useQuery(filters);
+	const { data: classes } = api.class.searchClasses.useQuery({});
+	const { data: programs } = api.program.getAllPrograms.useQuery();
+
+	if (isLoading) {
+		return <div>Loading...</div>;
+	}
+
+	return (
+		<div className="space-y-4">
+			<Card>
+				<CardHeader>
+					<CardTitle>Student Management</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<div className="mb-6 space-y-4">
+						<div className="flex space-x-4">
+							<Input
+								placeholder="Search students..."
+								value={filters.search}
+								onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+								className="max-w-sm"
+							/>
+							<Select
+								value={filters.programId}
+								onValueChange={(value) => setFilters({ ...filters, programId: value })}
+							>
+								<SelectTrigger className="w-[200px]">
+									<SelectValue placeholder="Filter by Program" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="">All Programs</SelectItem>
+									{programs?.map((program) => (
+										<SelectItem key={program.id} value={program.id}>
+											{program.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<Select
+								value={filters.classId}
+								onValueChange={(value) => setFilters({ ...filters, classId: value })}
+							>
+								<SelectTrigger className="w-[200px]">
+									<SelectValue placeholder="Filter by Class" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="">All Classes</SelectItem>
+									{classes?.map((cls) => (
+										<SelectItem key={cls.id} value={cls.id}>
+											{cls.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<Select
+								value={filters.status}
+								onValueChange={(value) => setFilters({ ...filters, status: value as Status })}
+							>
+								<SelectTrigger className="w-[180px]">
+									<SelectValue placeholder="Status" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="">All Status</SelectItem>
+									{Object.values(Status).map((status) => (
+										<SelectItem key={status} value={status}>
+											{status}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
+
+					<div className="space-y-4">
+						{showDetails && selectedStudentId ? (
+							<StudentDetails 
+								studentId={selectedStudentId}
+								onBack={() => {
+									setShowDetails(false);
+									setSelectedStudentId(null);
+								}}
+							/>
+						) : (
+							<>
+								<StudentList 
+									students={students || []} 
+									onSelect={(id) => {
+										setSelectedStudentId(id);
+										setShowDetails(true);
+									}}
+								/>
+								<StudentForm 
+									selectedStudent={students?.find(s => s.id === selectedStudentId)}
+									classes={classes || []}
+									onSuccess={() => setSelectedStudentId(null)}
+								/>
+							</>
+						)}
+					</div>
+				</CardContent>
+			</Card>
+		</div>
+	);
+};

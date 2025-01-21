@@ -1,0 +1,286 @@
+import { z } from "zod";
+import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { TRPCError } from "@trpc/server";
+import { NotificationType, UserType } from "@prisma/client";
+
+export const notificationRouter = createTRPCRouter({
+	create: protectedProcedure
+		.input(
+			z.object({
+				title: z.string(),
+				content: z.string(),
+				type: z.enum(["ANNOUNCEMENT", "ASSIGNMENT", "GRADE", "REMINDER", "SYSTEM"]),
+				scheduledFor: z.date().optional(),
+				recipients: z.object({
+					programIds: z.array(z.string()).optional(),
+					classGroupIds: z.array(z.string()).optional(),
+					classIds: z.array(z.string()).optional(),
+					userIds: z.array(z.string()).optional(),
+				}),
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			// Check user permissions based on role
+			const user = await ctx.db.user.findUnique({
+				where: { id: ctx.session.user.id },
+				include: {
+					userRoles: {
+						include: { role: true },
+					},
+					coordinatorProfile: {
+						include: { programs: true },
+					},
+					teacherProfile: {
+						include: { classes: true },
+					},
+				},
+			});
+
+			if (!user) {
+				throw new TRPCError({
+					code: "UNAUTHORIZED",
+					message: "User not found",
+				});
+			}
+
+			// Get all recipient users based on the hierarchical structure
+			const recipientUsers = new Set<string>();
+
+			// Add directly specified users
+			if (input.recipients.userIds) {
+				input.recipients.userIds.forEach((id) => recipientUsers.add(id));
+			}
+
+			// Add users from programs (if user is admin or coordinator of these programs)
+			if (input.recipients.programIds) {
+				const programs = await ctx.db.program.findMany({
+					where: {
+						id: { in: input.recipients.programIds },
+						OR: [
+							{
+								coordinatorId: user.coordinatorProfile?.id,
+							},
+							{
+								// Admin can send to any program
+								id: user.userType === "ADMIN" ? undefined : null,
+							},
+						],
+					},
+					include: {
+						classGroups: {
+							include: {
+								classes: {
+									include: {
+										students: {
+											include: { user: true },
+										},
+										teachers: {
+											include: { teacher: { include: { user: true } } },
+										},
+									},
+								},
+							},
+						},
+					},
+				});
+
+				programs.forEach((program) => {
+					program.classGroups.forEach((group) => {
+						group.classes.forEach((cls) => {
+							cls.students.forEach((student) => recipientUsers.add(student.userId));
+							cls.teachers.forEach((teacher) => recipientUsers.add(teacher.teacher.userId));
+						});
+					});
+				});
+			}
+
+			// Add users from class groups
+			if (input.recipients.classGroupIds) {
+				const classGroups = await ctx.db.classGroup.findMany({
+					where: {
+						id: { in: input.recipients.classGroupIds },
+						program: user.coordinatorProfile
+							? { coordinatorId: user.coordinatorProfile.id }
+							: undefined,
+					},
+					include: {
+						classes: {
+							include: {
+								students: {
+									include: { user: true },
+								},
+								teachers: {
+									include: { teacher: { include: { user: true } } },
+								},
+							},
+						},
+					},
+				});
+
+				classGroups.forEach((group) => {
+					group.classes.forEach((cls) => {
+						cls.students.forEach((student) => recipientUsers.add(student.userId));
+						cls.teachers.forEach((teacher) => recipientUsers.add(teacher.teacher.userId));
+					});
+				});
+			}
+
+			// Add users from classes
+			if (input.recipients.classIds) {
+				const classes = await ctx.db.class.findMany({
+					where: {
+						id: { in: input.recipients.classIds },
+						teachers: user.teacherProfile
+							? { some: { teacherId: user.teacherProfile.id } }
+							: undefined,
+					},
+					include: {
+						students: {
+							include: { user: true },
+						},
+						teachers: {
+							include: { teacher: { include: { user: true } } },
+						},
+					},
+				});
+
+				classes.forEach((cls) => {
+					cls.students.forEach((student) => recipientUsers.add(student.userId));
+					cls.teachers.forEach((teacher) => recipientUsers.add(teacher.teacher.userId));
+				});
+			}
+
+			// Create the notification
+			const notification = await ctx.db.notification.create({
+				data: {
+					title: input.title,
+					content: input.content,
+					type: input.type,
+					senderId: ctx.session.user.id,
+					recipients: {
+						create: Array.from(recipientUsers).map((userId) => ({
+							recipientId: userId,
+						})),
+					},
+				},
+				include: {
+					sender: true,
+					recipients: {
+						include: {
+							recipient: true,
+						},
+					},
+				},
+			});
+
+			return notification;
+		}),
+
+	getAll: protectedProcedure
+		.input(
+			z.object({
+				type: z.enum(["SENT", "RECEIVED"]).default("RECEIVED"),
+				filters: z
+					.object({
+						type: z.enum(["ANNOUNCEMENT", "ASSIGNMENT", "GRADE", "REMINDER", "SYSTEM"]).optional(),
+						startDate: z.date().optional(),
+						endDate: z.date().optional(),
+						read: z.boolean().optional(),
+					})
+					.optional(),
+			})
+		)
+		.query(async ({ ctx, input }) => {
+			if (input.type === "SENT") {
+				return ctx.db.notification.findMany({
+					where: {
+						senderId: ctx.session.user.id,
+						type: input.filters?.type,
+						createdAt: {
+							gte: input.filters?.startDate,
+							lte: input.filters?.endDate,
+						},
+					},
+					include: {
+						sender: true,
+						recipients: {
+							include: {
+								recipient: true,
+							},
+						},
+					},
+					orderBy: {
+						createdAt: "desc",
+					},
+				});
+			}
+
+			return ctx.db.notification.findMany({
+				where: {
+					recipients: {
+						some: {
+							recipientId: ctx.session.user.id,
+							read: input.filters?.read,
+						},
+					},
+					type: input.filters?.type,
+					createdAt: {
+						gte: input.filters?.startDate,
+						lte: input.filters?.endDate,
+					},
+				},
+				include: {
+					sender: true,
+					recipients: {
+						include: {
+							recipient: true,
+						},
+					},
+				},
+				orderBy: {
+					createdAt: "desc",
+				},
+			});
+		}),
+
+	markAsRead: protectedProcedure
+		.input(z.string())
+		.mutation(async ({ ctx, input }) => {
+			await ctx.db.notificationRecipient.updateMany({
+				where: {
+					notificationId: input,
+					recipientId: ctx.session.user.id,
+				},
+				data: {
+					read: true,
+					readAt: new Date(),
+				},
+			});
+		}),
+
+	delete: protectedProcedure
+		.input(z.string())
+		.mutation(async ({ ctx, input }) => {
+			const notification = await ctx.db.notification.findUnique({
+				where: { id: input },
+			});
+
+			if (!notification) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Notification not found",
+				});
+			}
+
+			if (notification.senderId !== ctx.session.user.id) {
+				throw new TRPCError({
+					code: "FORBIDDEN",
+					message: "You can only delete notifications you sent",
+				});
+			}
+
+			await ctx.db.notification.delete({
+				where: { id: input },
+			});
+		}),
+});
