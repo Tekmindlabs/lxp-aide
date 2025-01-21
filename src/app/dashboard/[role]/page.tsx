@@ -10,12 +10,21 @@ export default async function RoleDashboard({
   params: { role: string };
 }) {
   const session = await getServerSession(authOptions);
+  
+  // Add debugging
+  console.log({
+    sessionExists: !!session,
+    userRoles: session?.user?.roles,
+    currentRole: params.role
+  });
 
   if (!session?.user) {
     redirect("/auth/signin");
   }
 
-  if (!session.user.roles.includes(params.role)) {
+  // Make role check case insensitive
+  if (!session.user.roles.map(r => r.toLowerCase())
+      .includes(params.role.toLowerCase())) {
     redirect(`/dashboard/${session.user.roles[0]}`);
   }
 
