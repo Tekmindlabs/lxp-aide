@@ -1,24 +1,24 @@
 "use client";
 
-
 import { type FC, useState } from "react";
-import { api } from "@/utils/api";
+import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
-import { type RouterOutputs } from "@/utils/api";
+import { type RouterOutputs } from "@/trpc/react";
+import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type Classroom = RouterOutputs["classroom"]["getById"];
 type Period = RouterOutputs["classroom"]["getAvailability"][number];
 
 interface ClassroomViewProps {
 	classroomId: string;
-	onBack: () => void;
 	onEdit: () => void;
 }
 
-const ClassroomView: FC<ClassroomViewProps> = ({ classroomId, onBack, onEdit }) => {
+const ClassroomView: FC<ClassroomViewProps> = ({ classroomId, onEdit }) => {
+
 	const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 	
 	const { data: classroom, isLoading: classroomLoading } = api.classroom.getById.useQuery(classroomId);
@@ -36,18 +36,18 @@ const ClassroomView: FC<ClassroomViewProps> = ({ classroomId, onBack, onEdit }) 
 	}
 
 	return (
-		<div className="space-y-4">
-			<div className="flex items-center justify-between">
-				<Button onClick={onBack} variant="outline">
-					Back
-				</Button>
-				<h2 className="text-2xl font-bold">{classroom.name}</h2>
-				<Button onClick={onEdit}>
-					Edit Classroom
-				</Button>
-			</div>
+		<DialogContent className="max-w-4xl">
+			<DialogHeader>
+				<div className="flex items-center justify-between">
+					<DialogTitle className="text-2xl font-bold">{classroom?.name}</DialogTitle>
+					<Button onClick={onEdit}>
+						Edit Classroom
+					</Button>
+				</div>
+			</DialogHeader>
 
 			<div className="grid gap-4 md:grid-cols-2">
+
 				<Card>
 					<CardHeader>
 						<CardTitle>Classroom Details</CardTitle>
@@ -126,7 +126,7 @@ const ClassroomView: FC<ClassroomViewProps> = ({ classroomId, onBack, onEdit }) 
 					</CardContent>
 				</Card>
 			</div>
-		</div>
+		</DialogContent>
 	);
 };
 

@@ -8,6 +8,8 @@ import { Status } from "@prisma/client";
 import { api } from "@/utils/api";
 import { TeacherList } from "./TeacherList";
 import { TeacherForm } from "./TeacherForm";
+import { TeacherView } from "./TeacherView";
+import { Button } from "@/components/ui/button";
 import { UserType } from "@/types/user";
 
 // Define interfaces for the component
@@ -57,6 +59,8 @@ interface SearchFilters {
 
 export const TeacherManagement = () => {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
     search: "",
     subjectId: "all",
@@ -77,6 +81,21 @@ export const TeacherManagement = () => {
   const { data: subjects } = api.subject.searchSubjects.useQuery({});
   const { data: classes } = api.class.searchClasses.useQuery({});
 
+  const handleEdit = (id: string) => {
+    setSelectedTeacherId(id);
+    setIsFormOpen(true);
+  };
+
+  const handleCreate = () => {
+    setSelectedTeacherId(null);
+    setIsFormOpen(true);
+  };
+
+  const handleView = (id: string) => {
+    setSelectedTeacherId(id);
+    setIsViewOpen(true);
+  };
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -84,8 +103,9 @@ export const TeacherManagement = () => {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Teacher Management</CardTitle>
+          <Button onClick={handleCreate}>Create Teacher</Button>
         </CardHeader>
         <CardContent>
           <div className="mb-6 space-y-4">
@@ -150,14 +170,27 @@ export const TeacherManagement = () => {
           <div className="space-y-4">
             <TeacherList 
               teachers={teachers || []} 
-              onSelect={setSelectedTeacherId}
+              onSelect={handleView}
+              onEdit={handleEdit}
             />
             <TeacherForm 
+              isOpen={isFormOpen}
+              onClose={() => setIsFormOpen(false)}
               selectedTeacher={teachers?.find((t: Teacher) => t.id === selectedTeacherId)}
               subjects={subjects || []}
               classes={classes || []}
-              onSuccess={() => setSelectedTeacherId(null)}
             />
+            {selectedTeacherId && (
+              <TeacherView
+              isOpen={isViewOpen}
+              onClose={() => setIsViewOpen(false)}
+              teacherId={selectedTeacherId}
+              onEdit={() => {
+                setIsViewOpen(false);
+                handleEdit(selectedTeacherId);
+              }}
+              />
+            )}
           </div>
         </CardContent>
       </Card>

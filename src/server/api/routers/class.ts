@@ -189,4 +189,57 @@ export const classRouter = createTRPCRouter({
 				},
 			});
 		}),
+
+	getClassDetails: protectedProcedure
+		.input(z.object({
+			id: z.string(),
+		}))
+		.query(async ({ ctx, input }) => {
+			return ctx.prisma.class.findUnique({
+				where: { id: input.id },
+				include: {
+					classGroup: {
+						include: {
+							program: true,
+						},
+					},
+					teachers: {
+						include: {
+							teacher: {
+								include: {
+									user: true,
+								},
+							},
+						},
+					},
+					students: {
+						include: {
+							user: true,
+							activities: {
+								select: {
+									status: true,
+									grade: true,
+								},
+							},
+							attendance: {
+								select: {
+									status: true,
+									date: true,
+								},
+							},
+						},
+					},
+					activities: {
+						include: {
+							submissions: true,
+						},
+					},
+					timetable: {
+						include: {
+							periods: true,
+						},
+					},
+				},
+			});
+		}),
 });

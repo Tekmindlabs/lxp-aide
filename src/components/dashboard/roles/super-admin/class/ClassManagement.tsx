@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Status } from "@prisma/client";
-import { api } from "@/utils/api";
+import { api } from "@/trpc/react";
 import { ClassList } from "./ClassList";
 import { ClassForm } from "./ClassForm";
 
@@ -18,6 +19,7 @@ interface SearchFilters {
 
 export const ClassManagement = () => {
 	const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [filters, setFilters] = useState<SearchFilters>({
 		search: "",
 	});
@@ -26,6 +28,16 @@ export const ClassManagement = () => {
 	const { data: classGroups } = api.classGroup.getAllClassGroups.useQuery();
 	const { data: teachers } = api.subject.getAvailableTeachers.useQuery();
 
+	const handleEdit = (id: string) => {
+		setSelectedClassId(id);
+		setIsFormOpen(true);
+	};
+
+	const handleCreate = () => {
+		setSelectedClassId(null);
+		setIsFormOpen(true);
+	};
+
 	if (isLoading) {
 		return <div>Loading...</div>;
 	}
@@ -33,8 +45,9 @@ export const ClassManagement = () => {
 	return (
 		<div className="space-y-4">
 			<Card>
-				<CardHeader>
+				<CardHeader className="flex flex-row items-center justify-between">
 					<CardTitle>Class Management</CardTitle>
+					<Button onClick={handleCreate}>Create Class</Button>
 				</CardHeader>
 				<CardContent>
 					<div className="mb-6 space-y-4">
@@ -99,13 +112,14 @@ export const ClassManagement = () => {
 					<div className="space-y-4">
 						<ClassList 
 							classes={classes || []} 
-							onSelect={setSelectedClassId}
+							onSelect={handleEdit}
 						/>
 						<ClassForm 
+							isOpen={isFormOpen}
+							onClose={() => setIsFormOpen(false)}
 							selectedClass={classes?.find(c => c.id === selectedClassId)}
 							classGroups={classGroups || []}
 							teachers={teachers || []}
-							onSuccess={() => setSelectedClassId(null)}
 						/>
 					</div>
 				</CardContent>

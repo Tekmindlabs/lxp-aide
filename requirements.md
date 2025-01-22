@@ -530,11 +530,13 @@ Manage subject-specific templates for assignments, tests, and lesson plans.
 10. Teacher Collaboration
 Shared Feature for Both Roles:
 Share teaching resources, ideas, and feedback with other teachers.
-Collaborate on interdisciplinary projects.
+Collaborate on interdisciplinpm nary projects.
 Class Teachers:
 Coordinate with subject teachers to align teaching goals and class progress.
 Subject Teachers:
 Collaborate with other subject specialists to maintain curriculum standards.
+
+
 Non-Functional Requirements
 1. Usability
 Intuitive interface designed for role-specific workflows.

@@ -27,67 +27,72 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   {
     title: "Dashboard",
-    href: "/dashboard/super-admin",
+    href: "/dashboard/super_admin",
     icon: LuLayoutDashboard,
   },
   {
     title: "Programs",
-    href: "/dashboard/super-admin/program",
+    href: "/dashboard/super_admin/program",
     icon: LuGraduationCap,
   },
   {
     title: "Academic Calendar",
-    href: "/dashboard/super-admin/academic-calendar",
+    href: "/dashboard/super_admin/academic-calendar",
     icon: LuCalendar,
   },
   {
     title: "Class Groups",
-    href: "/dashboard/super-admin/class-group", // Adjust this path as needed
-    icon: LuUsers, // You can choose an appropriate icon
-  },
-  {
-    title: "Teachers",
-    href: "/dashboard/super-admin/teacher",
-    icon: LuUsers,
-  },
-  {
-    title: "Students",
-    href: "/dashboard/super-admin/student",
+    href: "/dashboard/super_admin/class-group",
     icon: LuUsers,
   },
   {
     title: "Classes",
-    href: "/dashboard/super-admin/class",
+    href: "/dashboard/super_admin/class",
+    icon: LuBookOpen,
+  },
+  {
+    title: "Teachers",
+    href: "/dashboard/super_admin/teacher",
+    icon: LuUsers,
+  },
+  {
+    title: "Students",
+    href: "/dashboard/super_admin/student",
+    icon: LuUsers,
+  },
+  {
+    title: "Subjects",
+    href: "/dashboard/super_admin/subject",
     icon: LuBookOpen,
   },
   {
     title: "Timetables",
-    href: "/dashboard/super-admin/timetable",
+    href: "/dashboard/super_admin/timetable",
     icon: LuClock,
   },
   {
     title: "Classrooms",
-    href: "/dashboard/super-admin/classroom",
+    href: "/dashboard/super_admin/classroom",
     icon: LuHouse,
   },
   {
-    title: "User Management",
-    href: "/dashboard/super-admin/users",
+    title: "Users",
+    href: "/dashboard/super_admin/users",
     icon: LuUsers,
   },
   {
     title: "Messages",
-    href: "/dashboard/super-admin/messaging",
+    href: "/dashboard/super_admin/messaging",
     icon: LuMessageSquare,
   },
   {
     title: "Notifications",
-    href: "/dashboard/super-admin/notification",
+    href: "/dashboard/super_admin/notification",
     icon: LuBell,
   },
   {
     title: "Settings",
-    href: "/dashboard/super-admin/settings",
+    href: "/dashboard/super_admin/settings",
     icon: LuSettings,
   },
 ];

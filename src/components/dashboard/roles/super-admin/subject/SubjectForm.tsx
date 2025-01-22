@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 import { api } from "@/utils/api";
 import { Status } from "@prisma/client";
 
@@ -40,21 +43,44 @@ export const SubjectForm = ({
 		status: selectedSubject?.status || Status.ACTIVE,
 	}));
 
+	const { toast } = useToast();
 	const utils = api.useContext();
 
 	const createMutation = api.subject.createSubject.useMutation({
 		onSuccess: () => {
+			toast({
+				title: "Success",
+				description: "Subject created successfully",
+			});
 			utils.subject.searchSubjects.invalidate();
 			resetForm();
 			onSuccess();
+		},
+		onError: (error) => {
+			toast({
+				title: "Error",
+				description: error.message,
+				variant: "destructive",
+			});
 		},
 	});
 
 	const updateMutation = api.subject.updateSubject.useMutation({
 		onSuccess: () => {
+			toast({
+				title: "Success",
+				description: "Subject updated successfully",
+			});
 			utils.subject.searchSubjects.invalidate();
 			resetForm();
 			onSuccess();
+		},
+		onError: (error) => {
+			toast({
+				title: "Error",
+				description: error.message,
+				variant: "destructive",
+			});
 		},
 	});
 
@@ -82,81 +108,94 @@ export const SubjectForm = ({
 	};
 
 	return (
-		<form onSubmit={handleSubmit} className="space-y-4">
-			<div>
-				<Label htmlFor="name">Name</Label>
-				<Input
-					id="name"
-					value={formData.name}
-					onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-					required
-				/>
-			</div>
+		<DialogContent>
+			<DialogHeader>
+				<DialogTitle>{selectedSubject ? "Edit" : "Create"} Subject</DialogTitle>
+			</DialogHeader>
+			<form onSubmit={handleSubmit} className="space-y-4">
+				<div>
+					<Label htmlFor="name">Name</Label>
+					<Input
+						id="name"
+						value={formData.name}
+						onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+						required
+					/>
+				</div>
 
-			<div>
-				<Label htmlFor="code">Code</Label>
-				<Input
-					id="code"
-					value={formData.code}
-					onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-					required
-				/>
-			</div>
+				<div>
+					<Label htmlFor="code">Code</Label>
+					<Input
+						id="code"
+						value={formData.code}
+						onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+						required
+					/>
+				</div>
 
-			<div>
-				<Label htmlFor="description">Description</Label>
-				<Textarea
-					id="description"
-					value={formData.description}
-					onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-				/>
-			</div>
+				<div>
+					<Label htmlFor="description">Description</Label>
+					<Textarea
+						id="description"
+						value={formData.description}
+						onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+					/>
+				</div>
 
-			<div>
-				<Label>Class Groups</Label>
-				<MultiSelect
-					options={classGroups.map(group => ({
-						label: `${group.name} (${group.program.name})`,
-						value: group.id,
-					}))}
-					selected={formData.classGroupIds}
-					onChange={(values) => setFormData({ ...formData, classGroupIds: values })}
-					placeholder="Select class groups"
-				/>
-			</div>
+				<div>
+					<Label>Class Groups</Label>
+					<MultiSelect
+						options={classGroups.map(group => ({
+							label: `${group.name} (${group.program.name})`,
+							value: group.id,
+						}))}
+						selected={formData.classGroupIds}
+						onChange={(values) => setFormData({ ...formData, classGroupIds: values })}
+						placeholder="Select class groups"
+					/>
+				</div>
 
-			<div>
-				<Label>Teachers</Label>
-				<MultiSelect
-					options={teachers.map(teacher => ({
-						label: teacher.user.name || "Unnamed Teacher",
-						value: teacher.id,
-					}))}
-					selected={formData.teacherIds}
-					onChange={(values) => setFormData({ ...formData, teacherIds: values })}
-					placeholder="Select teachers"
-				/>
-			</div>
+				<div>
+					<Label>Teachers</Label>
+					<MultiSelect
+						options={teachers.map(teacher => ({
+							label: teacher.user.name || "Unnamed Teacher",
+							value: teacher.id,
+						}))}
+						selected={formData.teacherIds}
+						onChange={(values) => setFormData({ ...formData, teacherIds: values })}
+						placeholder="Select teachers"
+					/>
+				</div>
 
-			<div>
-				<Label htmlFor="status">Status</Label>
-				<select
-					id="status"
-					value={formData.status}
-					onChange={(e) => setFormData({ ...formData, status: e.target.value as Status })}
-					className="w-full border p-2 rounded"
-				>
-					{Object.values(Status).map((status) => (
-						<option key={status} value={status}>
-							{status}
-						</option>
-					))}
-				</select>
-			</div>
+				<div>
+					<Label htmlFor="status">Status</Label>
+					<Select
+						value={formData.status}
+						onValueChange={(value) => setFormData({ ...formData, status: value as Status })}
+					>
+						<SelectTrigger>
+							<SelectValue placeholder="Select status" />
+						</SelectTrigger>
+						<SelectContent>
+							{Object.values(Status).map((status) => (
+								<SelectItem key={status} value={status}>
+									{status}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
 
-			<Button type="submit">
-				{selectedSubject ? "Update" : "Create"} Subject
-			</Button>
-		</form>
+				<div className="flex justify-end space-x-2">
+					<Button variant="outline" type="button" onClick={onSuccess}>
+						Cancel
+					</Button>
+					<Button type="submit" disabled={createMutation.isLoading || updateMutation.isLoading}>
+						{createMutation.isLoading || updateMutation.isLoading ? "Saving..." : selectedSubject ? "Update" : "Create"}
+					</Button>
+				</div>
+			</form>
+		</DialogContent>
 	);
 };

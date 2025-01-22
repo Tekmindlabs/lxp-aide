@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { PlusCircle } from "lucide-react";
 import { Status } from "@prisma/client";
 import { api } from "@/utils/api";
 import { SubjectList } from "./SubjectList";
@@ -19,6 +22,7 @@ interface SearchFilters {
 
 export const SubjectManagement = () => {
 	const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
+	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [filters, setFilters] = useState<SearchFilters>({
 		search: "",
 	});
@@ -28,6 +32,21 @@ export const SubjectManagement = () => {
 	const { data: programs } = api.program.getAllPrograms.useQuery();
 	const { data: teachers } = api.subject.getAvailableTeachers.useQuery();
 
+	const handleCreate = () => {
+		setSelectedSubjectId(null);
+		setIsFormOpen(true);
+	};
+
+	const handleEdit = (id: string) => {
+		setSelectedSubjectId(id);
+		setIsFormOpen(true);
+	};
+
+	const handleFormSuccess = () => {
+		setIsFormOpen(false);
+		setSelectedSubjectId(null);
+	};
+
 	if (isLoading) {
 		return <div>Loading...</div>;
 	}
@@ -35,9 +54,13 @@ export const SubjectManagement = () => {
 	return (
 		<div className="space-y-4">
 			<Card>
-				<CardHeader>
-					<CardTitle>Subject Management</CardTitle>
-				</CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Subject Management</CardTitle>
+          <Button onClick={handleCreate}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Create Subject
+          </Button>
+        </CardHeader>
 				<CardContent>
 					<div className="mb-6 space-y-4">
 						<div className="flex space-x-4">
@@ -116,15 +139,17 @@ export const SubjectManagement = () => {
 
 					<div className="space-y-4">
 						<SubjectList 
-							subjects={subjects || []} 
-							onSelect={setSelectedSubjectId}
+						  subjects={subjects || []} 
+						  onSelect={handleEdit}
 						/>
-						<SubjectForm 
+						<Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+						  <SubjectForm 
 							selectedSubject={subjects?.find(s => s.id === selectedSubjectId)}
 							classGroups={classGroups || []}
 							teachers={teachers || []}
-							onSuccess={() => setSelectedSubjectId(null)}
-						/>
+							onSuccess={handleFormSuccess}
+						  />
+						</Dialog>
 					</div>
 				</CardContent>
 			</Card>

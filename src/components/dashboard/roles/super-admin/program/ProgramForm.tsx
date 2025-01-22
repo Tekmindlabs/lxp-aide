@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/utils/api";
 import { Status } from "@prisma/client";
+import { toast } from "@/components/ui/use-toast";
 
 interface ProgramFormData {
 	name: string;
 	description?: string;
-	level: string;
+	academicYearId: string;
 	coordinatorId?: string;
 	status: Status;
 }
@@ -27,11 +27,12 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 	const [formData, setFormData] = useState<ProgramFormData>(() => ({
 		name: selectedProgram?.name || "",
 		description: selectedProgram?.description || "",
-		level: selectedProgram?.level || "",
+		academicYearId: selectedProgram?.academicYearId || "none",
 		coordinatorId: selectedProgram?.coordinatorId || "none",
 		status: selectedProgram?.status || Status.ACTIVE,
 	}));
 
+	const { data: academicYears } = api.academicCalendar.getAllAcademicYears.useQuery();
 	const utils = api.useContext();
 
 	const createMutation = api.program.createProgram.useMutation({
@@ -39,6 +40,17 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 			utils.program.getAllPrograms.invalidate();
 			resetForm();
 			onSuccess();
+			toast({
+				title: "Success",
+				description: "Program created successfully",
+			});
+		},
+		onError: (error) => {
+			toast({
+				title: "Error",
+				description: error.message,
+				variant: "destructive",
+			});
 		},
 	});
 
@@ -47,6 +59,17 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 			utils.program.getAllPrograms.invalidate();
 			resetForm();
 			onSuccess();
+			toast({
+				title: "Success",
+				description: "Program updated successfully",
+			});
+		},
+		onError: (error) => {
+			toast({
+				title: "Error",
+				description: error.message,
+				variant: "destructive",
+			});
 		},
 	});
 
@@ -54,7 +77,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 		setFormData({
 			name: "",
 			description: "",
-			level: "",
+			academicYearId: "none",
 			coordinatorId: "none",
 			status: Status.ACTIVE,
 		});
@@ -65,6 +88,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 		const submissionData = {
 			...formData,
 			coordinatorId: formData.coordinatorId === "none" ? undefined : formData.coordinatorId,
+			academicYearId: formData.academicYearId === "none" ? undefined : formData.academicYearId,
 		};
 
 		if (selectedProgram) {
@@ -99,13 +123,21 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 			</div>
 
 			<div>
-				<Label htmlFor="level">Level</Label>
-				<Input
-					id="level"
-					value={formData.level}
-					onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+				<Label htmlFor="academicYear">Academic Year</Label>
+				<select
+					id="academicYear"
+					value={formData.academicYearId}
+					onChange={(e) => setFormData({ ...formData, academicYearId: e.target.value })}
+					className="w-full border p-2 rounded"
 					required
-				/>
+				>
+					<option value="none">Select Academic Year</option>
+					{academicYears?.map((year) => (
+						<option key={year.id} value={year.id}>
+							{year.name}
+						</option>
+					))}
+				</select>
 			</div>
 
 			<div>
@@ -141,8 +173,8 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 				</select>
 			</div>
 
-			<Button type="submit">
-				{selectedProgram ? "Update" : "Create"} Program
+			<Button type="submit" disabled={createMutation.isLoading || updateMutation.isLoading}>
+				{createMutation.isLoading || updateMutation.isLoading ? 'Saving...' : selectedProgram ? "Update" : "Create"} Program
 			</Button>
 		</form>
 	);

@@ -7,7 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { api } from "@/utils/api";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/components/ui/use-toast";
+import { api } from "@/trpc/react";
 
 const formSchema = z.object({
 	name: z.string().min(1, "Name is required"),
@@ -22,6 +24,8 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface TeacherFormProps {
+	isOpen: boolean;
+	onClose: () => void;
 	selectedTeacher?: {
 		id: string;
 		name: string;
@@ -36,10 +40,9 @@ interface TeacherFormProps {
 	};
 	subjects: { id: string; name: string }[];
 	classes: { id: string; name: string; classGroup: { name: string } }[];
-	onSuccess: () => void;
 }
 
-export const TeacherForm = ({ selectedTeacher, subjects, classes, onSuccess }: TeacherFormProps) => {
+export const TeacherForm = ({ isOpen, onClose, selectedTeacher, subjects, classes }: TeacherFormProps) => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const utils = api.useContext();
 
@@ -60,14 +63,36 @@ export const TeacherForm = ({ selectedTeacher, subjects, classes, onSuccess }: T
 		onSuccess: () => {
 			utils.teacher.searchTeachers.invalidate();
 			form.reset();
-			onSuccess();
+			onClose();
+			toast({
+				title: "Success",
+				description: "Teacher created successfully",
+			});
+		},
+		onError: (error) => {
+			toast({
+				title: "Error",
+				description: error.message,
+				variant: "destructive",
+			});
 		},
 	});
 
 	const updateTeacher = api.teacher.updateTeacher.useMutation({
 		onSuccess: () => {
 			utils.teacher.searchTeachers.invalidate();
-			onSuccess();
+			onClose();
+			toast({
+				title: "Success",
+				description: "Teacher updated successfully",
+			});
+		},
+		onError: (error) => {
+			toast({
+				title: "Error",
+				description: error.message,
+				variant: "destructive",
+			});
 		},
 	});
 
@@ -88,7 +113,12 @@ export const TeacherForm = ({ selectedTeacher, subjects, classes, onSuccess }: T
 	};
 
 	return (
-		<Form {...form}>
+		<Dialog open={isOpen} onOpenChange={onClose}>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>{selectedTeacher ? 'Edit' : 'Create'} Teacher</DialogTitle>
+				</DialogHeader>
+				<Form {...form}>
 			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 				<FormField
 					control={form.control}
@@ -236,10 +266,17 @@ export const TeacherForm = ({ selectedTeacher, subjects, classes, onSuccess }: T
 		</FormItem>
 	)}
 />
-				<Button type="submit" disabled={isSubmitting}>
-					{selectedTeacher ? "Update" : "Create"} Teacher
-				</Button>
+				<div className="flex justify-end space-x-2">
+					<Button type="button" variant="outline" onClick={onClose}>
+						Cancel
+					</Button>
+					<Button type="submit" disabled={isSubmitting}>
+						{isSubmitting ? "Saving..." : selectedTeacher ? "Update" : "Create"} Teacher
+					</Button>
+				</div>
 			</form>
 		</Form>
+	</DialogContent>
+</Dialog>
 	);
 };

@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Status } from "@prisma/client";
+import { ClassDetailView } from "./ClassDetailView";
 
 interface Class {
 	id: string;
@@ -32,8 +34,11 @@ interface ClassListProps {
 }
 
 export const ClassList = ({ classes, onSelect }: ClassListProps) => {
+	const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+
 	return (
-		<div className="rounded-md border">
+		<>
+			<div className="rounded-md border">
 			<Table>
 				<TableHeader>
 					<TableRow>
@@ -64,18 +69,35 @@ export const ClassList = ({ classes, onSelect }: ClassListProps) => {
 								</Badge>
 							</TableCell>
 							<TableCell>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => onSelect(cls.id)}
-								>
-									Edit
-								</Button>
+								<div className="flex space-x-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => onSelect(cls.id)}
+									>
+										Edit
+									</Button>
+									<Button
+										variant="secondary"
+										size="sm"
+										onClick={() => setSelectedClassId(cls.id)}
+									>
+										View
+									</Button>
+								</div>
 							</TableCell>
 						</TableRow>
 					))}
 				</TableBody>
 			</Table>
 		</div>
-	);
-};
+
+		{selectedClassId && (
+			<ClassDetailView
+				isOpen={!!selectedClassId}
+				onClose={() => setSelectedClassId(null)}
+				classId={selectedClassId}
+			/>
+		)}
+	</>
+);

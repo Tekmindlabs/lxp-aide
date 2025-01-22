@@ -11,6 +11,7 @@ export const programRouter = createTRPCRouter({
 						user: true,
 					},
 				},
+				academicYear: true,
 				classGroups: {
 					include: {
 						classes: {
@@ -38,6 +39,7 @@ export const programRouter = createTRPCRouter({
 							user: true,
 						},
 					},
+					academicYear: true,
 					classGroups: {
 						include: {
 							classes: {
@@ -66,8 +68,9 @@ export const programRouter = createTRPCRouter({
 			z.object({
 				name: z.string(),
 				description: z.string().optional(),
-				level: z.string(),
+				academicYearId: z.string(),
 				coordinatorId: z.string().optional(),
+				status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -75,12 +78,15 @@ export const programRouter = createTRPCRouter({
 				data: {
 					name: input.name,
 					description: input.description,
-					level: input.level,
+					academicYear: {
+						connect: { id: input.academicYearId }
+					},
 					coordinator: input.coordinatorId
 						? {
 								connect: { id: input.coordinatorId },
 							}
 						: undefined,
+					status: input.status || "ACTIVE",
 				},
 			});
 		}),
@@ -91,7 +97,7 @@ export const programRouter = createTRPCRouter({
 				id: z.string(),
 				name: z.string().optional(),
 				description: z.string().optional(),
-				level: z.string().optional(),
+				academicYearId: z.string().optional(),
 				coordinatorId: z.string().optional(),
 				status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
 			})
@@ -102,6 +108,11 @@ export const programRouter = createTRPCRouter({
 				where: { id },
 				data: {
 					...data,
+					academicYear: data.academicYearId
+						? {
+								connect: { id: data.academicYearId }
+							}
+						: undefined,
 					coordinator: data.coordinatorId
 						? {
 								connect: { id: data.coordinatorId },

@@ -9,51 +9,65 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable } from "@/components/ui/data-table";
 import { PlusCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
-// Sample data - replace with actual API calls
-const programs = [
-	{
-		id: "1",
-		name: "Elementary School",
-		description: "Primary education program for grades 1-5",
-		level: "Primary",
-		status: "ACTIVE",
-		classGroups: 5,
-		students: 150,
-		teachers: 10,
-	},
-	// Add more sample programs
-];
-
-const columns = [
-	{
-		accessorKey: "name",
-		header: "Program Name",
-	},
-	{
-		accessorKey: "level",
-		header: "Level",
-	},
-	{
-		accessorKey: "classGroups",
-		header: "Class Groups",
-	},
-	{
-		accessorKey: "students",
-		header: "Students",
-	},
-	{
-		accessorKey: "teachers",
-		header: "Teachers",
-	},
-	{
-		accessorKey: "status",
-		header: "Status",
-	},
-];
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { api } from "@/utils/api";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function ProgramPage() {
 	const [isCreating, setIsCreating] = useState(false);
+	const [formData, setFormData] = useState({
+		name: "",
+		description: "",
+		academicYearId: "",
+	});
+
+	const { toast } = useToast();
+	
+	const { data: academicYears } = api.academicCalendar.getAllAcademicYears.useQuery();
+	const { data: programs, refetch: refetchPrograms } = api.program.getAll.useQuery();
+	
+	const createProgram = api.program.create.useMutation({
+		onSuccess: () => {
+			toast({
+				title: "Success",
+				description: "Program created successfully",
+			});
+			setIsCreating(false);
+			setFormData({ name: "", description: "", academicYearId: "" });
+			void refetchPrograms();
+		},
+		onError: (error) => {
+			toast({
+				title: "Error",
+				description: error.message,
+				variant: "destructive",
+			});
+		},
+	});
+
+	const columns = [
+		{
+			accessorKey: "name",
+			header: "Program Name",
+		},
+		{
+			accessorKey: "description",
+			header: "Description",
+		},
+		{
+			accessorKey: "academicYear.name",
+			header: "Academic Year",
+		},
+		{
+			accessorKey: "status",
+			header: "Status",
+		},
+	];
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault();
+		createProgram.mutate(formData);
+	};
 
 	return (
 		<div className="space-y-6">
@@ -70,21 +84,49 @@ export default function ProgramPage() {
 						<DialogHeader>
 							<DialogTitle>Create New Program</DialogTitle>
 						</DialogHeader>
-						<div className="space-y-4 py-4">
+						<form onSubmit={handleSubmit} className="space-y-4 py-4">
 							<div className="space-y-2">
 								<Label htmlFor="name">Program Name</Label>
-								<Input id="name" placeholder="Enter program name" />
-							</div>
-							<div className="space-y-2">
-								<Label htmlFor="level">Level</Label>
-								<Input id="level" placeholder="Enter program level" />
+								<Input 
+									id="name" 
+									placeholder="Enter program name"
+									value={formData.name}
+									onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+									required
+								/>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="description">Description</Label>
-								<Input id="description" placeholder="Enter program description" />
+								<Input 
+									id="description" 
+									placeholder="Enter program description"
+									value={formData.description}
+									onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+								/>
 							</div>
-							<Button className="w-full">Create Program</Button>
-						</div>
+							<div className="space-y-2">
+								<Label htmlFor="academicYear">Academic Year</Label>
+								<Select 
+									value={formData.academicYearId}
+									onValueChange={(value) => setFormData(prev => ({ ...prev, academicYearId: value }))}
+									required
+								>
+									<SelectTrigger>
+										<SelectValue placeholder="Select Academic Year" />
+									</SelectTrigger>
+									<SelectContent>
+										{academicYears?.map((year) => (
+											<SelectItem key={year.id} value={year.id}>
+												{year.name}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+							<Button type="submit" className="w-full" disabled={createProgram.isLoading}>
+								{createProgram.isLoading ? "Creating..." : "Create Program"}
+							</Button>
+						</form>
 					</DialogContent>
 				</Dialog>
 			</div>
@@ -101,11 +143,10 @@ export default function ProgramPage() {
 							<CardTitle>Programs Overview</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<DataTable columns={columns} data={programs} />
+							<DataTable columns={columns} data={programs ?? []} />
 						</CardContent>
 					</Card>
 				</TabsContent>
-				{/* Add other tab contents */}
 			</Tabs>
 		</div>
 	);

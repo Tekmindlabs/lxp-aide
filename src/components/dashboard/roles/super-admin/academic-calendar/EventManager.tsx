@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { api } from "@/utils/api";
+import { api } from "@/trpc/react";
+import { toast } from "@/components/ui/use-toast";
 import { EventType, Status } from "@prisma/client";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -63,6 +64,17 @@ export const EventManager = ({ academicYears, filteredEvents }: EventManagerProp
 			utils.academicCalendar.getEventsByAcademicYear.invalidate(formData.academicYearId);
 			setIsOpen(false);
 			resetForm();
+			toast({
+				title: "Success",
+				description: "Event created successfully",
+			});
+		},
+		onError: (error) => {
+			toast({
+				title: "Error",
+				description: error.message,
+				variant: "destructive",
+			});
 		},
 	});
 
@@ -71,7 +83,18 @@ export const EventManager = ({ academicYears, filteredEvents }: EventManagerProp
 			const event = filteredEvents.find(e => e.id === eventId);
 			if (event) {
 				utils.academicCalendar.getEventsByAcademicYear.invalidate(event.academicYearId);
+				toast({
+					title: "Success",
+					description: "Event deleted successfully",
+				});
 			}
+		},
+		onError: (error) => {
+			toast({
+				title: "Error",
+				description: error.message,
+				variant: "destructive",
+			});
 		},
 	});
 

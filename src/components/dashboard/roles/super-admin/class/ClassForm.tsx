@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/components/ui/use-toast";
 import { api } from "@/utils/api";
 
 const formSchema = z.object({
@@ -22,6 +24,8 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface ClassFormProps {
+	isOpen: boolean;
+	onClose: () => void;
 	selectedClass?: {
 		id: string;
 		name: string;
@@ -32,10 +36,9 @@ interface ClassFormProps {
 	};
 	classGroups: { id: string; name: string }[];
 	teachers: { id: string; user: { name: string } }[];
-	onSuccess: () => void;
 }
 
-export const ClassForm = ({ selectedClass, classGroups, teachers, onSuccess }: ClassFormProps) => {
+export const ClassForm = ({ isOpen, onClose, selectedClass, classGroups, teachers }: ClassFormProps) => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const utils = api.useContext();
 
@@ -54,14 +57,36 @@ export const ClassForm = ({ selectedClass, classGroups, teachers, onSuccess }: C
 		onSuccess: () => {
 			utils.class.searchClasses.invalidate();
 			form.reset();
-			onSuccess();
+			onClose();
+			toast({
+				title: "Success",
+				description: "Class created successfully",
+			});
+		},
+		onError: (error) => {
+			toast({
+				title: "Error",
+				description: error.message,
+				variant: "destructive",
+			});
 		},
 	});
 
 	const updateClass = api.class.updateClass.useMutation({
 		onSuccess: () => {
 			utils.class.searchClasses.invalidate();
-			onSuccess();
+			onClose();
+			toast({
+				title: "Success",
+				description: "Class updated successfully",
+			});
+		},
+		onError: (error) => {
+			toast({
+				title: "Error",
+				description: error.message,
+				variant: "destructive",
+			});
 		},
 	});
 
@@ -82,8 +107,13 @@ export const ClassForm = ({ selectedClass, classGroups, teachers, onSuccess }: C
 	};
 
 	return (
-		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+		<Dialog open={isOpen} onOpenChange={onClose}>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>{selectedClass ? "Edit" : "Create"} Class</DialogTitle>
+				</DialogHeader>
+				<Form {...form}>
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 				<FormField
 					control={form.control}
 					name="name"
@@ -214,10 +244,17 @@ export const ClassForm = ({ selectedClass, classGroups, teachers, onSuccess }: C
 				/>
 
 
-				<Button type="submit" disabled={isSubmitting}>
-					{selectedClass ? "Update" : "Create"} Class
-				</Button>
-			</form>
-		</Form>
-	);
+				<div className="flex justify-end space-x-2">
+				  <Button variant="outline" type="button" onClick={onClose}>
+					Cancel
+				  </Button>
+				  <Button type="submit" disabled={isSubmitting}>
+					{isSubmitting ? "Saving..." : selectedClass ? "Update" : "Create"}
+				  </Button>
+				</div>
+			  </form>
+			</Form>
+		  </DialogContent>
+		</Dialog>
+	  );
 };

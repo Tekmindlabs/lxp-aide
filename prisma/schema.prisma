@@ -69,6 +69,7 @@ model AcademicYear {
   updatedAt DateTime @updatedAt
   terms     Term[]
   events    Event[]
+  programs  Program[]
 }
 
 model Event {
@@ -98,14 +99,17 @@ model Term {
   timetables    Timetable[]
 }
 
+
+
 model Program {
   id            String    @id @default(cuid())
   name          String
   description   String?
-  level         String
   status        Status    @default(ACTIVE)
   coordinator   CoordinatorProfile? @relation(fields: [coordinatorId], references: [id])
   coordinatorId String?
+  academicYear  AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicYearId String
   classGroups   ClassGroup[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

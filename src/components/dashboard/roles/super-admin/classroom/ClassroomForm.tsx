@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { api } from "@/utils/api";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -23,11 +24,12 @@ const formSchema = z.object({
 });
 
 interface ClassroomFormProps {
-  onCancel: () => void;
-  classroomId?: string;
+  isOpen: boolean;
+  onClose: () => void;
+  classroomId?: string | null;
 }
 
-const ClassroomForm: FC<ClassroomFormProps> = ({ onCancel, classroomId }) => {
+const ClassroomForm: FC<ClassroomFormProps> = ({ isOpen, onClose, classroomId }) => {
   const { toast } = useToast();
   const utils = api.useContext();
   const [resources, setResources] = useState<string[]>([]);
@@ -69,7 +71,7 @@ const ClassroomForm: FC<ClassroomFormProps> = ({ onCancel, classroomId }) => {
         description: "Classroom updated successfully",
       });
       void utils.classroom.getAll.invalidate();
-      onCancel();
+        onClose();
     },
     onError: (error) => {
       toast({
@@ -87,7 +89,7 @@ const ClassroomForm: FC<ClassroomFormProps> = ({ onCancel, classroomId }) => {
         description: "Classroom created successfully",
       });
       void utils.classroom.getAll.invalidate();
-      onCancel();
+        onClose();
     },
     onError: (error) => {
       toast({
@@ -123,7 +125,12 @@ const ClassroomForm: FC<ClassroomFormProps> = ({ onCancel, classroomId }) => {
   };
 
   return (
-    <Form {...form}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{classroomId ? 'Edit' : 'Create'} Classroom</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
@@ -189,7 +196,7 @@ const ClassroomForm: FC<ClassroomFormProps> = ({ onCancel, classroomId }) => {
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
             <Button 
@@ -199,8 +206,10 @@ const ClassroomForm: FC<ClassroomFormProps> = ({ onCancel, classroomId }) => {
             {classroomId ? "Update" : "Create"} Classroom
           </Button>
         </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+        </DialogContent>
+      </Dialog>
   );
 };
 
