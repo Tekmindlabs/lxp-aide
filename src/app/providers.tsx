@@ -2,12 +2,21 @@
 
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink } from "@trpc/client";
-import superjson from "superjson";
+import { loggerLink, unstable_httpBatchStreamLink } from '@trpc/client';
+import { ThemeProvider } from "@/components/theme-provider";
+import { SessionProvider } from "next-auth/react";
 import { api } from "@/utils/api";
-import type { AppRouter } from "@/server/api/root";
+import superjson from "superjson";
 
-export function TRPCProvider({ children }: { children: React.ReactNode }) {
+export function Providers({ 
+  children, 
+  session, 
+  cookieHeader 
+}: { 
+  children: React.ReactNode, 
+  session: any,
+  cookieHeader: string
+}) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       mutations: {
@@ -21,21 +30,38 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
   const [trpcClient] = useState(() => 
     api.createClient({
       links: [
-        httpBatchLink({
+        loggerLink({
+          enabled: (opts) =>
+            process.env.NODE_ENV === 'development' ||
+            (opts.direction === 'down' && opts.result instanceof Error),
+        }),
+        unstable_httpBatchStreamLink({
           url: '/api/trpc',
-          transformer: superjson,
+          headers() {
+            return {
+              cookie: cookieHeader,
+              'x-trpc-source': 'react',
+            };
+          },
+          transformer: superjson, // Add the required transformer
         }),
       ],
     })
   );
 
   return (
-    <api.Provider 
-      client={trpcClient} 
-      queryClient={queryClient}
-    >
+    <api.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        {children}
+        <SessionProvider session={session}>
+          <ThemeProvider 
+            attribute="class" 
+            defaultTheme="system" 
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </SessionProvider>
       </QueryClientProvider>
     </api.Provider>
   );

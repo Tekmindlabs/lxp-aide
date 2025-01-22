@@ -41,35 +41,38 @@ const coordinatorNavItems = [
 	},
 ];
 
+
 export default async function RoleLayout({
-	children,
-	params,
+  children,
+  params,
 }: {
-	children: React.ReactNode;
-	params: { role: string };
+  children: React.ReactNode;
+  params: { role: string };
 }) {
-	const session = await getServerAuthSession();
+  const session = await getServerAuthSession();
+  // Await the role parameter
+  const role = await Promise.resolve(params.role);
 
-	if (!session) {
-		redirect("/auth/signin");
-	}
+  if (!session) {
+    redirect("/auth/signin");
+  }
 
-	const userRoles = session.user.roles.map((role) => role.toLowerCase());
-	if (!userRoles.includes(params.role.toLowerCase())) {
-		redirect(`/dashboard/${session.user.roles[0]}`);
-	}
+  const userRoles = session.user.roles.map((r) => r.toLowerCase());
+  if (!userRoles.includes(role.toLowerCase())) {
+    redirect(`/dashboard/${session.user.roles[0]}`);
+  }
 
-	// Use coordinator nav items for coordinator role
-	const navItems = params.role.toLowerCase() === 'coordinator' ? coordinatorNavItems : [];
+  // Use coordinator nav items for coordinator role
+  const navItems = role.toLowerCase() === 'coordinator' ? coordinatorNavItems : [];
 
-	return (
-		<div className="space-y-6 p-10 pb-16">
-			<div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
-				<aside className="lg:w-1/5">
-					<SidebarNav items={navItems} />
-				</aside>
-				<div className="flex-1">{children}</div>
-			</div>
-		</div>
-	);
+  return (
+    <div className="space-y-6 p-10 pb-16">
+      <div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
+        <aside className="lg:w-1/5">
+          <SidebarNav items={navItems} />
+        </aside>
+        <div className="flex-1">{children}</div>
+      </div>
+    </div>
+  );
 }
