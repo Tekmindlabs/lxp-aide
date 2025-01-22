@@ -1,7 +1,19 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
-import { AttachmentType, ConversationType, ParticipantRole, Prisma } from "@prisma/client";
+import { AttachmentType, ConversationType, ParticipantRole, Prisma, UserType } from "@prisma/client";
+
+// Add helper function for role-based access
+const canMessageUser = (senderRole: UserType, recipientRole: UserType) => {
+	const roleHierarchy = {
+		ADMIN: ["ADMIN", "COORDINATOR", "TEACHER", "STUDENT", "PARENT"],
+		COORDINATOR: ["COORDINATOR", "TEACHER", "STUDENT", "PARENT"],
+		TEACHER: ["TEACHER", "STUDENT", "PARENT"],
+		STUDENT: ["TEACHER"],
+		PARENT: ["TEACHER"],
+	};
+	return roleHierarchy[senderRole]?.includes(recipientRole) || false;
+};
 
 // Define the include types
 const conversationInclude = {
@@ -45,6 +57,29 @@ export const messageRouter = createTRPCRouter({
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
+			// Get sender's role
+			const sender = await ctx.prisma.user.findUnique({
+				where: { id: ctx.session!.user.id },
+				include: { userRoles: { include: { role: true } } },
+			});
+
+			// Get recipients' roles
+			const recipients = await ctx.prisma.user.findMany({
+				where: { id: { in: input.participantIds } },
+				include: { userRoles: { include: { role: true } } },
+			});
+
+			// Check if sender can message all recipients
+			const senderRole = sender?.userType;
+			for (const recipient of recipients) {
+				if (!canMessageUser(senderRole!, recipient.userType!)) {
+					throw new TRPCError({
+						code: "FORBIDDEN",
+						message: `You don't have permission to message ${recipient.name}`,
+					});
+				}
+			}
+
 			const conversation = await ctx.prisma.conversation.create({
 				data: {
 					title: input.title,
@@ -70,11 +105,15 @@ export const messageRouter = createTRPCRouter({
 										create: input.attachments,
 									}
 								: undefined,
+							recipients: {
+								create: input.participantIds.map((id) => ({
+									recipientId: id,
+								})),
+							},
 						},
 					},
 				},
 				include: conversationInclude,
-
 			});
 
 			return conversation;
@@ -95,13 +134,21 @@ export const messageRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Check if user is participant
-			const participant = await ctx.prisma.conversationParticipant.findFirst({
-				where: {
-					conversationId: input.conversationId,
-					userId: ctx.session!.user.id,
-					leftAt: null,
-				},
+			const conversation = await ctx.prisma.conversation.findUnique({
+				where: { id: input.conversationId },
+				include: { participants: true },
 			});
+
+			if (!conversation) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Conversation not found",
+				});
+			}
+
+			const participant = conversation.participants.find(
+				(p) => p.userId === ctx.session!.user.id && !p.leftAt
+			);
 
 			if (!participant) {
 				throw new TRPCError({
@@ -110,6 +157,7 @@ export const messageRouter = createTRPCRouter({
 				});
 			}
 
+			// Create message with recipients
 			const message = await ctx.prisma.message.create({
 				data: {
 					content: input.content,
@@ -120,9 +168,15 @@ export const messageRouter = createTRPCRouter({
 								create: input.attachments,
 							}
 						: undefined,
+					recipients: {
+						create: conversation.participants
+							.filter((p) => p.userId !== ctx.session!.user.id && !p.leftAt)
+							.map((p) => ({
+								recipientId: p.userId,
+							})),
+					},
 				},
 				include: messageInclude,
-
 			});
 
 			return message;

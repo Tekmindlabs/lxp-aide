@@ -1,36 +1,47 @@
 import { useState } from "react";
-import { api } from "@/utils/api";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
+import { PlusCircle } from "lucide-react";
 import ClassActivityList from "./ClassActivityList";
 import ClassActivityForm from "./ClassActivityForm";
 
 export default function ClassActivityManagement() {
-	const [isCreating, setIsCreating] = useState(false);
-	const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
+	const [isFormOpen, setIsFormOpen] = useState(false);
+	const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+
+	const handleEdit = (id: string) => {
+		setSelectedActivityId(id);
+		setIsFormOpen(true);
+	};
+
+	const handleCreate = () => {
+		setSelectedActivityId(null);
+		setIsFormOpen(true);
+	};
+
+	const handleClose = () => {
+		setIsFormOpen(false);
+		setSelectedActivityId(null);
+	};
 
 	return (
 		<div className="space-y-6">
 			<div className="flex justify-between items-center">
 				<h2 className="text-3xl font-bold tracking-tight">Class Activities</h2>
-				<Button onClick={() => setIsCreating(true)}>Create Activity</Button>
+				<Button onClick={handleCreate}>
+					<PlusCircle className="mr-2 h-4 w-4" />
+					Create Activity
+				</Button>
 			</div>
 
-			<div className="grid gap-4">
-				{(isCreating || selectedActivity) ? (
-					<Card className="p-6">
-						<ClassActivityForm
-							activityId={selectedActivity}
-							onClose={() => {
-								setIsCreating(false);
-								setSelectedActivity(null);
-							}}
-						/>
-					</Card>
-				) : (
-					<ClassActivityList onEdit={setSelectedActivity} />
-				)}
-			</div>
+			<ClassActivityList onEdit={handleEdit} />
+
+			<Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+				<ClassActivityForm
+					activityId={selectedActivityId}
+					onClose={handleClose}
+				/>
+			</Dialog>
 		</div>
 	);
 }
