@@ -1,3 +1,5 @@
+'use client';
+
 import SuperAdminSidebar from "@/components/dashboard/roles/super-admin/layout/SuperAdminSidebar";
 
 export default function SuperAdminLayout({

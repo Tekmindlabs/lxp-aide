@@ -1,5 +1,4 @@
 import { SystemMetrics } from "@/components/dashboard/SystemMetrics";
-import SystemMetrics from "@/components/dashboard/SystemMetrics";
 
 export default function SuperAdminDashboardPage() {
 	return (

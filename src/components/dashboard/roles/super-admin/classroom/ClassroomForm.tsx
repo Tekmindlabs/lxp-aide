@@ -1,4 +1,4 @@
-// src/components/dashboard/roles/super-admin/classroom/ClassroomForm.tsx
+'use client';
 
 import { FC, useState } from "react";
 import { useForm } from "react-hook-form";

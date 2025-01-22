@@ -1,7 +1,32 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
-import { AttachmentType, ConversationType } from "@prisma/client";
+import { AttachmentType, ConversationType, ParticipantRole, Prisma } from "@prisma/client";
+
+// Define the include types
+const conversationInclude = {
+	participants: {
+		include: {
+			user: true,
+		},
+	},
+	messages: {
+		include: {
+			sender: true,
+			attachments: true,
+		},
+	},
+} satisfies Prisma.ConversationInclude;
+
+const messageInclude = {
+	sender: true,
+	attachments: true,
+	reactions: {
+		include: {
+			user: true,
+		},
+	},
+} satisfies Prisma.MessageInclude;
 
 export const messageRouter = createTRPCRouter({
 	createConversation: protectedProcedure
@@ -27,19 +52,19 @@ export const messageRouter = createTRPCRouter({
 					participants: {
 						create: [
 							{
-								userId: ctx.session.user.id,
-								role: "OWNER",
+								userId: ctx.session!.user.id,
+								role: "OWNER" as ParticipantRole,
 							},
 							...input.participantIds.map((id) => ({
 								userId: id,
-								role: "MEMBER",
+								role: "MEMBER" as ParticipantRole,
 							})),
 						],
 					},
 					messages: {
 						create: {
 							content: input.initialMessage,
-							senderId: ctx.session.user.id,
+							senderId: ctx.session!.user.id,
 							attachments: input.attachments
 								? {
 										create: input.attachments,
@@ -48,19 +73,8 @@ export const messageRouter = createTRPCRouter({
 						},
 					},
 				},
-				include: {
-					participants: {
-						include: {
-							user: true,
-						},
-					},
-					messages: {
-						include: {
-							sender: true,
-							attachments: true,
-						},
-					},
-				},
+				include: conversationInclude,
+
 			});
 
 			return conversation;
@@ -84,7 +98,7 @@ export const messageRouter = createTRPCRouter({
 			const participant = await ctx.prisma.conversationParticipant.findFirst({
 				where: {
 					conversationId: input.conversationId,
-					userId: ctx.session.user.id,
+					userId: ctx.session!.user.id,
 					leftAt: null,
 				},
 			});
@@ -99,7 +113,7 @@ export const messageRouter = createTRPCRouter({
 			const message = await ctx.prisma.message.create({
 				data: {
 					content: input.content,
-					senderId: ctx.session.user.id,
+					senderId: ctx.session!.user.id,
 					conversationId: input.conversationId,
 					attachments: input.attachments
 						? {
@@ -107,15 +121,8 @@ export const messageRouter = createTRPCRouter({
 							}
 						: undefined,
 				},
-				include: {
-					sender: true,
-					attachments: true,
-					reactions: {
-						include: {
-							user: true,
-						},
-					},
-				},
+				include: messageInclude,
+
 			});
 
 			return message;
@@ -126,7 +133,7 @@ export const messageRouter = createTRPCRouter({
 			where: {
 				participants: {
 					some: {
-						userId: ctx.session.user.id,
+						userId: ctx.session!.user.id,
 						leftAt: null,
 					},
 				},
@@ -144,6 +151,7 @@ export const messageRouter = createTRPCRouter({
 					},
 					include: {
 						sender: true,
+						recipients: true,
 					},
 				},
 			},
@@ -158,22 +166,8 @@ export const messageRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const conversation = await ctx.prisma.conversation.findUnique({
 				where: { id: input },
-				include: {
-					participants: {
-						include: {
-							user: true,
-						},
-					},
-					messages: {
-						include: {
-							sender: true,
-							attachments: true,
-						},
-						orderBy: {
-							createdAt: "desc",
-						},
-					},
-				},
+				include: conversationInclude,
+
 			});
 
 			if (!conversation) {
@@ -185,7 +179,7 @@ export const messageRouter = createTRPCRouter({
 
 			// Check if user is participant
 			const isParticipant = conversation.participants.some(
-				(p) => p.userId === ctx.session.user.id && !p.leftAt
+				(p) => p.userId === ctx.session!.user.id && !p.leftAt
 			);
 
 			if (!isParticipant) {
@@ -206,7 +200,7 @@ export const messageRouter = createTRPCRouter({
 					message: {
 						conversationId: input,
 					},
-					recipientId: ctx.session.user.id,
+					recipientId: ctx.session!.user.id,
 					read: false,
 				},
 				data: {
@@ -229,7 +223,7 @@ export const messageRouter = createTRPCRouter({
 					conversation: {
 						participants: {
 							some: {
-								userId: ctx.session.user.id,
+								userId: ctx.session!.user.id,
 								leftAt: null,
 							},
 						},
@@ -271,7 +265,7 @@ export const messageRouter = createTRPCRouter({
 			}
 
 			const isParticipant = message.conversation.participants.some(
-				(p) => p.userId === ctx.session.user.id && !p.leftAt
+				(p) => p.userId === ctx.session!.user.id && !p.leftAt
 			);
 
 			if (!isParticipant) {
@@ -286,7 +280,7 @@ export const messageRouter = createTRPCRouter({
 				where: {
 					messageId_userId_type: {
 						messageId: input.messageId,
-						userId: ctx.session.user.id,
+						userId: ctx.session!.user.id,
 						type: input.type,
 					},
 				},
@@ -302,7 +296,7 @@ export const messageRouter = createTRPCRouter({
 			await ctx.prisma.messageReaction.create({
 				data: {
 					messageId: input.messageId,
-					userId: ctx.session.user.id,
+					userId: ctx.session!.user.id,
 					type: input.type,
 				},
 			});
