@@ -1,173 +1,36 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { Status } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 
 export const programRouter = createTRPCRouter({
-	createProgram: protectedProcedure
-		.input(z.object({
-			name: z.string(),
-			description: z.string().optional(),
-			level: z.string(),
-			coordinatorId: z.string().optional(),
-			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).default(Status.ACTIVE),
-		}))
-		.mutation(async ({ ctx, input }) => {
-			return ctx.prisma.program.create({
-				data: input,
-				include: {
-					coordinator: {
-						include: {
-							user: true,
+	getAll: protectedProcedure.query(async ({ ctx }) => {
+		const programs = await ctx.prisma.program.findMany({
+			include: {
+				coordinator: {
+					include: {
+						user: true,
+					},
+				},
+				classGroups: {
+					include: {
+						classes: {
+							include: {
+								students: true,
+								teachers: true,
+							},
 						},
 					},
 				},
-			});
-		}),
+			},
+		});
 
-	updateProgram: protectedProcedure
-		.input(z.object({
-			id: z.string(),
-			name: z.string().optional(),
-			description: z.string().optional(),
-			level: z.string().optional(),
-			coordinatorId: z.string().optional(),
-			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).optional(),
-		}))
-		.mutation(async ({ ctx, input }) => {
-			const { id, ...data } = input;
-			return ctx.prisma.program.update({
-				where: { id },
-				data,
-				include: {
-					coordinator: {
-						include: {
-							user: true,
-						},
-					},
-				},
-			});
-		}),
+		return programs;
+	}),
 
-	deleteProgram: protectedProcedure
-		.input(z.string())
-		.mutation(async ({ ctx, input }) => {
-			return ctx.prisma.program.delete({
-				where: { id: input },
-			});
-		}),
-
-	getProgram: protectedProcedure
+	getById: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.prisma.program.findUnique({
-				where: { id: input },
-				include: {
-					coordinator: {
-						include: {
-							user: true,
-						},
-					},
-					classGroups: true,
-				},
-			});
-		}),
-
-	getAllPrograms: protectedProcedure
-		.query(async ({ ctx }) => {
-			return ctx.prisma.program.findMany({
-				include: {
-					coordinator: {
-						include: {
-							user: true,
-						},
-					},
-					classGroups: true,
-				},
-			});
-		}),
-
-	getAvailableCoordinators: protectedProcedure
-		.query(async ({ ctx }) => {
-			return ctx.prisma.coordinatorProfile.findMany({
-				include: {
-					user: true,
-				},
-			});
-		}),
-
-	searchPrograms: protectedProcedure
-		.input(z.object({
-			search: z.string().optional(),
-			level: z.string().optional(),
-			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).optional(),
-			academicYearId: z.string().optional(),
-			sortBy: z.enum(['name', 'level', 'createdAt']).optional(),
-			sortOrder: z.enum(['asc', 'desc']).optional(),
-		}))
-		.query(async ({ ctx, input }) => {
-			const { search, level, status, academicYearId, sortBy = 'name', sortOrder = 'asc' } = input;
-			
-			return ctx.prisma.program.findMany({
-				where: {
-					...(search && {
-						OR: [
-							{ name: { contains: search, mode: 'insensitive' } },
-							{ description: { contains: search, mode: 'insensitive' } },
-						],
-					}),
-					...(level && { level }),
-					...(status && { status }),
-				},
-				include: {
-					coordinator: {
-						include: {
-							user: true,
-						},
-					},
-					classGroups: true,
-				},
-				orderBy: {
-					[sortBy]: sortOrder,
-				},
-			});
-		}),
-
-	associateAcademicYear: protectedProcedure
-		.input(z.object({
-			programId: z.string(),
-			academicYearId: z.string(),
-		}))
-		.mutation(async ({ ctx, input }) => {
-			const { programId, academicYearId } = input;
-
-			// First, verify both program and academic year exist
-			const [program, academicYear] = await Promise.all([
-				ctx.prisma.program.findUnique({ where: { id: programId } }),
-				ctx.prisma.academicYear.findUnique({ where: { id: academicYearId } }),
-			]);
-
-			if (!program || !academicYear) {
-				throw new Error("Program or Academic Year not found");
-			}
-
-			// Create terms for the program's academic year
-			await ctx.prisma.term.create({
-				data: {
-					name: "Default Term",
-					academicYearId,
-					startDate: academicYear.startDate,
-					endDate: academicYear.endDate,
-					status: Status.ACTIVE,
-				},
-			});
-
-			return program;
-		}),
-
-	getProgramWithAcademicDetails: protectedProcedure
-		.input(z.string())
-		.query(async ({ ctx, input }) => {
-			return ctx.prisma.program.findUnique({
+			const program = await ctx.prisma.program.findUnique({
 				where: { id: input },
 				include: {
 					coordinator: {
@@ -177,18 +40,82 @@ export const programRouter = createTRPCRouter({
 					},
 					classGroups: {
 						include: {
-							timetable: {
+							classes: {
 								include: {
-									term: {
-										include: {
-											academicYear: true,
-										},
-									},
+									students: true,
+									teachers: true,
 								},
 							},
 						},
 					},
 				},
+			});
+
+			if (!program) {
+				throw new TRPCError({
+					code: "NOT_FOUND",
+					message: "Program not found",
+				});
+			}
+
+			return program;
+		}),
+
+	create: protectedProcedure
+		.input(
+			z.object({
+				name: z.string(),
+				description: z.string().optional(),
+				level: z.string(),
+				coordinatorId: z.string().optional(),
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			return ctx.prisma.program.create({
+				data: {
+					name: input.name,
+					description: input.description,
+					level: input.level,
+					coordinator: input.coordinatorId
+						? {
+								connect: { id: input.coordinatorId },
+							}
+						: undefined,
+				},
+			});
+		}),
+
+	update: protectedProcedure
+		.input(
+			z.object({
+				id: z.string(),
+				name: z.string().optional(),
+				description: z.string().optional(),
+				level: z.string().optional(),
+				coordinatorId: z.string().optional(),
+				status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			const { id, ...data } = input;
+			return ctx.prisma.program.update({
+				where: { id },
+				data: {
+					...data,
+					coordinator: data.coordinatorId
+						? {
+								connect: { id: data.coordinatorId },
+							}
+						: undefined,
+				},
+			});
+		}),
+
+	delete: protectedProcedure
+		.input(z.string())
+		.mutation(async ({ ctx, input }) => {
+			return ctx.prisma.program.delete({
+				where: { id: input },
 			});
 		}),
 });

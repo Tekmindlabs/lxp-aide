@@ -1,7 +1,10 @@
-import '@/app/globals.css' 
+import '@/app/globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { Providers } from '@/components/providers'
+import { headers } from "next/headers"
+import { TRPCReactProvider } from "@/trpc/react"
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/toaster"
 import { ConsentBanner } from '@/components/gdpr/consent-banner'
 import { getServerAuthSession } from '@/server/auth'
 
@@ -18,24 +21,21 @@ export default async function RootLayout({
   children: React.ReactNode
 }) {
   const session = await getServerAuthSession();
+  const headersList = await headers();
+  const cookieHeader = headersList.get("cookie");
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link 
-          rel="stylesheet" 
-          href="/_next/static/css/app/layout.css" 
-          as="style"
-          precedence="high"
-        />
-      </head>
       <body className={inter.className} suppressHydrationWarning>
-        <Providers session={session}>
-          {children}
-          <ConsentBanner />
-        </Providers>
+        <TRPCReactProvider cookies={cookieHeader ?? ""}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            {children}
+            <ConsentBanner />
+            <Toaster />
+          </ThemeProvider>
+        </TRPCReactProvider>
       </body>
     </html>
-
   )
 }
+
