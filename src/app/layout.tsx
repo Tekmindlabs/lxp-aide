@@ -16,6 +16,26 @@ export const metadata: Metadata = {
   description: 'A scalable and type-safe RBAC system built with modern web technologies',
 }
 
+// Create a new Client Component for providers
+'use client'
+function Providers({ children, session, cookieHeader }: { 
+  children: React.ReactNode, 
+  session: any,
+  cookieHeader: string
+}) {
+  return (
+    <TRPCReactProvider cookies={cookieHeader}></TRPCReactProvider>
+      <SessionProvider session={session}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+          <ConsentBanner />
+          <Toaster />
+        </ThemeProvider>
+      </SessionProvider>
+    </TRPCReactProvider>
+  )
+}
+
 export default async function RootLayout({
   children,
 }: {
@@ -23,20 +43,14 @@ export default async function RootLayout({
 }) {
   const session = await getServerAuthSession();
   const headersList = headers();
-  const cookieHeader = headersList.get("cookie");
+  const cookieHeader = headersList.get("cookie") ?? "";
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>
-        <TRPCReactProvider cookies={cookieHeader ?? ""}>
-            <SessionProvider session={session}>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              {children}
-              <ConsentBanner />
-              <Toaster />
-            </ThemeProvider>
-            </SessionProvider>
-        </TRPCReactProvider>
+        <Providers session={session} cookieHeader={cookieHeader}>
+          {children}
+        </Providers>
       </body>
     </html>
   )
