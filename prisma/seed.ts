@@ -143,37 +143,45 @@ async function main() {
       },
     });
 
-    // Create corresponding profile based on role
+    // Create or update corresponding profile based on role
     switch (demoUser.role) {
       case DefaultRoles.TEACHER:
-        await prisma.teacherProfile.create({
-          data: {
-            userId: user.id,
-            specialization: 'General',
-          },
-        });
-        break;
+      await prisma.teacherProfile.upsert({
+        where: { userId: user.id },
+        update: { specialization: 'General' },
+        create: {
+        userId: user.id,
+        specialization: 'General',
+        },
+      });
+      break;
       case DefaultRoles.STUDENT:
-        await prisma.studentProfile.create({
-          data: {
-            userId: user.id,
-          },
-        });
-        break;
+      await prisma.studentProfile.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+        userId: user.id,
+        },
+      });
+      break;
       case DefaultRoles.PARENT:
-        await prisma.parentProfile.create({
-          data: {
-            userId: user.id,
-          },
-        });
-        break;
+      await prisma.parentProfile.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+        userId: user.id,
+        },
+      });
+      break;
       case DefaultRoles.PROGRAM_COORDINATOR:
-        await prisma.coordinatorProfile.create({
-          data: {
-            userId: user.id,
-          },
-        });
-        break;
+      await prisma.coordinatorProfile.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+        userId: user.id,
+        },
+      });
+      break;
     }
   }
 

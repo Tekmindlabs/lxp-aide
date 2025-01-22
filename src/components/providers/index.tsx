@@ -3,10 +3,17 @@
 import { AuthProvider } from "./auth-provider";
 import { ThemeProvider } from "./theme-provider";
 import { TRPCProvider } from "@/app/providers";
+import { type Session } from "next-auth";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ 
+  children,
+  session 
+}: { 
+  children: React.ReactNode;
+  session?: Session | null;
+}) {
   return (
-    <AuthProvider>
+    <AuthProvider session={session}>
       <TRPCProvider>
         <ThemeProvider
           attribute="class"

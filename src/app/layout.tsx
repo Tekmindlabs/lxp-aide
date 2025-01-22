@@ -36,5 +36,6 @@ export default async function RootLayout({
         </Providers>
       </body>
     </html>
+
   )
 }

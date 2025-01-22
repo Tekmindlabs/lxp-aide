@@ -61,15 +61,20 @@ export default function SignIn() {
         email,
         password,
         redirect: false,
+        callbackUrl: searchParams.get("callbackUrl") || "/dashboard"
       });
 
       if (result?.error) {
         setError("Invalid credentials");
+        setIsLoading(false);
         return;
       }
 
-      const callbackUrl = searchParams.get("from") || "/dashboard";
-      router.push(callbackUrl);
+      if (result?.ok) {
+        const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+        router.push(callbackUrl);
+        router.refresh();
+      }
     } catch (error) {
       setError("An error occurred. Please try again.");
     } finally {

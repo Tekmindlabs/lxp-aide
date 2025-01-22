@@ -34,7 +34,7 @@ declare module "next-auth" {
 }
 
 export const authOptions: NextAuthOptions = {
-  debug: true, // Set to true temporarily for debugging
+  debug: true,
   callbacks: {
     jwt: async ({ token, user }) => {
       if (user) {
@@ -42,45 +42,21 @@ export const authOptions: NextAuthOptions = {
         token.roles = user.roles;
         token.permissions = user.permissions;
       }
-
-      // Fetch fresh data on every jwt callback
-      const userWithRoles = await prisma.user.findUnique({
-        where: { id: token.id as string },
-        include: {
-          userRoles: {
-            include: {
-              role: {
-                include: {
-                  permissions: {
-                    include: {
-                      permission: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      if (userWithRoles) {
-        token.roles = userWithRoles.userRoles.map((ur) => ur.role.name);
-        token.permissions = userWithRoles.userRoles
-          .flatMap((ur) => ur.role.permissions)
-          .map((rp) => rp.permission.name);
-      }
-
       return token;
     },
     session: async ({ session, token }) => {
-      if (session.user && token) {
-        session.user.id = token.id as string;
-        session.user.roles = token.roles as string[];
-        session.user.permissions = token.permissions as string[];
+      if (token) {
+        session.user = {
+          ...session.user,
+          id: token.id as string,
+          roles: token.roles as string[],
+          permissions: token.permissions as string[],
+        };
       }
       return session;
     },
   },
+
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
@@ -152,19 +128,28 @@ export const authOptions: NextAuthOptions = {
   ],
   pages: {
     signIn: "/auth/signin",
-    verifyRequest: "/auth/verify-request",
     error: "/auth/error",
   },
+
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // 24 hours
+  },
+  jwt: {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 };
 
 export const getServerAuthSession = async () => {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    throw new Error("Unauthorized");
+  try {
+    const session = await getServerSession(authOptions);
+    return session;
+  } catch (error) {
+    console.error("Error getting session:", error);
+    return null;
   }
-  return session;
 };
+
+
+

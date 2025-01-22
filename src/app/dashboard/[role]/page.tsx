@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/server/auth";
+import { getServerAuthSession } from "@/server/auth";
 import { DefaultRoles } from "@/utils/permissions";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 
@@ -9,18 +8,12 @@ export default async function RoleDashboard({
 }: {
   params: { role: string };
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerAuthSession().catch(() => null);
   
   // Normalize the role to uppercase and replace hyphens with underscores
   const normalizedRole = params.role.toUpperCase().replace(/-/g, '_');
 
-  console.log({
-    sessionExists: !!session,
-    userRoles: session?.user?.roles,
-    currentRole: normalizedRole,
-  });
-
-  if (!session) {
+  if (!session?.user) {
     redirect('/auth/signin');
   }
 
