@@ -24,19 +24,59 @@ const formSchema = z.object({
 
 interface ClassroomFormProps {
   onCancel: () => void;
+  classroomId?: string;
 }
 
-const ClassroomForm: FC<ClassroomFormProps> = ({ onCancel }) => {
+const ClassroomForm: FC<ClassroomFormProps> = ({ onCancel, classroomId }) => {
   const { toast } = useToast();
   const utils = api.useContext();
   const [resources, setResources] = useState<string[]>([]);
   const [newResource, setNewResource] = useState("");
+
+  const { data: classroomData } = api.classroom.getById.useQuery(
+    classroomId || "",
+    {
+      enabled: !!classroomId,
+      onSuccess: (data) => {
+        if (data) {
+          form.reset({
+            name: data.name,
+            capacity: data.capacity,
+          });
+          try {
+            const parsedResources = JSON.parse(data.resources || "[]");
+            setResources(Array.isArray(parsedResources) ? parsedResources : []);
+          } catch (e) {
+            setResources([]);
+          }
+        }
+      },
+    }
+  );
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       capacity: 1,
+    },
+  });
+
+  const updateClassroom = api.classroom.update.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Classroom updated successfully",
+      });
+      void utils.classroom.getAll.invalidate();
+      onCancel();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -70,10 +110,16 @@ const ClassroomForm: FC<ClassroomFormProps> = ({ onCancel }) => {
   };
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
-    createClassroom.mutate({
+    const payload = {
       ...data,
       resources: JSON.stringify(resources),
-    });
+    };
+
+    if (classroomId) {
+      updateClassroom.mutate({ id: classroomId, ...payload });
+    } else {
+      createClassroom.mutate(payload);
+    }
   };
 
   return (
@@ -146,8 +192,11 @@ const ClassroomForm: FC<ClassroomFormProps> = ({ onCancel }) => {
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit" disabled={createClassroom.isLoading}>
-            Create Classroom
+            <Button 
+            type="submit" 
+            disabled={createClassroom.isLoading || updateClassroom.isLoading}
+            >
+            {classroomId ? "Update" : "Create"} Classroom
           </Button>
         </div>
       </form>

@@ -15,9 +15,10 @@ type Period = RouterOutputs["classroom"]["getAvailability"][number];
 interface ClassroomViewProps {
 	classroomId: string;
 	onBack: () => void;
+	onEdit: () => void;
 }
 
-const ClassroomView: FC<ClassroomViewProps> = ({ classroomId, onBack }) => {
+const ClassroomView: FC<ClassroomViewProps> = ({ classroomId, onBack, onEdit }) => {
 	const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 	
 	const { data: classroom, isLoading: classroomLoading } = api.classroom.getById.useQuery(classroomId);
@@ -41,6 +42,9 @@ const ClassroomView: FC<ClassroomViewProps> = ({ classroomId, onBack }) => {
 					Back
 				</Button>
 				<h2 className="text-2xl font-bold">{classroom.name}</h2>
+				<Button onClick={onEdit}>
+					Edit Classroom
+				</Button>
 			</div>
 
 			<div className="grid gap-4 md:grid-cols-2">
@@ -57,9 +61,18 @@ const ClassroomView: FC<ClassroomViewProps> = ({ classroomId, onBack }) => {
 								<div>
 									<span className="font-semibold">Resources:</span>
 									<ul className="list-disc list-inside">
-										{JSON.parse(classroom.resources).map((resource: string, index: number) => (
-											<li key={index}>{resource}</li>
-										))}
+										{(() => {
+											try {
+												const resources = JSON.parse(classroom.resources);
+												return Array.isArray(resources)
+													? resources.map((resource: string, index: number) => (
+															<li key={index}>{resource}</li>
+													))
+													: <li>{classroom.resources}</li>;
+											} catch (e) {
+												return <li>{classroom.resources}</li>;
+											}
+										})()}
 									</ul>
 								</div>
 							)}

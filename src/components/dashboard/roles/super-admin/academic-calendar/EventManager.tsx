@@ -24,6 +24,8 @@ interface EventFormData {
 		frequency: 'daily' | 'weekly' | 'monthly';
 		interval: number;
 		endAfterOccurrences?: number;
+		daysOfWeek?: number[]; // For weekly recurrence
+		dayOfMonth?: number;   // For monthly recurrence
 	};
 }
 
@@ -43,7 +45,15 @@ export const EventManager = ({ academicYears, filteredEvents }: EventManagerProp
 		academicYearId: "none",
 		status: Status.ACTIVE,
 		isRecurring: false,
-	  });
+	});
+
+	const [dateRange, setDateRange] = useState<{
+		from: Date | undefined;
+		to: Date | undefined;
+	}>({
+		from: undefined,
+		to: undefined,
+	});
 
 	  const utils = api.useContext();
 
@@ -203,80 +213,140 @@ export const EventManager = ({ academicYears, filteredEvents }: EventManagerProp
 							</div>
 
 							{formData.isRecurring && (
-							  <div className="space-y-4">
-								<div>
-								  <Label htmlFor="frequency">Frequency</Label>
-								  <select
-									id="frequency"
-									value={formData.recurrencePattern?.frequency}
-									onChange={(e) => setFormData({
-									  ...formData,
-									  recurrencePattern: {
-										...formData.recurrencePattern!,
-										frequency: e.target.value as 'daily' | 'weekly' | 'monthly'
-									  }
-									})}
-									className="w-full border p-2 rounded"
-								  >
-									<option value="daily">Daily</option>
-									<option value="weekly">Weekly</option>
-									<option value="monthly">Monthly</option>
-								  </select>
-								</div>
+								<div className="space-y-4">
+									<div>
+										<Label htmlFor="frequency">Frequency</Label>
+										<select
+											id="frequency"
+											value={formData.recurrencePattern?.frequency}
+											onChange={(e) => {
+												const frequency = e.target.value as 'daily' | 'weekly' | 'monthly';
+												setFormData({
+													...formData,
+													recurrencePattern: {
+														frequency,
+														interval: 1,
+														endAfterOccurrences: 1,
+														daysOfWeek: frequency === 'weekly' ? [new Date().getDay()] : undefined,
+														dayOfMonth: frequency === 'monthly' ? new Date().getDate() : undefined
+													}
+												});
+											}}
+											className="w-full border p-2 rounded"
+										>
+											<option value="daily">Daily</option>
+											<option value="weekly">Weekly</option>
+											<option value="monthly">Monthly</option>
+										</select>
+									</div>
 
-								<div>
-								  <Label htmlFor="interval">Interval</Label>
-								  <Input
-									id="interval"
-									type="number"
-									min="1"
-									value={formData.recurrencePattern?.interval}
-									onChange={(e) => setFormData({
-									  ...formData,
-									  recurrencePattern: {
-										...formData.recurrencePattern!,
-										interval: parseInt(e.target.value)
-									  }
-									})}
-								  />
-								</div>
+									{formData.recurrencePattern?.frequency === 'weekly' && (
+										<div>
+											<Label>Days of Week</Label>
+											<div className="flex gap-2 flex-wrap">
+												{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+													<Button
+														key={day}
+														type="button"
+														variant={formData.recurrencePattern?.daysOfWeek?.includes(index) ? 'default' : 'outline'}
+														onClick={() => {
+															const daysOfWeek = formData.recurrencePattern?.daysOfWeek || [];
+															setFormData({
+																...formData,
+																recurrencePattern: {
+																	...formData.recurrencePattern!,
+																	daysOfWeek: daysOfWeek.includes(index)
+																		? daysOfWeek.filter(d => d !== index)
+																		: [...daysOfWeek, index]
+																}
+															});
+														}}
+													>
+														{day}
+													</Button>
+												))}
+											</div>
+										</div>
+									)}
 
-								<div>
-								  <Label htmlFor="occurrences">Number of Occurrences</Label>
-								  <Input
-									id="occurrences"
-									type="number"
-									min="1"
-									value={formData.recurrencePattern?.endAfterOccurrences}
-									onChange={(e) => setFormData({
-									  ...formData,
-									  recurrencePattern: {
-										...formData.recurrencePattern!,
-										endAfterOccurrences: parseInt(e.target.value)
-									  }
-									})}
-								  />
+									{formData.recurrencePattern?.frequency === 'monthly' && (
+										<div>
+											<Label>Day of Month</Label>
+											<Input
+												type="number"
+												min="1"
+												max="31"
+												value={formData.recurrencePattern.dayOfMonth}
+												onChange={(e) => setFormData({
+													...formData,
+													recurrencePattern: {
+														...formData.recurrencePattern!,
+														dayOfMonth: parseInt(e.target.value)
+													}
+												})}
+											/>
+										</div>
+									)}
+
+									<div>
+										<Label htmlFor="interval">Interval</Label>
+										<Input
+											id="interval"
+											type="number"
+											min="1"
+											value={formData.recurrencePattern?.interval}
+											onChange={(e) => setFormData({
+												...formData,
+												recurrencePattern: {
+													...formData.recurrencePattern!,
+													interval: parseInt(e.target.value)
+												}
+											})}
+										/>
+									</div>
+
+									<div>
+										<Label htmlFor="occurrences">Number of Occurrences</Label>
+										<Input
+											id="occurrences"
+											type="number"
+											min="1"
+											value={formData.recurrencePattern?.endAfterOccurrences}
+											onChange={(e) => setFormData({
+												...formData,
+												recurrencePattern: {
+													...formData.recurrencePattern!,
+													endAfterOccurrences: parseInt(e.target.value)
+												}
+											})}
+										/>
+									</div>
 								</div>
-							  </div>
 							)}
 
-							<div>
-							  <Label>Start Date</Label>
-							  <Calendar
-								mode="single"
-								selected={formData.startDate}
-								onSelect={(date) => date && setFormData({ ...formData, startDate: date })}
-								className="rounded-md border"
-							  />
-							</div>
-							<div>
-								<Label>End Date</Label>
-								<Calendar
-									mode="single"
-									selected={formData.endDate}
-									onSelect={(date) => date && setFormData({ ...formData, endDate: date })}
-									className="rounded-md border"
-								/>
+							<div className="space-y-4">
+								<Label>Date Range</Label>
+								<div className="flex flex-col space-y-2">
+									<Calendar
+										mode="range"
+										selected={{ 
+											from: dateRange.from, 
+											to: dateRange.to 
+										}}
+										onSelect={(range) => {
+											setDateRange(range || { from: undefined, to: undefined });
+											if (range?.from) {
+												setFormData(prev => ({
+													...prev,
+													startDate: range.from,
+													endDate: range.to || range.from
+												}));
+											}
+										}}
+										numberOfMonths={2}
+										className="rounded-md border"
+									/>
+								</div>
 							</div>
 							<Button type="submit">Create</Button>
 						</form>
