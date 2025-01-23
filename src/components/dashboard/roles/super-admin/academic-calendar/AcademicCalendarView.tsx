@@ -6,14 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { EventForm } from "./EventForm";
 
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { api } from "@/utils/api";
 import { EventType, Status } from "@prisma/client";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Badge } from "@/components/ui/badge";
+import { CalendarForm } from "./CalendarForm";
+
 
 type NewEvent = {
   title: string;
@@ -30,19 +31,28 @@ export const AcademicCalendarView = () => {
   const [view, setView] = useState<'month' | 'week'>('month');
   const [selectedEventType, setSelectedEventType] = useState<EventType | 'ALL'>('ALL');
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
+  const [isAddCalendarOpen, setIsAddCalendarOpen] = useState(false);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
-  const [newEvent, setNewEvent] = useState<NewEvent>({
-    title: '',
-    description: '',
-    eventType: EventType.ACADEMIC,
-    startDate: new Date(),
-    endDate: new Date(),
-  });
+  const [newCalendar, setNewCalendar] = useState({ name: '', description: '' });
+
+
 
   const { toast } = useToast();
 
   // Fetch calendars
-  const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
+  const { data: calendars, refetch: refetchCalendars } = api.academicCalendar.getAllCalendars.useQuery();
+
+  // Create calendar mutation
+  const createCalendar = api.academicCalendar.createCalendar.useMutation({
+    onSuccess: () => {
+      toast({ title: "Success", description: "Calendar created successfully" });
+      setIsAddCalendarOpen(false);
+      void refetchCalendars();
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   // Fetch events based on date range
   const { data: events, refetch: refetchEvents } = api.academicCalendar.getEventsByDateRange.useQuery({
@@ -117,105 +127,90 @@ export const AcademicCalendarView = () => {
     : undefined;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Academic Calendar Management</CardTitle>
-        <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
-          <DialogTrigger asChild>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Calendar Management</CardTitle>
+          <Dialog open={isAddCalendarOpen} onOpenChange={setIsAddCalendarOpen}>
+            <DialogTrigger asChild>
+              <Button>Add Calendar</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Calendar</DialogTitle>
+              </DialogHeader>
+              <CalendarForm onSubmit={(data) => createCalendar.mutate(data)} />
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {calendars?.map((calendar) => (
+              <Card key={calendar.id} className="p-4">
+                <div className="flex flex-col space-y-2">
+                  <h3 className="font-semibold">{calendar.name}</h3>
+                  <p className="text-sm text-gray-500">{calendar.description}</p>
+                  <div className="flex items-center space-x-2">
+                    <Badge>{calendar.type}</Badge>
+                    <Badge variant="outline">{calendar.visibility}</Badge>
+                  </div>
+                  <Button 
+                    variant={selectedCalendarId === calendar.id ? "default" : "outline"}
+                    className="w-full mt-2"
+                    onClick={() => setSelectedCalendarId(calendar.id)}
+                  >
+                    {selectedCalendarId === calendar.id ? "Selected" : "Select Calendar"}
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {selectedCalendarId && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>
+              {calendars?.find(c => c.id === selectedCalendarId)?.name} - Events
+            </CardTitle>
+            <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
+            <DialogTrigger asChild>
             <Button>Add Event</Button>
-          </DialogTrigger>
-          <DialogContent>
+            </DialogTrigger>
+            <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Event</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <Input
-              placeholder="Event Title"
-              value={newEvent.title}
-              onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-              />
-              <Textarea
-              placeholder="Event Description"
-              value={newEvent.description}
-              onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-              />
-              <Select
-              value={newEvent.eventType}
-              onValueChange={(value: EventType) => setNewEvent({ ...newEvent, eventType: value })}
-              required
-              >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Event Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(EventType).map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type.charAt(0) + type.slice(1).toLowerCase()}
-                </SelectItem>
-                ))}
-              </SelectContent>
-              </Select>
-              <div className="space-y-2">
-              <div>
-                <span className="text-sm font-medium">Start Date</span>
-                <Input
-                type="date"
-                value={format(newEvent.startDate, 'yyyy-MM-dd')}
-                onChange={(e) => setNewEvent({ ...newEvent, startDate: new Date(e.target.value) })}
-                required
-                />
-              </div>
-              <div>
-                <span className="text-sm font-medium">End Date</span>
-                <Input
-                type="date"
-                value={format(newEvent.endDate, 'yyyy-MM-dd')}
-                onChange={(e) => setNewEvent({ ...newEvent, endDate: new Date(e.target.value) })}
-                required
-                />
-              </div>
-              </div>
-              <Button 
-              onClick={handleAddEvent} 
-              disabled={createEvent.isLoading}
-              >
-              {createEvent.isLoading ? "Creating..." : "Save Event"}
-              </Button>
-            </div>
+            <EventForm 
+              calendarId={selectedCalendarId}
+              onSubmit={(data) => {
+              createEvent.mutate({
+                ...data,
+                status: Status.ACTIVE,
+                calendarId: selectedCalendarId,
+              });
+              }}
+            />
+            </DialogContent>
 
-          </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
             <div className="flex space-x-4">
-            <Select 
-              value={selectedCalendarId} 
-              onValueChange={setSelectedCalendarId}
-            >
-              <SelectTrigger>
-              <SelectValue placeholder="Select Calendar" />
-              </SelectTrigger>
-              <SelectContent>
-              {calendars?.map((calendar) => (
-                <SelectItem key={calendar.id} value={calendar.id}>
-                {calendar.name}
-                </SelectItem>
-              ))}
-              </SelectContent>
-            </Select>
-
             <Select value={selectedEventType} onValueChange={(value: EventType | 'ALL') => setSelectedEventType(value)}>
+
               <SelectTrigger>
                 <SelectValue placeholder="Select Event Type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Events</SelectItem>
-                <SelectItem value="ACADEMIC">Academic</SelectItem>
-                <SelectItem value="HOLIDAY">Holiday</SelectItem>
-                <SelectItem value="EXAM">Exam</SelectItem>
-                <SelectItem value="ACTIVITY">Activity</SelectItem>
-                <SelectItem value="OTHER">Other</SelectItem>
+                {Object.values(EventType).map((type) => (
+                  <SelectItem key={type} value={type}>
+                  {type}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
