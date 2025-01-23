@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/utils/api";
 import { Status } from "@prisma/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
+import type { TRPCClientError } from "@trpc/client";
 
 
 interface ProgramFormData {
@@ -125,20 +126,29 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 
 			<div>
 				<Label htmlFor="calendar">Calendar</Label>
-				<select
-					id="calendar"
-					value={formData.calendarId}
-					onChange={(e) => setFormData({ ...formData, calendarId: e.target.value })}
-					className="w-full border p-2 rounded"
-					required
-				>
-					<option value="none">Select Calendar</option>
-					{calendars?.map((calendar) => (
-						<option key={calendar.id} value={calendar.id}>
-							{calendar.name}
-						</option>
-					))}
-				</select>
+
+    <select
+        id="calendar"
+        value={formData.calendarId}
+        onChange={(e) => setFormData({ ...formData, calendarId: e.target.value })}
+        className="w-full border p-2 rounded"
+        required
+        title="Select academic calendar for this program"
+    >
+
+        <option value="none">Select Calendar</option>
+
+        {calendars?.map((calendar) => (
+
+            <option key={calendar.id} value={calendar.id}>
+
+                {calendar.name}
+
+            </option>
+
+        ))}
+
+    </select>
 			</div>
 
 			<div>
@@ -148,6 +158,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 					value={formData.coordinatorId}
 					onChange={(e) => setFormData({ ...formData, coordinatorId: e.target.value })}
 					className="w-full border p-2 rounded"
+					title="Select program coordinator"
 				>
 					<option value="none">Select Coordinator</option>
 					{coordinators.map((coordinator) => (
@@ -165,6 +176,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 					value={formData.status}
 					onChange={(e) => setFormData({ ...formData, status: e.target.value as Status })}
 					className="w-full border p-2 rounded"
+					title="Select program status"
 				>
 					{Object.values(Status).map((status) => (
 						<option key={status} value={status}>

@@ -3,30 +3,50 @@ import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 
 export const programRouter = createTRPCRouter({
-	getAll: protectedProcedure.query(async ({ ctx }) => {
-		const programs = await ctx.prisma.program.findMany({
-			include: {
-				coordinator: {
+	getAllPrograms: protectedProcedure
+		.input(
+			z.object({
+				page: z.number().min(1).default(1),
+				pageSize: z.number().min(1).max(100).default(10),
+			})
+		)
+		.query(async ({ ctx, input }) => {
+			try {
+				const programs = await ctx.prisma.program.findMany({
+					skip: (input.page - 1) * input.pageSize,
+					take: input.pageSize,
 					include: {
-						user: true,
-					},
-				},
-				calendar: true,
-				classGroups: {
-					include: {
-						classes: {
+						coordinator: {
 							include: {
-								students: true,
-								teachers: true,
+								user: true,
 							},
 						},
+						calendar: true,
 					},
-				},
-			},
-		});
+					orderBy: {
+						name: 'asc',
+					},
+				});
 
-		return programs;
-	}),
+				const totalCount = await ctx.prisma.program.count();
+
+				return {
+					programs,
+					pagination: {
+						currentPage: input.page,
+						pageSize: input.pageSize,
+						totalCount,
+						totalPages: Math.ceil(totalCount / input.pageSize),
+					},
+				};
+			} catch (error) {
+				throw new TRPCError({
+					code: 'INTERNAL_SERVER_ERROR',
+					message: 'Failed to fetch programs',
+					cause: error,
+				});
+			}
+		}),
 
 	getById: protectedProcedure
 		.input(z.string())
@@ -39,7 +59,6 @@ export const programRouter = createTRPCRouter({
 							user: true,
 						},
 					},
-					academicYear: true,
 					classGroups: {
 						include: {
 							classes: {
@@ -103,22 +122,14 @@ export const programRouter = createTRPCRouter({
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
-			const { id, ...data } = input;
+			const { id, calendarId, coordinatorId, ...data } = input;
 			return ctx.prisma.program.update({
 				where: { id },
 				data: {
 					...data,
-					calendar: data.calendarId
-						? {
-								connect: { id: data.calendarId }
-							}
-						: undefined,
-					coordinator: data.coordinatorId
-						? {
-								connect: { id: data.coordinatorId },
-							}
-						: undefined,
-				},
+					calendar: calendarId ? { connect: { id: calendarId } } : undefined,
+					coordinator: coordinatorId ? { connect: { id: coordinatorId } } : undefined
+				}
 			});
 		}),
 

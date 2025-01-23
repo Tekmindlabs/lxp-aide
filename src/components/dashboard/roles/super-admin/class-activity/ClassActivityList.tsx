@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from "react";
 import { api } from "@/utils/api";
 import { Button } from "@/components/ui/button";
@@ -83,7 +85,7 @@ export default function ClassActivityList({ onEdit }: Props) {
 						<SelectValue placeholder="Filter by type" />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="">All Types</SelectItem>
+						<SelectItem value={null}>All Types</SelectItem>
 						{Object.values(ActivityType).map((type) => (
 							<SelectItem key={type} value={type}>{type}</SelectItem>
 						))}
@@ -97,7 +99,7 @@ export default function ClassActivityList({ onEdit }: Props) {
 						<SelectValue placeholder="Filter by class group" />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="">All Class Groups</SelectItem>
+						<SelectItem value={null}>All Class Groups</SelectItem>
 						{classGroups?.map((group) => (
 							<SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
 						))}

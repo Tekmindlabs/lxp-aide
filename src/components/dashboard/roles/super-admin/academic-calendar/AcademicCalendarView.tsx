@@ -7,24 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { EventForm } from "./EventForm";
-
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { api } from "@/utils/api";
-import { EventType, Status } from "@prisma/client";
+import { EventType, Status, CalendarType, Visibility } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { CalendarForm } from "./CalendarForm";
-
-
-type NewEvent = {
-  title: string;
-  description?: string;
-  eventType: EventType;
-  startDate: Date;
-  endDate: Date;
-};
-
-
+import { EventForm } from "./EventForm";
 
 export const AcademicCalendarView = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -33,11 +21,9 @@ export const AcademicCalendarView = () => {
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
   const [isAddCalendarOpen, setIsAddCalendarOpen] = useState(false);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
-  const [newCalendar, setNewCalendar] = useState({ name: '', description: '' });
-
-
 
   const { toast } = useToast();
+
 
   // Fetch calendars
   const { data: calendars, refetch: refetchCalendars } = api.academicCalendar.getAllCalendars.useQuery();
@@ -84,22 +70,8 @@ export const AcademicCalendarView = () => {
     },
   });
 
-  const handleAddEvent = () => {
-    if (!selectedCalendarId) {
-      toast({
-        title: "Error",
-        description: "Please select a calendar",
-        variant: "destructive",
-      });
-      return;
-    }
 
-    createEvent.mutate({
-      ...newEvent,
-      status: Status.ACTIVE,
-      calendarId: selectedCalendarId,
-    });
-  };
+
 
   const isDateInEvent = (date: Date) => {
     if (!events) return false;
@@ -139,7 +111,19 @@ export const AcademicCalendarView = () => {
               <DialogHeader>
                 <DialogTitle>Create New Calendar</DialogTitle>
               </DialogHeader>
-              <CalendarForm onSubmit={(data) => createCalendar.mutate(data)} />
+                <CalendarForm onSubmit={(data) => {
+                if (!data.name || !data.startDate || !data.endDate) return;
+                createCalendar.mutate({
+                  name: data.name,
+                  startDate: data.startDate,
+                  endDate: data.endDate,
+                  description: data.description ?? undefined,
+                  status: Status.ACTIVE,
+                  type: data.type ?? CalendarType.PRIMARY,
+                  isDefault: false,
+                  visibility: data.visibility ?? Visibility.ALL
+                });
+                }} />
             </DialogContent>
           </Dialog>
         </CardHeader>
@@ -175,26 +159,30 @@ export const AcademicCalendarView = () => {
               {calendars?.find(c => c.id === selectedCalendarId)?.name} - Events
             </CardTitle>
             <Dialog open={isAddEventOpen} onOpenChange={setIsAddEventOpen}>
-            <DialogTrigger asChild>
-            <Button>Add Event</Button>
-            </DialogTrigger>
-            <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Event</DialogTitle>
-            </DialogHeader>
-            <EventForm 
-              calendarId={selectedCalendarId}
-              onSubmit={(data) => {
-              createEvent.mutate({
-                ...data,
-                status: Status.ACTIVE,
-                calendarId: selectedCalendarId,
-              });
-              }}
-            />
-            </DialogContent>
-
-        </Dialog>
+              <DialogTrigger asChild>
+                <Button>Add Event</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Event</DialogTitle>
+                </DialogHeader>
+                <EventForm 
+                  calendarId={selectedCalendarId}
+                  onSubmit={(data) => {
+                  if (!data.title || !data.eventType || !data.startDate || !data.endDate) return;
+                  createEvent.mutate({
+                    title: data.title,
+                    description: data.description ?? undefined,
+                    eventType: data.eventType,
+                    startDate: data.startDate,
+                    endDate: data.endDate,
+                    status: Status.ACTIVE,
+                    calendarId: selectedCalendarId
+                  });
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -276,5 +264,7 @@ export const AcademicCalendarView = () => {
         </div>
       </CardContent>
     </Card>
-  );
+  )}
+  </div>
+);
 };

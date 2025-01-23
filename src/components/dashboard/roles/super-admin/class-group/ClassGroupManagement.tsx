@@ -12,7 +12,10 @@ export const ClassGroupManagement = () => {
 	const [activeTab, setActiveTab] = useState("list");
 	const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 	const { data: classGroups, isLoading } = api.classGroup.getAllClassGroups.useQuery();
-	const { data: programs } = api.program.getAllPrograms.useQuery();
+	const { data: programs } = api.program.getAllPrograms.useQuery({
+		page: 1,
+		pageSize: 10
+	});
 
 	const handleEdit = (groupId: string) => {
 		setSelectedGroupId(groupId);
@@ -62,7 +65,7 @@ export const ClassGroupManagement = () => {
 
 						<TabsContent value="create">
 							<ClassGroupForm 
-								programs={programs || []}
+								programs={programs?.programs || []}
 								onSuccess={handleSuccess}
 							/>
 						</TabsContent>
@@ -70,7 +73,7 @@ export const ClassGroupManagement = () => {
 						<TabsContent value="edit">
 							{selectedGroupId && (
 								<ClassGroupForm 
-									programs={programs || []}
+									programs={programs?.programs || []}
 									selectedClassGroup={classGroups?.find(g => g.id === selectedGroupId)}
 									onSuccess={handleSuccess}
 								/>

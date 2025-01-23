@@ -148,9 +148,10 @@ export default async function RoleLayout({
 		redirect("/auth/signin");
 	}
 
-	const role = params.role;
-	const userRoles = session.user.roles.map((r) => r.toLowerCase());
-	const currentRole = role.toLowerCase();
+        // Extract role from params
+        const { role } = await params;
+        const userRoles = session.user.roles.map((r) => r.toLowerCase());
+        const currentRole = role?.toLowerCase() || '';  
 
 	if (!userRoles.includes(currentRole)) {
 		redirect(`/dashboard/${session.user.roles[0].toLowerCase()}`);

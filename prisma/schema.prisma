@@ -381,7 +381,7 @@ model Period {
 
 model Classroom {
   id          String    @id @default(cuid())
-  name        String
+  name      String    @unique
   capacity    Int
   resources   String?   // JSON string of available resources
   periods     Period[]

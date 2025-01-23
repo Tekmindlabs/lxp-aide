@@ -33,6 +33,11 @@ const navigationItems = {
       title: "Settings",
       href: "/dashboard/ADMIN/settings",
       permission: Permissions.SETTINGS_MANAGE,
+    },
+    {
+      title: "Coordinator",
+      href: "/dashboard/ADMIN/coordinator",
+      permission: Permissions.ROLE_READ,
     }
   ],
   'TEACHER': [

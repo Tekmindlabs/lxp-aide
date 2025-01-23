@@ -1,3 +1,5 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +37,7 @@ export const CoordinatorDetails = ({ coordinatorId, onBack }: CoordinatorDetails
 
 					<div>
 						<h3 className="font-semibold">Status</h3>
-						<Badge variant={coordinator.status === "ACTIVE" ? "success" : "secondary"}>
+						<Badge variant={coordinator.status === "ACTIVE" ? "default" : "outline"}>
 							{coordinator.status}
 						</Badge>
 					</div>
@@ -43,7 +45,7 @@ export const CoordinatorDetails = ({ coordinatorId, onBack }: CoordinatorDetails
 					<div>
 						<h3 className="font-semibold">Assigned Programs</h3>
 						<div className="flex flex-wrap gap-2 mt-2">
-							{coordinator.coordinatorProfile?.programs.map((program) => (
+							{coordinator.coordinatorProfile?.programs.map((program: { id: string; name: string; level: string }) => (
 								<Badge key={program.id} variant="outline">
 									{program.name} ({program.level})
 								</Badge>

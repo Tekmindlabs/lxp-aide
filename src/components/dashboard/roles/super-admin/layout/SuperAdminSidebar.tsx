@@ -14,7 +14,9 @@ import {
   LuClock, 
   LuHouse, 
   LuMessageSquare, 
-  LuBell 
+  LuBell,
+  LuUserCog,
+  LuActivity 
 } from "react-icons/lu";
 import { type FC } from "react";
 
@@ -79,6 +81,16 @@ const menuItems: MenuItem[] = [
     title: "Users",
     href: "/dashboard/super_admin/users",
     icon: LuUsers,
+  },
+  {
+    title: "Coordinator Management",
+    href: "/dashboard/super_admin/coordinator",
+    icon: LuUserCog,
+  },
+  {
+    title: "Class Activities",
+    href: "/dashboard/super_admin/class-activities",
+    icon: LuActivity,
   },
   {
     title: "Messages",

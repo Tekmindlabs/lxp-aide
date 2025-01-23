@@ -19,12 +19,12 @@ export default function ProgramPage() {
 	const [formData, setFormData] = useState({
 		name: "",
 		description: "",
-		academicYearId: "",
+		calendarId: "",
 	});
 
 	const { toast } = useToast();
 	
-	const { data: academicYears } = api.academicCalendar.getAllAcademicYears.useQuery();
+const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
 	const { data: programs, refetch: refetchPrograms } = api.program.getAll.useQuery();
 	
 	const createProgram = api.program.create.useMutation({
@@ -34,7 +34,7 @@ export default function ProgramPage() {
 				description: "Program created successfully",
 			});
 			setIsCreating(false);
-			setFormData({ name: "", description: "", academicYearId: "" });
+			setFormData({ name: "", description: "", calendarId: "" });
 			void refetchPrograms();
 		},
 		onError: (error) => {
@@ -108,24 +108,24 @@ export default function ProgramPage() {
 							<div className="space-y-2">
 								<Label htmlFor="academicYear">Academic Year</Label>
 								<Select 
-									value={formData.academicYearId}
-									onValueChange={(value) => setFormData(prev => ({ ...prev, academicYearId: value }))}
+									value={formData.calendarId}
+									onValueChange={(value) => setFormData(prev => ({ ...prev, calendarId: value }))}
 									required
 								>
 									<SelectTrigger>
 										<SelectValue placeholder="Select Academic Year" />
 									</SelectTrigger>
 									<SelectContent>
-										{academicYears?.map((year) => (
-											<SelectItem key={year.id} value={year.id}>
-												{year.name}
+										{calendars?.map((calendar) => (
+											<SelectItem key={calendar.id} value={calendar.id}>
+												{calendar.name}
 											</SelectItem>
 										))}
 									</SelectContent>
 								</Select>
 							</div>
-							<Button type="submit" className="w-full" disabled={createProgram.isLoading}>
-								{createProgram.isLoading ? "Creating..." : "Create Program"}
+							<Button type="submit" className="w-full" disabled={createProgram.isPending}>
+								{createProgram.isPending ? "Creating..." : "Create Program"}
 							</Button>
 						</form>
 					</DialogContent>

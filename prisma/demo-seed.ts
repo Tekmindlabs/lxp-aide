@@ -521,13 +521,15 @@ async function seedDemoData() {
     console.log('Creating demo classrooms...');
     const classrooms = await Promise.all([
       prisma.classroom.upsert({
-      where: { name: 'Room 101' },
-      update: {},
-      create: {
-        name: 'Room 101',
-        capacity: 30,
-        resources: 'Projector, Whiteboard',
-      }
+        where: {
+          id: "room-101", // Provide a specific ID
+        },
+        update: {},
+        create: {
+          name: "Room 101",
+          capacity: 30,
+          resources: "Projector, Whiteboard"
+        }
       }),
       prisma.classroom.upsert({
       where: { name: 'Room 102' },

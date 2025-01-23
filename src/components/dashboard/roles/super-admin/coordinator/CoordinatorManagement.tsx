@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,7 +24,7 @@ export const CoordinatorManagement = () => {
 	});
 
 	const { data: coordinators, isLoading } = api.coordinator.searchCoordinators.useQuery(filters);
-	const { data: programs } = api.program.getAllPrograms.useQuery();
+	const { data: programs } = api.program.getAll.useQuery();
 
 	if (isLoading) {
 		return <div>Loading...</div>;
