@@ -26,11 +26,25 @@ export const CalendarForm = ({ calendar, onSubmit }: CalendarFormProps) => {
 		isDefault: calendar?.isDefault || false,
 		startDate: calendar?.startDate || new Date(),
 		endDate: calendar?.endDate || new Date(),
+		metadata: calendar?.metadata || {
+			academicYear: format(new Date(), 'yyyy'),
+			semester: 'BOTH',
+			terms: 2
+		}
 	});
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
-		onSubmit(formData);
+		const submissionData = {
+			...formData,
+			startDate: new Date(formData.startDate!),
+			endDate: new Date(formData.endDate!),
+			metadata: {
+				...formData.metadata,
+				academicYear: `${format(formData.startDate!, 'yyyy')}-${format(formData.endDate!, 'yyyy')}`,
+			}
+		};
+		onSubmit(submissionData);
 	};
 
 	return (

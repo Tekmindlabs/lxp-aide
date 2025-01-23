@@ -1,4 +1,4 @@
-import { PrismaClient, UserType, Status, EventType, ActivityType, ResourceType } from '@prisma/client';
+const { PrismaClient, UserType, Status, EventType, ActivityType, ResourceType } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
@@ -131,70 +131,206 @@ async function seedDemoData() {
     console.log('Creating demo calendar...');
     const calendar = await prisma.calendar.create({
       data: {
-        name: '2024-2025 Academic Calendar',
-        description: 'Main academic calendar for 2024-2025',
-        status: Status.ACTIVE,
+      name: '2024-2025 Academic Calendar',
+      description: 'Main academic calendar for 2024-2025',
+      startDate: new Date('2024-08-01'),
+      endDate: new Date('2025-05-31'),
+      type: 'PRIMARY',
+      status: Status.ACTIVE,
+      isDefault: true,
+      visibility: 'ALL',
+      metadata: {
+        academicYear: '2024-2025',
+        semester: 'BOTH',
+        terms: 2
+      }
       }
     });
 
     // 2. Create Demo Events
     console.log('Creating demo events...');
     await Promise.all([
+      // Academic Events
       prisma.event.create({
-        data: {
-          title: 'First Day of School',
-          description: 'Opening ceremony and first day of classes',
-          eventType: EventType.ACADEMIC,
-          startDate: new Date('2024-08-01'),
-          endDate: new Date('2024-08-01'),
-          calendarId: calendar.id,
-          status: Status.ACTIVE,
-        }
+      data: {
+        title: 'First Day of School',
+        description: 'Opening ceremony and first day of classes',
+        eventType: EventType.ACADEMIC,
+        startDate: new Date('2024-08-01'),
+        endDate: new Date('2024-08-01'),
+        calendarId: calendar.id,
+        status: Status.ACTIVE,
+        priority: 'HIGH',
+        visibility: 'ALL'
+      }
+      }),
+      // Holidays
+      prisma.event.create({
+      data: {
+        title: 'Fall Break',
+        description: 'Fall semester break',
+        eventType: EventType.HOLIDAY,
+        startDate: new Date('2024-10-14'),
+        endDate: new Date('2024-10-18'),
+        calendarId: calendar.id,
+        status: Status.ACTIVE,
+        priority: 'MEDIUM',
+        visibility: 'ALL'
+      }
       }),
       prisma.event.create({
-        data: {
-          title: 'Winter Break',
-          description: 'Winter holiday break',
-          eventType: EventType.HOLIDAY,
-          startDate: new Date('2024-12-20'),
-          endDate: new Date('2025-01-05'),
-          calendarId: calendar.id,
-          status: Status.ACTIVE,
-        }
+      data: {
+        title: 'Winter Break',
+        description: 'Winter holiday break',
+        eventType: EventType.HOLIDAY,
+        startDate: new Date('2024-12-23'),
+        endDate: new Date('2025-01-03'),
+        calendarId: calendar.id,
+        status: Status.ACTIVE,
+        priority: 'MEDIUM',
+        visibility: 'ALL'
+      }
       }),
       prisma.event.create({
-        data: {
-          title: 'Midterm Exams',
-          description: 'First semester midterm examinations',
-          eventType: EventType.EXAM,
-          startDate: new Date('2024-10-15'),
-          endDate: new Date('2024-10-25'),
-          calendarId: calendar.id,
-          status: Status.ACTIVE,
-        }
+      data: {
+        title: 'Spring Break',
+        description: 'Spring semester break',
+        eventType: EventType.HOLIDAY,
+        startDate: new Date('2025-03-24'),
+        endDate: new Date('2025-03-28'),
+        calendarId: calendar.id,
+        status: Status.ACTIVE,
+        priority: 'MEDIUM',
+        visibility: 'ALL'
+      }
+      }),
+      // Exams
+      prisma.event.create({
+      data: {
+        title: 'Fall Midterms',
+        description: 'Fall semester midterm examinations',
+        eventType: EventType.EXAM,
+        startDate: new Date('2024-10-07'),
+        endDate: new Date('2024-10-11'),
+        calendarId: calendar.id,
+        status: Status.ACTIVE,
+        priority: 'HIGH',
+        visibility: 'ALL'
+      }
+      }),
+      prisma.event.create({
+      data: {
+        title: 'Fall Finals',
+        description: 'Fall semester final examinations',
+        eventType: EventType.EXAM,
+        startDate: new Date('2024-12-16'),
+        endDate: new Date('2024-12-20'),
+        calendarId: calendar.id,
+        status: Status.ACTIVE,
+        priority: 'HIGH',
+        visibility: 'ALL'
+      }
+      }),
+      prisma.event.create({
+      data: {
+        title: 'Spring Midterms',
+        description: 'Spring semester midterm examinations',
+        eventType: EventType.EXAM,
+        startDate: new Date('2025-03-17'),
+        endDate: new Date('2025-03-21'),
+        calendarId: calendar.id,
+        status: Status.ACTIVE,
+        priority: 'HIGH',
+        visibility: 'ALL'
+      }
+      }),
+      prisma.event.create({
+      data: {
+        title: 'Spring Finals',
+        description: 'Spring semester final examinations',
+        eventType: EventType.EXAM,
+        startDate: new Date('2025-05-26'),
+        endDate: new Date('2025-05-30'),
+        calendarId: calendar.id,
+        status: Status.ACTIVE,
+        priority: 'HIGH',
+        visibility: 'ALL'
+      }
       })
     ]);
 
-    // 3. Create Demo Terms
+    // 3. Create Demo Terms with Grading Periods and Weeks
     console.log('Creating demo terms...');
     const terms = await Promise.all([
       prisma.term.create({
-        data: {
-          name: 'Fall Semester 2024',
+      data: {
+        name: 'Fall Semester 2024',
+        startDate: new Date('2024-08-01'),
+        endDate: new Date('2024-12-20'),
+        calendarId: calendar.id,
+        status: Status.ACTIVE,
+        gradingPeriods: {
+        create: [
+          {
+          name: 'Fall Quarter 1',
           startDate: new Date('2024-08-01'),
+          endDate: new Date('2024-10-04'),
+          weight: 50,
+          status: Status.ACTIVE
+          },
+          {
+          name: 'Fall Quarter 2',
+          startDate: new Date('2024-10-21'),
           endDate: new Date('2024-12-20'),
-          calendarId: calendar.id,
-          status: Status.ACTIVE,
+          weight: 50,
+          status: Status.ACTIVE
+          }
+        ]
+        },
+        weeks: {
+        create: Array.from({ length: 18 }, (_, i) => ({
+          weekNumber: i + 1,
+          startDate: new Date(2024, 7, 1 + (i * 7)),
+          endDate: new Date(2024, 7, 7 + (i * 7)),
+          status: Status.ACTIVE
+        }))
         }
+      }
       }),
       prisma.term.create({
-        data: {
-          name: 'Spring Semester 2025',
+      data: {
+        name: 'Spring Semester 2025',
+        startDate: new Date('2025-01-06'),
+        endDate: new Date('2025-05-30'),
+        calendarId: calendar.id,
+        status: Status.ACTIVE,
+        gradingPeriods: {
+        create: [
+          {
+          name: 'Spring Quarter 1',
           startDate: new Date('2025-01-06'),
-          endDate: new Date('2025-05-31'),
-          calendarId: calendar.id,
-          status: Status.ACTIVE,
+          endDate: new Date('2025-03-14'),
+          weight: 50,
+          status: Status.ACTIVE
+          },
+          {
+          name: 'Spring Quarter 2',
+          startDate: new Date('2025-03-31'),
+          endDate: new Date('2025-05-30'),
+          weight: 50,
+          status: Status.ACTIVE
+          }
+        ]
+        },
+        weeks: {
+        create: Array.from({ length: 18 }, (_, i) => ({
+          weekNumber: i + 1,
+          startDate: new Date(2025, 0, 6 + (i * 7)),
+          endDate: new Date(2025, 0, 12 + (i * 7)),
+          status: Status.ACTIVE
+        }))
         }
+      }
       })
     ]);
 
@@ -471,12 +607,12 @@ async function seedDemoData() {
     if (students.length > 0) {
       console.log('Creating student assignments...');
       await Promise.all(
-      students.map(student =>
+      students.map((student: { id: string }) =>
         prisma.studentActivity.create({
         data: {
           studentId: student.id,
           activityId: activities[0].id,
-          status: 'PENDING'
+          status: 'PENDING' as const
         }
         })
       )

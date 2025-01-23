@@ -116,16 +116,43 @@ model Event {
 }
 
 model Term {
+  id              String          @id @default(cuid())
+  name            String
+  calendar        Calendar        @relation(fields: [calendarId], references: [id])
+  calendarId      String
+  startDate       DateTime
+  endDate         DateTime
+  status          Status          @default(ACTIVE)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  timetables      Timetable[]
+  gradingPeriods  GradingPeriod[]
+  weeks           Week[]
+}
+
+model GradingPeriod {
   id          String    @id @default(cuid())
   name        String
-  calendar    Calendar  @relation(fields: [calendarId], references: [id])
-  calendarId  String
+  term        Term      @relation(fields: [termId], references: [id])
+  termId      String
+  startDate   DateTime
+  endDate     DateTime
+  weight      Int       @default(50)
+  status      Status    @default(ACTIVE)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Week {
+  id          String    @id @default(cuid())
+  weekNumber  Int
+  term        Term      @relation(fields: [termId], references: [id])
+  termId      String
   startDate   DateTime
   endDate     DateTime
   status      Status    @default(ACTIVE)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  timetables  Timetable[]
 }
 
 

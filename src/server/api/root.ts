@@ -2,6 +2,7 @@ import { createTRPCRouter } from "@/server/api/trpc";
 import { userRouter } from "./routers/user";
 import { roleRouter } from "./routers/role";
 import { permissionRouter } from "./routers/permission";
+import { calendarRouter } from "./routers/calendar";
 import { academicCalendarRouter } from "./routers/academic-calendar";
 import { programRouter } from "./routers/program";
 import { classGroupRouter } from "./routers/class-group";
@@ -33,6 +34,7 @@ export const appRouter = createTRPCRouter({
   message: messageRouter,
   notification: notificationRouter,
   classActivity: classActivityRouter,
+  calendar: calendarRouter,
 });
 
 export type AppRouter = typeof appRouter;

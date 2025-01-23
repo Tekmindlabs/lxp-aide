@@ -29,6 +29,7 @@ export const AcademicCalendarView = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [view, setView] = useState<'month' | 'week'>('month');
   const [selectedEventType, setSelectedEventType] = useState<EventType | 'ALL'>('ALL');
+  const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
   const [newEvent, setNewEvent] = useState<NewEvent>({
     title: '',
@@ -40,12 +41,17 @@ export const AcademicCalendarView = () => {
 
   const { toast } = useToast();
 
-  // Fetch events based on date range
+  // Fetch calendars
+  const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
 
+  // Fetch events based on date range
   const { data: events, refetch: refetchEvents } = api.academicCalendar.getEventsByDateRange.useQuery({
     eventType: selectedEventType === 'ALL' ? undefined : selectedEventType,
     startDate: view === 'week' ? startOfWeek(selectedDate) : undefined,
     endDate: view === 'week' ? endOfWeek(selectedDate) : undefined,
+    calendarId: selectedCalendarId
+  }, {
+    enabled: !!selectedCalendarId,
   });
 
 
@@ -69,9 +75,19 @@ export const AcademicCalendarView = () => {
   });
 
   const handleAddEvent = () => {
+    if (!selectedCalendarId) {
+      toast({
+        title: "Error",
+        description: "Please select a calendar",
+        variant: "destructive",
+      });
+      return;
+    }
+
     createEvent.mutate({
       ...newEvent,
       status: Status.ACTIVE,
+      calendarId: selectedCalendarId,
     });
   };
 
@@ -172,7 +188,23 @@ export const AcademicCalendarView = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <div className="flex space-x-4">
+            <div className="flex space-x-4">
+            <Select 
+              value={selectedCalendarId} 
+              onValueChange={setSelectedCalendarId}
+            >
+              <SelectTrigger>
+              <SelectValue placeholder="Select Calendar" />
+              </SelectTrigger>
+              <SelectContent>
+              {calendars?.map((calendar) => (
+                <SelectItem key={calendar.id} value={calendar.id}>
+                {calendar.name}
+                </SelectItem>
+              ))}
+              </SelectContent>
+            </Select>
+
             <Select value={selectedEventType} onValueChange={(value: EventType | 'ALL') => setSelectedEventType(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select Event Type" />

@@ -6,18 +6,28 @@ import { Progress } from './progress';
 import { api } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
 
+interface FileInfo {
+	size: number;
+	createdAt: Date;
+	updatedAt: Date;
+	mimeType: string;
+	publicUrl: string;
+}
+
 interface FileUploadProps {
-	onUploadComplete?: (filePath: string) => void;
+	onUploadComplete?: (filePath: string, fileInfo: FileInfo) => void;
 	maxSize?: number;
 	allowedTypes?: string[];
 	className?: string;
+	subDir?: string;
 }
 
 export const FileUpload = ({ 
 	onUploadComplete, 
 	maxSize = 10 * 1024 * 1024, // 10MB
 	allowedTypes = ['image/*', 'application/pdf'],
-	className 
+	className,
+	subDir
 }: FileUploadProps) => {
 	const [file, setFile] = useState<File | null>(null);
 	const [progress, setProgress] = useState(0);
@@ -80,8 +90,6 @@ export const FileUpload = ({
 
 		try {
 			setProgress(10);
-
-			// Get upload configuration
 			const { uploadToken } = await uploadConfigMutation.mutateAsync({
 				fileName: file.name,
 				fileType: file.type,
@@ -89,28 +97,32 @@ export const FileUpload = ({
 			});
 
 			setProgress(30);
-
-			// Create form data
 			const formData = new FormData();
 			formData.append('file', file);
 			formData.append('uploadToken', uploadToken);
+			if (subDir) {
+				formData.append('subDir', subDir);
+			}
 
-			// Upload file
 			const response = await fetch('/api/upload', {
 				method: 'POST',
 				body: formData,
 			});
 
 			if (!response.ok) {
-				throw new Error('Upload failed');
+				const error = await response.json();
+				throw new Error(error.error || 'Upload failed');
 			}
 
 			setProgress(90);
-
-			const { filePath } = await response.json();
-			onUploadComplete?.(filePath);
+			const { filePath, fileInfo } = await response.json();
+			onUploadComplete?.(filePath, fileInfo);
 			setProgress(100);
 
+			toast({
+				title: 'Upload complete',
+				description: 'File has been successfully uploaded',
+			});
 		} catch (error) {
 			toast({
 				title: 'Upload failed',
@@ -119,7 +131,7 @@ export const FileUpload = ({
 			});
 			setProgress(0);
 		}
-	}, [file, uploadConfigMutation, onUploadComplete, toast]);
+	}, [file, uploadConfigMutation, onUploadComplete, subDir, toast]);
 
 
 	return (

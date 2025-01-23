@@ -3,8 +3,15 @@ DROP TABLE IF EXISTS "Event";
 DROP TABLE IF EXISTS "Calendar";
 
 -- Create new Calendar table with enhanced fields
+CREATE TYPE "Status" AS ENUM ('ACTIVE', 'INACTIVE', 'ARCHIVED');
 CREATE TYPE "CalendarType" AS ENUM ('PRIMARY', 'SECONDARY', 'EXAM', 'ACTIVITY');
 CREATE TYPE "Visibility" AS ENUM ('ALL', 'STAFF', 'STUDENTS', 'PARENTS');
+CREATE TYPE "Priority" AS ENUM ('HIGH', 'MEDIUM', 'LOW');
+CREATE TYPE "EventType" AS ENUM ('ACADEMIC', 'HOLIDAY', 'EXAM', 'ACTIVITY', 'OTHER');
+
+-- Drop existing constraints and tables
+DROP TABLE IF EXISTS "Event";
+DROP TABLE IF EXISTS "Calendar";
 
 CREATE TABLE "Calendar" (
 	"id" TEXT NOT NULL,

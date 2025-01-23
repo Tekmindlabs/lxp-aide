@@ -26,6 +26,41 @@ export const academicCalendarRouter = createTRPCRouter({
 			});
 		}),
 
+	getCalendarById: protectedProcedure
+		.input(z.object({
+			id: z.string(),
+		}))
+		.query(async ({ ctx, input }) => {
+			return ctx.prisma.calendar.findUnique({
+				where: { id: input.id },
+				include: {
+					events: true,
+				},
+			});
+		}),
+
+	updateCalendar: protectedProcedure
+		.input(z.object({
+			id: z.string(),
+			name: z.string().optional(),
+			description: z.string().optional(),
+			startDate: z.date().optional(),
+			endDate: z.date().optional(),
+			type: z.enum(['PRIMARY', 'SECONDARY', 'EXAM', 'ACTIVITY']).optional(),
+			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).optional(),
+			visibility: z.enum(['ALL', 'STAFF', 'STUDENTS', 'PARENTS']).optional(),
+		}))
+		.mutation(async ({ ctx, input }) => {
+			const { id, ...data } = input;
+			return ctx.prisma.calendar.update({
+				where: { id },
+				data,
+				include: {
+					events: true,
+				},
+			});
+		}),
+
 	// Event Operations
 	createEvent: protectedProcedure
 		.input(z.object({
@@ -35,10 +70,20 @@ export const academicCalendarRouter = createTRPCRouter({
 			startDate: z.date(),
 			endDate: z.date(),
 			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).default(Status.ACTIVE),
+			calendarId: z.string()
 		}))
 		.mutation(async ({ ctx, input }) => {
+			const { calendarId, ...eventData } = input;
 			return ctx.prisma.event.create({
-				data: input,
+				data: {
+					...eventData,
+					calendar: {
+						connect: { id: calendarId }
+					}
+				},
+				include: {
+					calendar: true
+				}
 			});
 		}),
 
@@ -81,20 +126,25 @@ export const academicCalendarRouter = createTRPCRouter({
 			eventType: z.enum([EventType.ACADEMIC, EventType.HOLIDAY, EventType.EXAM, EventType.ACTIVITY, EventType.OTHER]).optional(),
 			startDate: z.date().optional(),
 			endDate: z.date().optional(),
+			calendarId: z.string()
 		}))
 		.query(async ({ ctx, input }) => {
-			const { eventType, startDate, endDate } = input;
+			const { eventType, startDate, endDate, calendarId } = input;
 			
 			return ctx.prisma.event.findMany({
 				where: {
 					...(eventType && { eventType }),
 					...(startDate && { startDate: { gte: startDate } }),
 					...(endDate && { endDate: { lte: endDate } }),
+					calendarId,
 					status: Status.ACTIVE,
 				},
 				orderBy: {
 					startDate: 'asc',
 				},
+				include: {
+					calendar: true
+				}
 			});
 		}),
 });

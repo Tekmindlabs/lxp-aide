@@ -32,12 +32,17 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <a href="/dashboard" className="font-bold">
+            <div className="flex items-center space-x-4">
+            <a 
+              href={session?.user?.roles?.[0] 
+              ? `/dashboard/${session.user.roles[0].toLowerCase()}` 
+              : "/dashboard"} 
+              className="font-bold"
+            >
               RBAC Dashboard
             </a>
             <DashboardNav />
-          </div>
+            </div>
           
           {session?.user && (
             <div className="flex items-center space-x-4">

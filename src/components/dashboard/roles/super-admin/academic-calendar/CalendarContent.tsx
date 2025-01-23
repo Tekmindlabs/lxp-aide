@@ -1,15 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar as CalendarModel, Event } from '@prisma/client';
+import { Calendar as CalendarModel } from '@prisma/client';
 import { Calendar } from '@/components/ui/calendar';
+import { api } from '@/utils/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CalendarContentProps {
-	calendar: CalendarModel & { events: Event[] };
+	calendar: CalendarModel;
 	view: 'list' | 'calendar';
 	filters: any;
 }
@@ -21,16 +22,17 @@ export const CalendarContent = ({
 }: CalendarContentProps) => {
 	const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-	const filteredEvents = calendar.events.filter((event) => {
-		if (filters.type && event.eventType !== filters.type) return false;
-		if (filters.visibility && event.visibility !== filters.visibility) return false;
-		if (filters.dateRange?.from) {
-			const eventDate = new Date(event.startDate);
-			if (eventDate < filters.dateRange.from) return false;
-			if (filters.dateRange.to && eventDate > filters.dateRange.to) return false;
-		}
-		return true;
+	const { data: events } = api.academicCalendar.getEventsByDateRange.useQuery({
+		calendarId: calendar.id,
+		eventType: filters.type,
+		startDate: filters.dateRange?.from,
+		endDate: filters.dateRange?.to,
 	});
+
+	const filteredEvents = events?.filter((event) => {
+		if (filters.visibility && event.visibility !== filters.visibility) return false;
+		return true;
+	}) ?? [];
 
 	const getDayEvents = (date: Date) => {
 		return filteredEvents.filter((event) => {
