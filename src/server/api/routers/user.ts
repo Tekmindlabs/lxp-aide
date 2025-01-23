@@ -114,4 +114,45 @@ export const userRouter = createTRPCRouter({
         where: { id: input },
       });
     }),
+
+  searchUsers: permissionProtectedProcedure(Permissions.USER_READ)
+    .input(z.object({
+      search: z.string(),
+      excludeIds: z.array(z.string()).optional(),
+      roles: z.array(z.string()).optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      return ctx.prisma.user.findMany({
+        where: {
+          AND: [
+            {
+              OR: [
+                { name: { contains: input.search, mode: 'insensitive' } },
+                { email: { contains: input.search, mode: 'insensitive' } },
+              ],
+            },
+            input.excludeIds ? { id: { notIn: input.excludeIds } } : {},
+            input.roles ? {
+              userRoles: {
+                some: {
+                  role: {
+                    name: { in: input.roles },
+                  },
+                },
+              },
+            } : {},
+          ],
+        },
+        include: {
+          userRoles: {
+            include: {
+              role: true,
+            },
+          },
+        },
+        orderBy: {
+          name: 'asc',
+        },
+      });
+    }),
 });

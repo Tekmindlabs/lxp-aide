@@ -8,6 +8,20 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
+import { useSession } from "next-auth/react";
+import { UserType } from "@prisma/client";
+import { Badge } from "@/components/ui/badge";
+
+const canMessageUser = (senderRole: UserType, recipientRole: UserType) => {
+	const roleHierarchy = {
+		ADMIN: ["ADMIN", "COORDINATOR", "TEACHER", "STUDENT", "PARENT"],
+		COORDINATOR: ["COORDINATOR", "TEACHER", "STUDENT", "PARENT"],
+		TEACHER: ["TEACHER", "STUDENT", "PARENT"],
+		STUDENT: ["TEACHER"],
+		PARENT: ["TEACHER"],
+	};
+	return roleHierarchy[senderRole]?.includes(recipientRole) || false;
+};
 
 type NewConversationProps = {
 	onCancel: () => void;
@@ -15,6 +29,8 @@ type NewConversationProps = {
 
 export default function NewConversation({ onCancel }: NewConversationProps) {
 	const { toast } = useToast();
+	const { data: session } = useSession();
+	const currentUserRole = session?.user?.userType;
 	const [type, setType] = useState<"DIRECT" | "GROUP">("DIRECT");
 	const [title, setTitle] = useState("");
 	const [searchQuery, setSearchQuery] = useState("");
@@ -22,7 +38,10 @@ export default function NewConversation({ onCancel }: NewConversationProps) {
 	const [message, setMessage] = useState("");
 
 	const utils = api.useContext();
-	const { data: users } = api.user.getAll.useQuery();
+	const { data: users } = api.user.searchUsers.useQuery({
+		search: searchQuery,
+		excludeIds: [session?.user?.id || ""],
+	});
 
 	const createConversation = api.message.createConversation.useMutation({
 		onSuccess: () => {
@@ -42,12 +61,10 @@ export default function NewConversation({ onCancel }: NewConversationProps) {
 		},
 	});
 
-	const filteredUsers = users?.filter(
-		(user) =>
-			user.id !== "current-user-id" &&
-			(user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				user.email?.toLowerCase().includes(searchQuery.toLowerCase()))
+	const filteredUsers = users?.filter(user => 
+		user.userType && currentUserRole && canMessageUser(currentUserRole, user.userType)
 	);
+
 
 	const handleCreate = () => {
 		if (!selectedUsers.length) {
@@ -139,8 +156,13 @@ export default function NewConversation({ onCancel }: NewConversationProps) {
 											{user.name?.[0].toUpperCase()}
 										</AvatarFallback>
 									</Avatar>
-									<div>
-										<p className="font-medium">{user.name}</p>
+									<div className="flex-1">
+										<div className="flex items-center justify-between">
+											<p className="font-medium">{user.name}</p>
+											<Badge variant="secondary" className="text-xs">
+												{user.userType?.toLowerCase()}
+											</Badge>
+										</div>
 										<p className="text-sm text-muted-foreground">
 											{user.email}
 										</p>

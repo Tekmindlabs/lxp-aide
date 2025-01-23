@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { api } from "@/utils/api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -56,9 +57,14 @@ export default function ConversationView({
 		return <div>Conversation not found</div>;
 	}
 
+	const { data: session } = useSession();
+	const currentUserId = session?.user?.id;
+
 	const otherParticipants = conversation.participants.filter(
-		(p) => p.user.id !== "current-user-id"
+		(p) => p.userId !== currentUserId
 	);
+
+	const isCurrentUserMessage = (senderId: string) => senderId === currentUserId;
 	const title =
 		conversation.title ||
 		otherParticipants.map((p) => p.user.name).join(", ");
@@ -124,9 +130,11 @@ export default function ConversationView({
 				<div className="space-y-4">
 					{conversation.messages.map((message) => (
 						<div key={message.id} className="flex flex-col gap-1">
-							<div className="flex items-start gap-2">
+							<div className={`flex items-start gap-2 ${
+								isCurrentUserMessage(message.sender.id) ? 'justify-end' : ''
+							}`}>
 								<div className="flex gap-2 max-w-[70%]">
-									{message.sender.id !== "current-user-id" && (
+									{!isCurrentUserMessage(message.sender.id) && (
 										<Avatar>
 											<AvatarImage
 												src={message.sender.image}
@@ -140,11 +148,16 @@ export default function ConversationView({
 									<div className="flex flex-col gap-1">
 										<Card
 											className={`p-3 ${
-												message.sender.id === "current-user-id"
+												isCurrentUserMessage(message.sender.id)
 													? "bg-primary text-primary-foreground"
 													: ""
 											}`}
 										>
+											{!isCurrentUserMessage(message.sender.id) && (
+												<p className="text-xs text-muted-foreground mb-1">
+													{message.sender.name}
+												</p>
+											)}
 											<p>{message.content}</p>
 											{message.attachments?.map((attachment) => (
 												<div key={attachment.id} className="mt-2">
@@ -161,7 +174,7 @@ export default function ConversationView({
 										</Card>
 										<div className="flex items-center gap-2 text-xs text-muted-foreground">
 											<span>{format(new Date(message.createdAt), "MMM d, h:mm a")}</span>
-											{message.sender.id === "current-user-id" && (
+											{isCurrentUserMessage(message.sender.id) && (
 												<span className="flex items-center">
 													{message.recipients?.every((r) => r.read) ? (
 														<LuCheckCheck className="h-3 w-3" />
