@@ -95,6 +95,8 @@ model Calendar {
   metadata      Json?     // For additional calendar-specific data
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  @@unique([name, type])
 }
 
 model Event {
@@ -128,6 +130,8 @@ model Term {
   timetables      Timetable[]
   gradingPeriods  GradingPeriod[]
   weeks           Week[]
+
+  @@unique([name, calendarId])
 }
 
 model GradingPeriod {
@@ -160,7 +164,7 @@ model Week {
 
 model Program {
   id            String    @id @default(cuid())
-  name          String
+  name          String    @unique
   description   String?
   status        Status    @default(ACTIVE)
   coordinator   CoordinatorProfile? @relation(fields: [coordinatorId], references: [id])
@@ -185,6 +189,8 @@ model ClassGroup {
   status      Status    @default(ACTIVE)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@unique([name, programId])
 }
 
 model Subject {
@@ -213,6 +219,8 @@ model Class {
   status      Status    @default(ACTIVE)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@unique([name, classGroupId])
 }
 
 // Profile Models

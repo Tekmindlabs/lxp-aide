@@ -9,11 +9,20 @@ export const academicCalendarRouter = createTRPCRouter({
 		.input(z.object({
 			name: z.string(),
 			description: z.string().optional(),
+			startDate: z.date(),
+			endDate: z.date(),
+			type: z.enum(['PRIMARY', 'SECONDARY', 'EXAM', 'ACTIVITY']).default('PRIMARY'),
 			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).default(Status.ACTIVE),
+			isDefault: z.boolean().default(false),
+			visibility: z.enum(['ALL', 'STAFF', 'STUDENTS', 'PARENTS']).default('ALL'),
+			metadata: z.any().optional(),
 		}))
 		.mutation(async ({ ctx, input }) => {
 			return ctx.prisma.calendar.create({
 				data: input,
+				include: {
+					events: true,
+				},
 			});
 		}),
 

@@ -5,33 +5,35 @@ const prisma = new PrismaClient();
 async function createUsers() {
   console.log('Creating demo users...');
   
-  // Create roles first
-  const roles = await Promise.all([
-    prisma.role.create({
-      data: {
-        name: 'ADMIN',
-        description: 'System Administrator'
+  // Create or get existing roles
+  const roleNames = ['ADMIN', 'TEACHER', 'STUDENT'];
+  const roles = await Promise.all(
+    roleNames.map(async (name) => {
+      const existingRole = await prisma.role.findUnique({
+        where: { name }
+      });
+      
+      if (existingRole) {
+        return existingRole;
       }
-    }),
-    prisma.role.create({
-      data: {
-        name: 'TEACHER',
-        description: 'School Teacher'
-      }
-    }),
-    prisma.role.create({
-      data: {
-        name: 'STUDENT',
-        description: 'Student'
-      }
+      
+      return prisma.role.create({
+        data: {
+          name,
+          description: `${name.charAt(0) + name.slice(1).toLowerCase()} Role`
+        }
+      });
     })
-  ]);
+  );
 
-  // Create users with profiles
+
+  // Create users with profiles if they don't exist
   const users = await Promise.all([
     // Admin
-    prisma.user.create({
-      data: {
+    prisma.user.upsert({
+      where: { email: 'admin@school.com' },
+      update: {},
+      create: {
         name: 'Admin User',
         email: 'admin@school.com',
         userType: UserType.ADMIN,
@@ -44,8 +46,10 @@ async function createUsers() {
       }
     }),
     // Teachers
-    prisma.user.create({
-      data: {
+    prisma.user.upsert({
+      where: { email: 'teacher1@school.com' },
+      update: {},
+      create: {
         name: 'John Teacher',
         email: 'teacher1@school.com',
         userType: UserType.TEACHER,
@@ -62,8 +66,10 @@ async function createUsers() {
         }
       }
     }),
-    prisma.user.create({
-      data: {
+    prisma.user.upsert({
+      where: { email: 'teacher2@school.com' },
+      update: {},
+      create: {
         name: 'Jane Teacher',
         email: 'teacher2@school.com',
         userType: UserType.TEACHER,
@@ -81,8 +87,10 @@ async function createUsers() {
       }
     }),
     // Students
-    prisma.user.create({
-      data: {
+    prisma.user.upsert({
+      where: { email: 'student1@school.com' },
+      update: {},
+      create: {
         name: 'Student One',
         email: 'student1@school.com',
         userType: UserType.STUDENT,
@@ -99,8 +107,10 @@ async function createUsers() {
         }
       }
     }),
-    prisma.user.create({
-      data: {
+    prisma.user.upsert({
+      where: { email: 'student2@school.com' },
+      update: {},
+      create: {
         name: 'Student Two',
         email: 'student2@school.com',
         userType: UserType.STUDENT,
@@ -366,122 +376,176 @@ async function seedDemoData() {
     // 5. Create Demo Class Groups
     console.log('Creating demo class groups...');
     const classGroups = await Promise.all([
-      prisma.classGroup.create({
-        data: {
-          name: 'Grade 1',
-          description: 'First Grade Classes',
-          programId: programs[0].id,
-          status: Status.ACTIVE,
+      prisma.classGroup.upsert({
+      where: { 
+        name_programId: {
+        name: 'Grade 1',
+        programId: programs[0].id
         }
+      },
+      update: {},
+      create: {
+        name: 'Grade 1',
+        description: 'First Grade Classes',
+        programId: programs[0].id,
+        status: Status.ACTIVE,
+      }
       }),
-      prisma.classGroup.create({
-        data: {
-          name: 'Grade 7',
-          description: 'Seventh Grade Classes',
-          programId: programs[1].id,
-          status: Status.ACTIVE,
+      prisma.classGroup.upsert({
+      where: { 
+        name_programId: {
+        name: 'Grade 7',
+        programId: programs[1].id
         }
+      },
+      update: {},
+      create: {
+        name: 'Grade 7',
+        description: 'Seventh Grade Classes',
+        programId: programs[1].id,
+        status: Status.ACTIVE,
+      }
       }),
-      prisma.classGroup.create({
-        data: {
-          name: 'Grade 10',
-          description: 'Tenth Grade Classes',
-          programId: programs[2].id,
-          status: Status.ACTIVE,
+      prisma.classGroup.upsert({
+      where: { 
+        name_programId: {
+        name: 'Grade 10',
+        programId: programs[2].id
         }
+      },
+      update: {},
+      create: {
+        name: 'Grade 10',
+        description: 'Tenth Grade Classes',
+        programId: programs[2].id,
+        status: Status.ACTIVE,
+      }
       })
     ]);
 
     // 6. Create Demo Subjects
     console.log('Creating demo subjects...');
     const subjects = await Promise.all([
-      prisma.subject.create({
-        data: {
-          name: 'Mathematics',
-          code: 'MATH101',
-          description: 'Basic Mathematics',
-          status: Status.ACTIVE,
-          classGroups: {
-            connect: [{ id: classGroups[0].id }]
-          }
+      prisma.subject.upsert({
+      where: { code: 'MATH101' },
+      update: {},
+      create: {
+        name: 'Mathematics',
+        code: 'MATH101',
+        description: 'Basic Mathematics',
+        status: Status.ACTIVE,
+        classGroups: {
+        connect: [{ id: classGroups[0].id }]
         }
+      }
       }),
-      prisma.subject.create({
-        data: {
-          name: 'Science',
-          code: 'SCI101',
-          description: 'General Science',
-          status: Status.ACTIVE,
-          classGroups: {
-            connect: [{ id: classGroups[0].id }]
-          }
+      prisma.subject.upsert({
+      where: { code: 'SCI101' },
+      update: {},
+      create: {
+        name: 'Science',
+        code: 'SCI101',
+        description: 'General Science',
+        status: Status.ACTIVE,
+        classGroups: {
+        connect: [{ id: classGroups[0].id }]
         }
+      }
       }),
-      prisma.subject.create({
-        data: {
-          name: 'English',
-          code: 'ENG101',
-          description: 'English Language Arts',
-          status: Status.ACTIVE,
-          classGroups: {
-            connect: [{ id: classGroups[0].id }]
-          }
+      prisma.subject.upsert({
+      where: { code: 'ENG101' },
+      update: {},
+      create: {
+        name: 'English',
+        code: 'ENG101',
+        description: 'English Language Arts',
+        status: Status.ACTIVE,
+        classGroups: {
+        connect: [{ id: classGroups[0].id }]
         }
+      }
       })
     ]);
 
     // 7. Create Demo Classes
     console.log('Creating demo classes...');
     const classes = await Promise.all([
-      prisma.class.create({
-        data: {
-          name: 'Grade 1-A',
-          classGroupId: classGroups[0].id,
-          capacity: 30,
-          status: Status.ACTIVE,
+      prisma.class.upsert({
+      where: {
+        name_classGroupId: {
+        name: 'Grade 1-A',
+        classGroupId: classGroups[0].id
         }
+      },
+      update: {},
+      create: {
+        name: 'Grade 1-A',
+        classGroupId: classGroups[0].id,
+        capacity: 30,
+        status: Status.ACTIVE,
+      }
       }),
-      prisma.class.create({
-        data: {
-          name: 'Grade 7-A',
-          classGroupId: classGroups[1].id,
-          capacity: 35,
-          status: Status.ACTIVE,
+      prisma.class.upsert({
+      where: {
+        name_classGroupId: {
+        name: 'Grade 7-A',
+        classGroupId: classGroups[1].id
         }
+      },
+      update: {},
+      create: {
+        name: 'Grade 7-A',
+        classGroupId: classGroups[1].id,
+        capacity: 35,
+        status: Status.ACTIVE,
+      }
       }),
-      prisma.class.create({
-        data: {
-          name: 'Grade 10-A',
-          classGroupId: classGroups[2].id,
-          capacity: 35,
-          status: Status.ACTIVE,
+      prisma.class.upsert({
+      where: {
+        name_classGroupId: {
+        name: 'Grade 10-A',
+        classGroupId: classGroups[2].id
         }
+      },
+      update: {},
+      create: {
+        name: 'Grade 10-A',
+        classGroupId: classGroups[2].id,
+        capacity: 35,
+        status: Status.ACTIVE,
+      }
       })
     ]);
 
     // 8. Create Demo Classrooms
     console.log('Creating demo classrooms...');
     const classrooms = await Promise.all([
-      prisma.classroom.create({
-        data: {
-          name: 'Room 101',
-          capacity: 30,
-          resources: 'Projector, Whiteboard',
-        }
+      prisma.classroom.upsert({
+      where: { name: 'Room 101' },
+      update: {},
+      create: {
+        name: 'Room 101',
+        capacity: 30,
+        resources: 'Projector, Whiteboard',
+      }
       }),
-      prisma.classroom.create({
-        data: {
-          name: 'Room 102',
-          capacity: 35,
-          resources: 'Smart Board, Computers',
-        }
+      prisma.classroom.upsert({
+      where: { name: 'Room 102' },
+      update: {},
+      create: {
+        name: 'Room 102',
+        capacity: 35,
+        resources: 'Smart Board, Computers',
+      }
       }),
-      prisma.classroom.create({
-        data: {
-          name: 'Science Lab',
-          capacity: 25,
-          resources: 'Lab Equipment, Safety Gear',
-        }
+      prisma.classroom.upsert({
+      where: { name: 'Science Lab' },
+      update: {},
+      create: {
+        name: 'Science Lab',
+        capacity: 25,
+        resources: 'Lab Equipment, Safety Gear',
+      }
       })
     ]);
 

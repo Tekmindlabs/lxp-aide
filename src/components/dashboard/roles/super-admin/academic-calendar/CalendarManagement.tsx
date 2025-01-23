@@ -21,27 +21,54 @@ export const CalendarManagement = () => {
 	const [filters, setFilters] = useState<CalendarFilters>({});
 	const { toast } = useToast();
 
-	const { data: calendars } = api.calendar.getAllCalendars.useQuery();
-	const { data: activeCalendar } = api.calendar.getCalendarById.useQuery(
+	const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
+	const { data: activeCalendar } = api.academicCalendar.getCalendarById.useQuery(
 		{ id: activeCalendarId! },
 		{ enabled: !!activeCalendarId }
 	);
 
-	const updateCalendarMutation = api.calendar.updateCalendar.useMutation({
+	const createCalendarMutation = api.academicCalendar.createCalendar.useMutation({
+		onSuccess: () => {
+			toast({
+				title: 'Success',
+				description: 'Calendar created successfully',
+			});
+		},
+		onError: (error) => {
+			toast({
+				title: 'Error',
+				description: error.message,
+				variant: 'destructive',
+			});
+		}
+	});
+
+	const updateCalendarMutation = api.academicCalendar.updateCalendar.useMutation({
 		onSuccess: () => {
 			toast({
 				title: 'Success',
 				description: 'Calendar updated successfully',
 			});
 		},
+		onError: (error) => {
+			toast({
+				title: 'Error',
+				description: error.message,
+				variant: 'destructive',
+			});
+		}
 	});
 
 	const handleCalendarUpdate = async (calendarId: string, data: any) => {
 		try {
-			await updateCalendarMutation.mutateAsync({
-				id: calendarId,
-				...data,
-			});
+			if (calendarId === 'new') {
+				await createCalendarMutation.mutateAsync(data);
+			} else {
+				await updateCalendarMutation.mutateAsync({
+					id: calendarId,
+					...data,
+				});
+			}
 		} catch (error) {
 			toast({
 				title: 'Error',
