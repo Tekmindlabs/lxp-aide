@@ -7,12 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/utils/api";
 import { Status } from "@prisma/client";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+
 
 interface ProgramFormData {
 	name: string;
 	description?: string;
-	academicYearId: string;
+	calendarId: string;
 	coordinatorId?: string;
 	status: Status;
 }
@@ -27,12 +28,12 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 	const [formData, setFormData] = useState<ProgramFormData>(() => ({
 		name: selectedProgram?.name || "",
 		description: selectedProgram?.description || "",
-		academicYearId: selectedProgram?.academicYearId || "none",
+		calendarId: selectedProgram?.calendarId || "none",
 		coordinatorId: selectedProgram?.coordinatorId || "none",
 		status: selectedProgram?.status || Status.ACTIVE,
 	}));
 
-	const { data: academicYears } = api.academicCalendar.getAllAcademicYears.useQuery();
+	const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
 	const utils = api.useContext();
 
 	const createMutation = api.program.createProgram.useMutation({
@@ -77,7 +78,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 		setFormData({
 			name: "",
 			description: "",
-			academicYearId: "none",
+			calendarId: "none",
 			coordinatorId: "none",
 			status: Status.ACTIVE,
 		});
@@ -88,7 +89,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 		const submissionData = {
 			...formData,
 			coordinatorId: formData.coordinatorId === "none" ? undefined : formData.coordinatorId,
-			academicYearId: formData.academicYearId === "none" ? undefined : formData.academicYearId,
+			calendarId: formData.calendarId === "none" ? undefined : formData.calendarId,
 		};
 
 		if (selectedProgram) {
@@ -123,18 +124,18 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 			</div>
 
 			<div>
-				<Label htmlFor="academicYear">Academic Year</Label>
+				<Label htmlFor="calendar">Calendar</Label>
 				<select
-					id="academicYear"
-					value={formData.academicYearId}
-					onChange={(e) => setFormData({ ...formData, academicYearId: e.target.value })}
+					id="calendar"
+					value={formData.calendarId}
+					onChange={(e) => setFormData({ ...formData, calendarId: e.target.value })}
 					className="w-full border p-2 rounded"
 					required
 				>
-					<option value="none">Select Academic Year</option>
-					{academicYears?.map((year) => (
-						<option key={year.id} value={year.id}>
-							{year.name}
+					<option value="none">Select Calendar</option>
+					{calendars?.map((calendar) => (
+						<option key={calendar.id} value={calendar.id}>
+							{calendar.name}
 						</option>
 					))}
 				</select>

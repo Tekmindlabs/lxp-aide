@@ -1,21 +1,20 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
-import { Status } from "@prisma/client";
 
 export const termRouter = createTRPCRouter({
 	createTerm: protectedProcedure
 		.input(z.object({
 			name: z.string(),
-			academicYearId: z.string(),
+			calendarId: z.string(),
 			startDate: z.date(),
 			endDate: z.date(),
-			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).default(Status.ACTIVE),
+			status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).default("ACTIVE"),
 		}))
 		.mutation(async ({ ctx, input }) => {
 			return ctx.prisma.term.create({
 				data: input,
 				include: {
-					academicYear: true,
+					calendar: true,
 					timetables: true,
 				},
 			});
@@ -27,7 +26,7 @@ export const termRouter = createTRPCRouter({
 			name: z.string().optional(),
 			startDate: z.date().optional(),
 			endDate: z.date().optional(),
-			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).optional(),
+			status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
 		}))
 		.mutation(async ({ ctx, input }) => {
 			const { id, ...data } = input;
@@ -35,7 +34,7 @@ export const termRouter = createTRPCRouter({
 				where: { id },
 				data,
 				include: {
-					academicYear: true,
+					calendar: true,
 					timetables: true,
 				},
 			});
@@ -55,7 +54,7 @@ export const termRouter = createTRPCRouter({
 			return ctx.prisma.term.findUnique({
 				where: { id: input },
 				include: {
-					academicYear: true,
+					calendar: true,
 					timetables: {
 						include: {
 							periods: true,
@@ -65,12 +64,13 @@ export const termRouter = createTRPCRouter({
 			});
 		}),
 
-	getTermsByAcademicYear: protectedProcedure
+	getTermsByCalendar: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
 			return ctx.prisma.term.findMany({
-				where: { academicYearId: input },
+				where: { calendarId: input },
 				include: {
+					calendar: true,
 					timetables: {
 						include: {
 							periods: true,

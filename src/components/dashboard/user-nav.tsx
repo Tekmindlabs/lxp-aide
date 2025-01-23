@@ -12,9 +12,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export function UserNav() {
   const { data: session } = useSession();
+  const router = useRouter();
 
   if (!session?.user) return null;
 
@@ -23,6 +26,13 @@ export function UserNav() {
     .map((n) => n[0])
     .join("")
     .toUpperCase();
+
+  const userRole = session.user.roles?.[0]?.toLowerCase() || '';
+  const profilePath = `/dashboard/${userRole}/profile`;
+
+  const handleSignOut = async () => {
+    await signOut({ redirect: true, callbackUrl: '/' });
+  };
 
   return (
     <DropdownMenu>
@@ -49,13 +59,16 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem onClick={() => window.location.href = "/dashboard/profile"}>
-            Profile
+          <DropdownMenuItem asChild>
+            <Link href={profilePath}>Profile Settings</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={`/dashboard/${userRole}/notification`}>Notifications</Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()}>
-          Log out
+        <DropdownMenuItem onClick={handleSignOut}>
+          Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

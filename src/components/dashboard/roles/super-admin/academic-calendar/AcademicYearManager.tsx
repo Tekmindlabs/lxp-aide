@@ -6,45 +6,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/utils/api";
 import { Status } from "@prisma/client";
-import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
+import { useToast } from "@/hooks/use-toast";
 
-interface AcademicYearFormData {
+interface CalendarFormData {
 	name: string;
-	startDate: Date;
-	endDate: Date;
+	description?: string;
 	status: Status;
 }
 
-export const AcademicYearManager = ({ academicYears }: { academicYears: any[] }) => {
+export const CalendarManager = ({ calendars }: { calendars: any[] }) => {
 	const [isOpen, setIsOpen] = useState(false);
-	const [formData, setFormData] = useState<AcademicYearFormData>({
+	const [formData, setFormData] = useState<CalendarFormData>({
 		name: "",
-		startDate: new Date(),
-		endDate: new Date(),
+		description: "",
 		status: Status.ACTIVE,
 	});
 
 	const utils = api.useContext();
-	const createMutation = api.academicCalendar.createAcademicYear.useMutation({
-		onSuccess: () => {
-			utils.academicCalendar.getAllAcademicYears.invalidate();
-			setIsOpen(false);
-			resetForm();
-		},
-	});
+	const { toast } = useToast();
 
-	const deleteMutation = api.academicCalendar.deleteAcademicYear.useMutation({
+	const createMutation = api.academicCalendar.createCalendar.useMutation({
 		onSuccess: () => {
-			utils.academicCalendar.getAllAcademicYears.invalidate();
+			utils.academicCalendar.getAllCalendars.invalidate();
+			setIsOpen(false);
+			toast({
+				title: "Success",
+				description: "Calendar created successfully",
+			});
+			resetForm();
 		},
 	});
 
 	const resetForm = () => {
 		setFormData({
 			name: "",
-			startDate: new Date(),
-			endDate: new Date(),
+			description: "",
 			status: Status.ACTIVE,
 		});
 	};
@@ -55,14 +51,14 @@ export const AcademicYearManager = ({ academicYears }: { academicYears: any[] })
 	};
 
 	return (
-		<div className="space-y-4">
+		<div>
 			<Dialog open={isOpen} onOpenChange={setIsOpen}>
 				<DialogTrigger asChild>
-					<Button>Add Academic Year</Button>
+					<Button>Create Calendar</Button>
 				</DialogTrigger>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Create Academic Year</DialogTitle>
+						<DialogTitle>Create Calendar</DialogTitle>
 					</DialogHeader>
 					<form onSubmit={handleSubmit} className="space-y-4">
 						<div>
@@ -75,61 +71,28 @@ export const AcademicYearManager = ({ academicYears }: { academicYears: any[] })
 							/>
 						</div>
 						<div>
-							<Label>Start Date</Label>
-							<Calendar
-								mode="single"
-								selected={formData.startDate}
-								onSelect={(date) => date && setFormData({ ...formData, startDate: date })}
-								className="rounded-md border"
+							<Label htmlFor="description">Description</Label>
+							<Input
+								id="description"
+								value={formData.description}
+								onChange={(e) => setFormData({ ...formData, description: e.target.value })}
 							/>
 						</div>
-						<div>
-							<Label>End Date</Label>
-							<Calendar
-								mode="single"
-								selected={formData.endDate}
-								onSelect={(date) => date && setFormData({ ...formData, endDate: date })}
-								className="rounded-md border"
-							/>
-						</div>
-						<div>
-							<Label htmlFor="status">Status</Label>
-							<select
-								id="status"
-								value={formData.status}
-								onChange={(e) => setFormData({ ...formData, status: e.target.value as Status })}
-								className="w-full border p-2 rounded"
-							>
-								{Object.values(Status).map((status) => (
-									<option key={status} value={status}>
-										{status}
-									</option>
-								))}
-							</select>
-						</div>
-						<Button type="submit">Create</Button>
+						<Button type="submit" disabled={createMutation.isLoading}>
+							{createMutation.isLoading ? "Creating..." : "Create Calendar"}
+						</Button>
 					</form>
 				</DialogContent>
 			</Dialog>
 
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-				{academicYears?.map((year) => (
-					<Card key={year.id}>
+				{calendars?.map((calendar) => (
+					<Card key={calendar.id}>
 						<CardContent className="p-4">
-							<div className="space-y-2">
-								<h3 className="font-semibold">{year.name}</h3>
-								<p className="text-sm text-gray-500">
-									{format(new Date(year.startDate), "MMM dd, yyyy")} -{" "}
-									{format(new Date(year.endDate), "MMM dd, yyyy")}
-								</p>
-								<p className="text-sm">Status: {year.status}</p>
-								<Button
-									variant="destructive"
-									size="sm"
-									onClick={() => deleteMutation.mutate(year.id)}
-								>
-									Delete
-								</Button>
+							<h3 className="font-semibold">{calendar.name}</h3>
+							<p className="text-sm text-gray-500">{calendar.description}</p>
+							<div className="mt-4">
+								<TermManager calendarId={calendar.id} />
 							</div>
 						</CardContent>
 					</Card>

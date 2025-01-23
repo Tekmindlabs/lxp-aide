@@ -136,7 +136,7 @@ export const classGroupRouter = createTRPCRouter({
 										include: {
 											term: {
 												include: {
-													academicYear: true,
+													calendar: true,
 												},
 											},
 										},
@@ -164,7 +164,7 @@ export const classGroupRouter = createTRPCRouter({
 						include: {
 							term: {
 								include: {
-									academicYear: true,
+									calendar: true,
 								},
 							},
 							periods: {
@@ -251,30 +251,30 @@ export const classGroupRouter = createTRPCRouter({
 			});
 		}),
 
-	inheritAcademicCalendar: protectedProcedure
+	inheritCalendar: protectedProcedure
 		.input(z.object({
 			classGroupId: z.string(),
-			academicYearId: z.string(),
+			calendarId: z.string(),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			const { classGroupId, academicYearId } = input;
+			const { classGroupId, calendarId } = input;
 
-			// Get the academic year and its terms
-			const academicYear = await ctx.prisma.academicYear.findUnique({
-				where: { id: academicYearId },
+			// Get the calendar and its terms
+			const calendar = await ctx.prisma.calendar.findUnique({
+				where: { id: calendarId },
 				include: {
 					terms: true,
 				},
 			});
 
-			if (!academicYear) {
-				throw new Error("Academic year not found");
+			if (!calendar) {
+				throw new Error("Calendar not found");
 			}
 
 			// Create a timetable for the class group using the first term
-			const term = academicYear.terms[0];
+			const term = calendar.terms[0];
 			if (!term) {
-				throw new Error("No terms found in academic year");
+				throw new Error("No terms found in calendar");
 			}
 
 			const timetable = await ctx.prisma.timetable.create({
@@ -291,7 +291,7 @@ export const classGroupRouter = createTRPCRouter({
 						include: {
 							term: {
 								include: {
-									academicYear: true,
+									calendar: true,
 								},
 							},
 						},

@@ -58,46 +58,76 @@ model ActivityLog {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+enum CalendarType {
+  PRIMARY
+  SECONDARY
+  EXAM
+  ACTIVITY
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum Visibility {
+  ALL
+  STAFF
+  STUDENTS
+  PARENTS
+}
+
 // Academic Structure
-model AcademicYear {
-  id        String   @id @default(cuid())
-  name      String
-  startDate DateTime
-  endDate   DateTime
-  status    Status   @default(ACTIVE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  terms     Term[]
-  events    Event[]
-  programs  Program[]
+model Calendar {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  startDate     DateTime
+  endDate       DateTime
+  type          CalendarType @default(PRIMARY)
+  status        Status    @default(ACTIVE)
+  isDefault     Boolean   @default(false)
+  events        Event[]
+  programs      Program[]
+  terms         Term[]
+  visibility    Visibility @default(ALL)
+  metadata      Json?     // For additional calendar-specific data
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Event {
-  id            String      @id @default(cuid())
+  id            String    @id @default(cuid())
   title         String
   description   String?
   eventType     EventType
   startDate     DateTime
   endDate       DateTime
-  academicYear  AcademicYear @relation(fields: [academicYearId], references: [id])
-  academicYearId String
-  status        Status      @default(ACTIVE)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  calendar      Calendar  @relation(fields: [calendarId], references: [id])
+  calendarId    String
+  status        Status    @default(ACTIVE)
+  priority      Priority  @default(MEDIUM)
+  visibility    Visibility @default(ALL)
+  recurrence    Json?     // Store recurrence pattern
+  metadata      Json?     // For additional event-specific data
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Term {
-  id            String    @id @default(cuid())
-  name          String
-  academicYear  AcademicYear @relation(fields: [academicYearId], references: [id])
-  academicYearId String
-  startDate     DateTime
-  endDate       DateTime
-  status        Status    @default(ACTIVE)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  timetables    Timetable[]
+  id          String    @id @default(cuid())
+  name        String
+  calendar    Calendar  @relation(fields: [calendarId], references: [id])
+  calendarId  String
+  startDate   DateTime
+  endDate     DateTime
+  status      Status    @default(ACTIVE)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  timetables  Timetable[]
 }
+
 
 
 
@@ -108,8 +138,8 @@ model Program {
   status        Status    @default(ACTIVE)
   coordinator   CoordinatorProfile? @relation(fields: [coordinatorId], references: [id])
   coordinatorId String?
-  academicYear  AcademicYear @relation(fields: [academicYearId], references: [id])
-  academicYearId String
+  calendar      Calendar  @relation(fields: [calendarId], references: [id])
+  calendarId    String
   classGroups   ClassGroup[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { api } from "@/utils/api";
 import { EventType, Status } from "@prisma/client";
@@ -20,8 +21,8 @@ type NewEvent = {
   eventType: EventType;
   startDate: Date;
   endDate: Date;
-  academicYearId: string;
 };
+
 
 
 export const AcademicCalendarView = () => {
@@ -35,23 +36,18 @@ export const AcademicCalendarView = () => {
     eventType: EventType.ACADEMIC,
     startDate: new Date(),
     endDate: new Date(),
-    academicYearId: '',
   });
 
   const { toast } = useToast();
 
-  // Fetch academic years
-  const { data: academicYears } = api.academicCalendar.getAllAcademicYears.useQuery();
+  // Fetch events based on date range
 
-  // Fetch events based on selected academic year and date range
-  const { data: events, refetch: refetchEvents } = api.academicCalendar.getEventsByAcademicYear.useQuery({
-    academicYearId: newEvent.academicYearId,
+  const { data: events, refetch: refetchEvents } = api.academicCalendar.getEventsByDateRange.useQuery({
     eventType: selectedEventType === 'ALL' ? undefined : selectedEventType,
     startDate: view === 'week' ? startOfWeek(selectedDate) : undefined,
     endDate: view === 'week' ? endOfWeek(selectedDate) : undefined,
-  }, {
-    enabled: !!newEvent.academicYearId,
   });
+
 
   // Create event mutation
   const createEvent = api.academicCalendar.createEvent.useMutation({
@@ -118,99 +114,66 @@ export const AcademicCalendarView = () => {
             </DialogHeader>
             <div className="space-y-4">
               <Input
-                placeholder="Event Title"
-                value={newEvent.title}
-                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+              placeholder="Event Title"
+              value={newEvent.title}
+              onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
               />
               <Textarea
-                placeholder="Event Description"
-                value={newEvent.description}
-                onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+              placeholder="Event Description"
+              value={newEvent.description}
+              onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
               />
-                <Select
-                value={newEvent.eventType}
-                onValueChange={(value: EventType) => setNewEvent({ ...newEvent, eventType: value })}
-                required
+              <Select
+              value={newEvent.eventType}
+              onValueChange={(value: EventType) => setNewEvent({ ...newEvent, eventType: value })}
+              required
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Event Type" />
-                </SelectTrigger>
-                <SelectContent>
-                    {Object.values(EventType).map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type.charAt(0) + type.slice(1).toLowerCase()}
-                    </SelectItem>
-                    ))}
-                </SelectContent>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Event Type" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(EventType).map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type.charAt(0) + type.slice(1).toLowerCase()}
+                </SelectItem>
+                ))}
+              </SelectContent>
               </Select>
               <div className="space-y-2">
-                <div>
-                  <span className="text-sm font-medium">Start Date</span>
-                  <Input
-                    type="date"
-                    value={format(newEvent.startDate, 'yyyy-MM-dd')}
-                    onChange={(e) => setNewEvent({ ...newEvent, startDate: new Date(e.target.value) })}
-                  />
-                </div>
-                <div>
-                  <span className="text-sm font-medium">End Date</span>
-                  <Input
-                    type="date"
-                    value={format(newEvent.endDate, 'yyyy-MM-dd')}
-                    onChange={(e) => setNewEvent({ ...newEvent, endDate: new Date(e.target.value) })}
-                  />
-                </div>
-              </div>
-                <Select
-                value={newEvent.academicYearId}
-                onValueChange={(value) => setNewEvent({ ...newEvent, academicYearId: value })}
+              <div>
+                <span className="text-sm font-medium">Start Date</span>
+                <Input
+                type="date"
+                value={format(newEvent.startDate, 'yyyy-MM-dd')}
+                onChange={(e) => setNewEvent({ ...newEvent, startDate: new Date(e.target.value) })}
                 required
-                >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Academic Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {academicYears?.map((year) => (
-                  <SelectItem key={year.id} value={year.id}>
-                    {year.name}
-                  </SelectItem>
-                  ))}
-                </SelectContent>
-                </Select>
-                <div className="space-y-2">
-                <div>
-                  <span className="text-sm font-medium">Start Date</span>
-                  <Input
-                  type="date"
-                  value={format(newEvent.startDate, 'yyyy-MM-dd')}
-                  onChange={(e) => setNewEvent({ ...newEvent, startDate: new Date(e.target.value) })}
-                  required
-                  />
-                </div>
-                <div>
-                  <span className="text-sm font-medium">End Date</span>
-                  <Input
-                  type="date"
-                  value={format(newEvent.endDate, 'yyyy-MM-dd')}
-                  onChange={(e) => setNewEvent({ ...newEvent, endDate: new Date(e.target.value) })}
-                  required
-                  />
-                </div>
-                </div>
-                <Button 
-                onClick={handleAddEvent} 
-                disabled={createEvent.isLoading}
-                >
-                {createEvent.isLoading ? "Creating..." : "Save Event"}
-                </Button>
+                />
+              </div>
+              <div>
+                <span className="text-sm font-medium">End Date</span>
+                <Input
+                type="date"
+                value={format(newEvent.endDate, 'yyyy-MM-dd')}
+                onChange={(e) => setNewEvent({ ...newEvent, endDate: new Date(e.target.value) })}
+                required
+                />
+              </div>
+              </div>
+              <Button 
+              onClick={handleAddEvent} 
+              disabled={createEvent.isLoading}
+              >
+              {createEvent.isLoading ? "Creating..." : "Save Event"}
+              </Button>
             </div>
+
           </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           <div className="flex space-x-4">
-            <Select value={selectedEventType} onValueChange={(value: Event['type'] | 'ALL') => setSelectedEventType(value)}>
+            <Select value={selectedEventType} onValueChange={(value: EventType | 'ALL') => setSelectedEventType(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select Event Type" />
               </SelectTrigger>

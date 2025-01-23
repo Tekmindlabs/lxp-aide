@@ -8,32 +8,38 @@ import { api } from "@/utils/api";
 import { Status } from "@prisma/client";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
+import { useToast } from "@/hooks/use-toast";
 
 interface TermFormData {
 	name: string;
-	academicYearId: string;
+	calendarId: string;
 	startDate: Date;
 	endDate: Date;
 	status: Status;
 }
 
-export const TermManager = ({ academicYearId }: { academicYearId: string }) => {
+export const TermManager = ({ calendarId }: { calendarId: string }) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [formData, setFormData] = useState<TermFormData>({
 		name: "",
-		academicYearId,
+		calendarId,
 		startDate: new Date(),
 		endDate: new Date(),
 		status: Status.ACTIVE,
 	});
 
 	const utils = api.useContext();
-	const { data: terms } = api.term.getTermsByAcademicYear.useQuery(academicYearId);
+	const { toast } = useToast();
+	const { data: terms } = api.term.getTermsByCalendar.useQuery(calendarId);
 
 	const createMutation = api.term.createTerm.useMutation({
 		onSuccess: () => {
-			utils.term.getTermsByAcademicYear.invalidate(academicYearId);
+			utils.term.getTermsByCalendar.invalidate(calendarId);
 			setIsOpen(false);
+			toast({
+				title: "Success",
+				description: "Term created successfully",
+			});
 			resetForm();
 		},
 	});
@@ -47,7 +53,7 @@ export const TermManager = ({ academicYearId }: { academicYearId: string }) => {
 	const resetForm = () => {
 		setFormData({
 			name: "",
-			academicYearId,
+			calendarId,
 			startDate: new Date(),
 			endDate: new Date(),
 			status: Status.ACTIVE,

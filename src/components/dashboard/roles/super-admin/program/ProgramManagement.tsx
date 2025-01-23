@@ -9,39 +9,33 @@ import { api } from "@/utils/api";
 import { ProgramList } from "./ProgramList";
 import { ProgramForm } from "./ProgramForm";
 
-interface AcademicYear {
-	id: string;
-	name: string;
-  }
-  
-  interface ProgramWithDetails extends Program {
+interface ProgramWithDetails extends Program {
 	coordinator?: {
-	  user: {
-		name: string | null;
-	  };
+		user: {
+			name: string | null;
+		};
 	} | null;
 	classGroups: any[]; // You can make this more specific based on your needs
-  }
-
-interface SearchFilters {
-    search: string;
-    level: string;
-    status?: Status;
-    academicYearId?: string;
-    sortBy?: 'name' | 'level' | 'createdAt';
-    sortOrder?: 'asc' | 'desc';
 }
+
+interface Filters {
+	search?: string;
+	level?: string;
+	status?: Status;
+	calendarId?: string;
+	sortBy?: 'name' | 'level' | 'createdAt';
+	sortOrder?: 'asc' | 'desc';
+}
+
 
 export const ProgramManagement = () => {
     const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
-    const [filters, setFilters] = useState<SearchFilters>({
-        search: "",
-        level: "",
-    });
+const [filters, setFilters] = useState<Filters>({});
 
-    const utils = api.useContext();
-    
-    const { data: academicYears } = api.academicCalendar.getAllAcademicYears.useQuery();
+const utils = api.useContext();
+
+const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
+
     const { data: programs, isLoading } = api.program.searchPrograms.useQuery(filters);
     const { data: coordinators } = api.program.getAvailableCoordinators.useQuery();
 
@@ -91,21 +85,22 @@ export const ProgramManagement = () => {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Select
-                                value={filters.academicYearId}
-                                onValueChange={(value) => setFilters({ ...filters, academicYearId: value })}
-                            >
-                                <SelectTrigger className="w-[200px]">
-                                    <SelectValue placeholder="Academic Year" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {academicYears?.map((year: AcademicYear) => (
-    <SelectItem key={year.id} value={year.id}>
-        {year.name}
-    </SelectItem>
-))}
-                                </SelectContent>
-                            </Select>
+<Select
+	value={filters.calendarId}
+	onValueChange={(value) => setFilters({ ...filters, calendarId: value })}
+>
+	<SelectTrigger className="w-[200px]">
+		<SelectValue placeholder="Filter by Calendar" />
+	</SelectTrigger>
+	<SelectContent>
+		<SelectItem value="">All Calendars</SelectItem>
+		{calendars?.map((calendar) => (
+			<SelectItem key={calendar.id} value={calendar.id}>
+				{calendar.name}
+			</SelectItem>
+		))}
+	</SelectContent>
+</Select>
                         </div>
                         <div className="flex space-x-4">
                             <Select
@@ -140,10 +135,8 @@ export const ProgramManagement = () => {
                         <ProgramList 
                             programs={programs || []} 
                             onSelect={setSelectedProgramId}
-                            onAssociateAcademicYear={(programId, academicYearId) => 
-                                associateAcademicYear.mutate({ programId, academicYearId })
-                            }
-                            academicYears={academicYears || []}
+calendars={calendars || []}
+
                         />
                         <ProgramForm 
                             coordinators={coordinators || []}

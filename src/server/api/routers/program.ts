@@ -11,7 +11,7 @@ export const programRouter = createTRPCRouter({
 						user: true,
 					},
 				},
-				academicYear: true,
+				calendar: true,
 				classGroups: {
 					include: {
 						classes: {
@@ -68,7 +68,7 @@ export const programRouter = createTRPCRouter({
 			z.object({
 				name: z.string(),
 				description: z.string().optional(),
-				academicYearId: z.string(),
+				calendarId: z.string(),
 				coordinatorId: z.string().optional(),
 				status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
 			})
@@ -78,8 +78,8 @@ export const programRouter = createTRPCRouter({
 				data: {
 					name: input.name,
 					description: input.description,
-					academicYear: {
-						connect: { id: input.academicYearId }
+					calendar: {
+						connect: { id: input.calendarId }
 					},
 					coordinator: input.coordinatorId
 						? {
@@ -97,7 +97,7 @@ export const programRouter = createTRPCRouter({
 				id: z.string(),
 				name: z.string().optional(),
 				description: z.string().optional(),
-				academicYearId: z.string().optional(),
+				calendarId: z.string().optional(),
 				coordinatorId: z.string().optional(),
 				status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]).optional(),
 			})
@@ -108,9 +108,9 @@ export const programRouter = createTRPCRouter({
 				where: { id },
 				data: {
 					...data,
-					academicYear: data.academicYearId
+					calendar: data.calendarId
 						? {
-								connect: { id: data.academicYearId }
+								connect: { id: data.calendarId }
 							}
 						: undefined,
 					coordinator: data.coordinatorId
