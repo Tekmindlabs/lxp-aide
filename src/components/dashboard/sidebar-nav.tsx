@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { BookOpen } from 'lucide-react';
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
 	items: {
 		href: string;
 		title: string;
+		icon?: React.ReactNode;
 	}[];
 }
 
@@ -35,6 +37,7 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
 						"justify-start"
 					)}
 				>
+					{item.icon && <span className="mr-2">{item.icon}</span>}
 					{item.title}
 				</Link>
 			))}

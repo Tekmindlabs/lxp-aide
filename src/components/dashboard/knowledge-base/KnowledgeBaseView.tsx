@@ -1,0 +1,75 @@
+'use client';
+
+import React from 'react';
+import { api } from '@/utils/api';
+import { DocumentList } from './DocumentList';
+import { FolderTree } from './FolderTree';
+import { DocumentUpload } from './DocumentUpload';
+import { Document, Folder } from '@/lib/knowledge-base/types';
+
+export function KnowledgeBaseView() {
+	const [selectedFolder, setSelectedFolder] = React.useState<Folder | null>(null);
+	const [selectedDocument, setSelectedDocument] = React.useState<Document | null>(null);
+	const [workspaceId] = React.useState('default'); // Replace with actual workspace ID from context
+
+	const { data: folders = [] } = api.knowledgeBase.getFolders.useQuery(
+		{ knowledgeBaseId: workspaceId },
+		{ enabled: !!workspaceId }
+	);
+
+	const { data: documents = [] } = api.knowledgeBase.getDocuments.useQuery(
+		{ folderId: selectedFolder?.id ?? '' },
+		{ enabled: !!selectedFolder }
+	);
+
+	const uploadMutation = api.knowledgeBase.uploadDocument.useMutation({
+		onSuccess: () => {
+			if (selectedFolder) {
+				api.utils.invalidateQueries(['knowledgeBase.getDocuments', { folderId: selectedFolder.id }]);
+			}
+		}
+	});
+
+	const handleUpload = async (file: File) => {
+		if (!selectedFolder) return;
+		
+		await uploadMutation.mutateAsync({
+			file,
+			workspaceId,
+			metadata: {
+				folderId: selectedFolder.id
+			}
+		});
+	};
+
+	const handleDocumentSelect = (document: Document) => {
+		setSelectedDocument(document);
+	};
+
+	const handleFolderSelect = (folder: Folder) => {
+		setSelectedFolder(folder);
+		setSelectedDocument(null);
+	};
+
+	return (
+		<div className="flex h-full">
+			<FolderTree
+				folders={folders}
+				onFolderSelect={handleFolderSelect}
+				selectedFolderId={selectedFolder?.id}
+			/>
+			
+			<div className="flex-1 flex flex-col">
+				<DocumentUpload
+					onUpload={handleUpload}
+					folderId={selectedFolder?.id || ''}
+				/>
+				
+				<DocumentList
+					documents={documents}
+					onDocumentSelect={handleDocumentSelect}
+				/>
+			</div>
+		</div>
+	);
+}

@@ -59,6 +59,10 @@ const superAdminNavItems = [
 		title: "Settings",
 		href: "/dashboard/super_admin/settings",
 	},
+	{
+		title: "Knowledge Base",
+		href: "/dashboard/super_admin/knowledge-base",
+	},
 ];
 
 const coordinatorNavItems = [
@@ -102,6 +106,10 @@ const coordinatorNavItems = [
 		title: "Notifications",
 		href: "/dashboard/coordinator/notification",
 	},
+	{
+		title: "Knowledge Base",
+		href: "/dashboard/coordinator/knowledge-base",
+	},
 ];
 
 const teacherNavItems = [
@@ -132,6 +140,25 @@ const teacherNavItems = [
 	{
 		title: "Notifications",
 		href: "/dashboard/teacher/notification",
+	},
+	{
+		title: "Knowledge Base",
+		href: "/dashboard/teacher/knowledge-base",
+	},
+];
+
+const studentNavItems = [
+	{
+		title: "Overview",
+		href: "/dashboard/student",
+	},
+	{
+		title: "Activities",
+		href: "/dashboard/student/class-activity",
+	},
+	{
+		title: "Knowledge Base",
+		href: "/dashboard/student/knowledge-base",
 	},
 ];
 
@@ -166,6 +193,8 @@ export default async function RoleLayout({
 				return coordinatorNavItems;
 			case 'teacher':
 				return teacherNavItems;
+			case 'student':
+				return studentNavItems;
 			default:
 				return [];
 		}

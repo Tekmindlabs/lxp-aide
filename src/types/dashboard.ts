@@ -12,7 +12,8 @@ export type DashboardFeature =
   | 'grading'
   | 'academic-calendar'
   | 'timetable-management'
-  | 'classroom-management';
+  | 'classroom-management'
+  | 'knowledge-base';
 
 export interface DashboardComponent {
   component: React.ComponentType<any>;
