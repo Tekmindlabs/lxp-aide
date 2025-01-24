@@ -20,7 +20,7 @@ export default async function RoleDashboard({
   const role = await Promise.resolve(params.role);
 
   // Normalize the role to uppercase and replace hyphens with underscores
-  const normalizedRole = role.toUpperCase().replace(/-/g, '_');
+  const normalizedRole = params.role.toUpperCase().replace(/-/g, '_');
   if (!session?.user) {
     redirect('/auth/signin');
   }
