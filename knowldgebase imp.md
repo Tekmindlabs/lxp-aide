@@ -1,549 +1,444 @@
-Based on the codebase and requirements, I'll provide detailed requirements for implementing the class group knowledge base using the second approach (Dedicated Collections with Shared Service). This approach aligns well with the existing LXP architecture and class group management system.
+Based on the provided codebase and requirements, I'll create a comprehensive requirements document for implementing a centralized knowledge base with workspace access in LXP Aide.
 
-# Class Group Knowledge Base Implementation Requirements
+# Requirements Document: Centralized Knowledge Base with Workspace Access
 
-## 1. Data Models and Schema Extensions
+## 1. System Architecture Overview
 
+### 1.1 Core Components
+- Centralized Document Management System
+- Workspace Management System
+- AI Integration Layer (OpenAI-compatible providers)
+- Vector Database (LanceDB)
+- Embedding Service (Jina AI API)
+- Access Control System
+
+### 1.2 Integration Points
+- LXP Aide Core System
+- Class Management System
+- User Management System
+- Document Processing Pipeline
+
+## 2. Knowledge Base Management
+
+### 2.1 Centralized Document Repository
 ```typescript
-// 1. Extend Prisma Schema
-model ClassGroupKnowledgeBase {
-  id          String      @id @default(cuid())
-  classGroupId String     @unique
-  classGroup   ClassGroup @relation(fields: [classGroupId], references: [id])
-  name        String
-  description String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  documents   Document[]
-  collections MilvusCollection[]
+interface CentralizedKnowledgeBase {
+  id: string;
+  name: string;
+  description: string;
+  folders: DocumentFolder[];
+  documents: Document[];
+  createdAt: DateTime;
+  updatedAt: DateTime;
 }
 
-model Document {
-  id          String   @id @default(cuid())
-  title       String
-  content     String   @db.Text
-  type        String   // e.g., "lesson", "assignment", "resource"
-  metadata    Json?
-  knowledgeBaseId String
-  knowledgeBase ClassGroupKnowledgeBase @relation(fields: [knowledgeBaseId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+interface DocumentFolder {
+  id: string;
+  name: string;
+  description: string;
+  parentFolderId?: string;
+  documents: Document[];
+  metadata: JSON;
 }
 
-model MilvusCollection {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  dimension   Int      @default(1536)
-  metadata    Json?
-  knowledgeBaseId String
-  knowledgeBase ClassGroupKnowledgeBase @relation(fields: [knowledgeBaseId], references: [id])
+interface Document {
+  id: string;
+  title: string;
+  type: string; // PDF, DOCX, TXT, etc.
+  content: string;
+  metadata: JSON;
+  embeddings: number[];
+  folderId: string;
+  createdAt: DateTime;
+  updatedAt: DateTime;
 }
 ```
 
-## 2. Service Implementation
+### 2.2 Document Processing Pipeline
+1. Document Upload
+2. Text Extraction
+3. Content Chunking
+4. Embedding Generation using Jina AI
+5. Vector Storage in LanceDB
+6. Metadata Indexing
 
+## 3. Workspace System
+
+### 3.1 Workspace Structure
 ```typescript
-// 2. Create ClassGroupKnowledgeBase Service
-interface KnowledgeBaseConfig {
-  dimension: number;
-  metricType: string;
-  indexType: string;
+interface Workspace {
+  id: string;
+  type: 'CLASS' | 'ADMIN';
+  name: string;
+  description: string;
+  classId?: string; // For class workspaces
+  documents: WorkspaceDocument[];
+  vectorCollection: string; // LanceDB collection name
+  createdAt: DateTime;
+  updatedAt: DateTime;
 }
 
-class ClassGroupKnowledgeBaseService {
-  private milvusClient: MilvusClient;
-  private config: KnowledgeBaseConfig;
-
-  constructor(config: KnowledgeBaseConfig) {
-    this.config = config;
-    this.milvusClient = new MilvusClient(process.env.MILVUS_URL);
-  }
-
-  async createKnowledgeBase(classGroupId: string, name: string) {
-    // 1. Create database entry
-    const knowledgeBase = await prisma.classGroupKnowledgeBase.create({
-      data: {
-        classGroupId,
-        name,
-        collections: {
-          create: {
-            name: `class_group_${classGroupId}_main`,
-            dimension: this.config.dimension
-          }
-        }
-      }
-    });
-
-    // 2. Initialize Milvus collection
-    await this.milvusClient.createCollection({
-      collection_name: `class_group_${classGroupId}_main`,
-      dimension: this.config.dimension,
-      metric_type: this.config.metricType,
-      index_type: this.config.indexType
-    });
-
-    return knowledgeBase;
-  }
-
-  async addDocument(knowledgeBaseId: string, document: DocumentInput) {
-    // 1. Store document in PostgreSQL
-    const savedDoc = await prisma.document.create({
-      data: {
-        ...document,
-        knowledgeBaseId
-      }
-    });
-
-    // 2. Generate embedding
-    const embedding = await generateEmbedding(document.content);
-
-    // 3. Store in Milvus
-    await this.milvusClient.insert({
-      collection_name: `class_group_${knowledgeBaseId}_main`,
-      data: [{
-        id: savedDoc.id,
-        embedding,
-        metadata: {
-          title: document.title,
-          type: document.type
-        }
-      }]
-    });
-
-    return savedDoc;
-  }
-
-  async searchContent(knowledgeBaseId: string, query: string) {
-    const embedding = await generateEmbedding(query);
-    
-    return this.milvusClient.search({
-      collection_name: `class_group_${knowledgeBaseId}_main`,
-      vector: embedding,
-      limit: 5
-    });
-  }
+interface WorkspaceDocument {
+  id: string;
+  sourceDocumentId: string; // Reference to centralized document
+  workspace: string;
+  metadata: JSON;
+  permissions: DocumentPermission[];
 }
 ```
 
-## 3. API Routes Implementation
+### 3.2 Workspace Creation Process
+1. Automatic workspace creation on class creation
+2. Vector collection initialization
+3. Permission setup
+4. Document attachment system
 
+## 4. Access Control System
+
+### 4.1 Role-Based Access
 ```typescript
-// 3. Create API endpoints
-// src/pages/api/class-group/[id]/knowledge-base/index.ts
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const { name } = await req.json();
-  const service = new ClassGroupKnowledgeBaseService(defaultConfig);
-  
-  const knowledgeBase = await service.createKnowledgeBase(
-    params.id,
-    name
-  );
-
-  return Response.json(knowledgeBase);
+enum UserRole {
+  SUPER_ADMIN,
+  PROGRAM_COORDINATOR,
+  TEACHER,
+  STUDENT
 }
 
-// src/pages/api/class-group/[id]/knowledge-base/documents.ts
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const document = await req.json();
-  const service = new ClassGroupKnowledgeBaseService(defaultConfig);
-  
-  const savedDoc = await service.addDocument(
-    params.id,
-    document
-  );
-
-  return Response.json(savedDoc);
+interface WorkspacePermission {
+  workspaceId: string;
+  roleId: UserRole;
+  permissions: string[]; // READ, WRITE, MANAGE, etc.
 }
 ```
 
-## 4. Integration with Class Group Management
+### 4.2 Permission Levels
+- Super Admin: Full access to centralized knowledge base and all workspaces
+- Program Coordinator: Access to program-related workspaces
+- Teachers: Access to assigned class workspaces
+- Students: Read-only access to class workspace documents
 
-```typescript
-// 4. Extend ClassGroupForm component
-export function ClassGroupForm({ 
-  selectedClassGroup,
-  onSuccess 
-}: ClassGroupFormProps) {
-  // ... existing form code ...
+I'll create a small guide for LanceDB implementation that can be added to the requirements document. Here's the section to add:
 
-  const createMutation = api.classGroup.create.useMutation({
-    onSuccess: async (data) => {
-      // Create knowledge base after class group creation
-      await fetch(`/api/class-group/${data.id}/knowledge-base`, {
-        method: 'POST',
-        body: JSON.stringify({
-          name: `${data.name} Knowledge Base`
-        })
-      });
-      onSuccess();
-    }
-  });
+## LanceDB Implementation Guide
 
-  // ... rest of component
-}
+### 1. Storage Setup
+
+First, create the necessary storage directory structure:
+
+```bash
+mkdir -p storage/lancedb
+mkdir -p storage/vector-cache
+mkdir -p storage/documents
 ```
 
-## 5. Access Control Requirements
+### 2. Environment Configuration
 
-```typescript
-// 5. Define access control rules
-const knowledgeBaseAccessRules = {
-  CREATE: ['SUPER_ADMIN', 'PROGRAM_COORDINATOR'],
-  READ: ['SUPER_ADMIN', 'PROGRAM_COORDINATOR', 'TEACHER'],
-  UPDATE: ['SUPER_ADMIN', 'PROGRAM_COORDINATOR'],
-  DELETE: ['SUPER_ADMIN'],
-  MANAGE_DOCUMENTS: ['SUPER_ADMIN', 'PROGRAM_COORDINATOR', 'TEACHER']
-};
+Add these variables to your `.env` file:
 
-// Middleware implementation
-export async function validateKnowledgeBaseAccess(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  next: NextFunction
-) {
-  const { user } = req.session;
-  const action = req.method;
-  
-  if (!knowledgeBaseAccessRules[action].includes(user.role)) {
-    return res.status(403).json({ error: 'Unauthorized' });
-  }
-  
-  next();
-}
-```
-
-## 6. UI Components
-
-```typescript
-// 6. Create knowledge base management components
-interface KnowledgeBaseProps {
-  classGroupId: string;
-}
-
-export function KnowledgeBaseManager({ classGroupId }: KnowledgeBaseProps) {
-  const [documents, setDocuments] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // ... implementation of document management UI
-  return (
-    <div>
-      <DocumentUploader classGroupId={classGroupId} />
-      <DocumentSearch 
-        classGroupId={classGroupId}
-        onSearch={setSearchQuery}
-      />
-      <DocumentList 
-        documents={documents}
-        onDelete={handleDelete}
-      />
-    </div>
-  );
-}
-```
-
-## 7. Testing Requirements
-
-```typescript
-// 7. Test specifications
-describe('ClassGroupKnowledgeBase', () => {
-  it('should create knowledge base when class group is created', async () => {
-    // Test implementation
-  });
-
-  it('should properly handle document uploads and embeddings', async () => {
-    // Test implementation
-  });
-
-  it('should enforce access control rules', async () => {
-    // Test implementation
-  });
-});
-```
-
-## 8. Deployment Considerations
-
-1. **Environment Variables**:
 ```env
-MILVUS_URL=
-MILVUS_PORT=
-OPENAI_API_KEY=  # For embeddings generation
-openai_base_url
-Openai_model
+# Existing LXP Aide .env configurations...
+
+# LanceDB Storage Configuration
+STORAGE_DIR=./storage
+VECTOR_CACHE_DIR=./storage/vector-cache
+DOCUMENTS_DIR=./storage/documents
 ```
 
-2. **Infrastructure Requirements**:
-- Milvus instance with sufficient capacity
-- Storage for document files
-- Adequate memory for embedding generation
+### 3. LanceDB Client Implementation
 
-3. **Monitoring Requirements**:
-- Collection size metrics
-- Search performance metrics
-- Embedding generation latency
-- Error rates and types
-
-I'll create detailed requirements for implementing Jina API embeddings integration with the class group knowledge base system. Here's the comprehensive implementation plan:
-
-# Requirements for Class Group Knowledge Base with Jina Embeddings
-
-## 1. Jina API Integration Service
+Create a new file `utils/vectorDb/lance/index.ts`:
 
 ```typescript
-// src/lib/jina/embeddings.ts
-interface JinaConfig {
+import lancedb from '@lancedb/lancedb';
+import { TextSplitter } from '../TextSplitter';
+
+export class LanceDbClient {
+  private uri: string;
+  
+  constructor() {
+    this.uri = `${process.env.STORAGE_DIR ? `${process.env.STORAGE_DIR}/` : "./storage/"}lancedb`;
+  }
+
+  async connect() {
+    try {
+      return await lancedb.connect(this.uri);
+    } catch (error) {
+      console.error('Failed to connect to LanceDB:', error);
+      throw error;
+    }
+  }
+
+  async createOrGetCollection(name: string, schema?: any) {
+    const db = await this.connect();
+    try {
+      const existingTable = await db.openTable(name);
+      return existingTable;
+    } catch {
+      // Table doesn't exist, create new
+      return await db.createTable(name, [], schema);
+    }
+  }
+
+  async addDocumentEmbeddings(
+    collectionName: string,
+    embeddings: number[][],
+    metadata: any[]
+  ) {
+    const collection = await this.createOrGetCollection(collectionName);
+    const data = embeddings.map((embedding, index) => ({
+      vector: embedding,
+      ...metadata[index]
+    }));
+    
+    await collection.add(data);
+  }
+
+  async similaritySearch(
+    collectionName: string,
+    queryEmbedding: number[],
+    limit: number = 5
+  ) {
+    const collection = await this.createOrGetCollection(collectionName);
+    return await collection.search(queryEmbedding)
+      .limit(limit)
+      .execute();
+  }
+
+  async deleteCollection(name: string) {
+    const db = await this.connect();
+    try {
+      await db.dropTable(name);
+    } catch (error) {
+      console.error(`Failed to delete collection ${name}:`, error);
+      throw error;
+    }
+  }
+}
+
+// Export singleton instance
+export const lanceDbClient = new LanceDbClient();
+```
+
+### 4. Usage Example
+
+```typescript
+import { lanceDbClient } from '../utils/vectorDb/lance';
+import { JinaEmbeddingService } from '../services/embedding';
+
+async function processAndStoreDocument(
+  workspaceId: string,
+  document: Document,
+  jinaEmbedder: JinaEmbeddingService
+) {
+  // 1. Split document into chunks
+  const textSplitter = new TextSplitter();
+  const chunks = textSplitter.split(document.content);
+
+  // 2. Generate embeddings
+  const embeddings = await jinaEmbedder.embedChunks(chunks);
+
+  // 3. Prepare metadata
+  const metadata = chunks.map((chunk, index) => ({
+    documentId: document.id,
+    workspaceId,
+    content: chunk,
+    chunkIndex: index,
+  }));
+
+  // 4. Store in LanceDB
+  const collectionName = `workspace_${workspaceId}`;
+  await lanceDbClient.addDocumentEmbeddings(
+    collectionName,
+    embeddings,
+    metadata
+  );
+}
+
+// Example search function
+async function searchWorkspace(
+  workspaceId: string,
+  query: string,
+  jinaEmbedder: JinaEmbeddingService
+) {
+  // 1. Generate query embedding
+  const queryEmbedding = await jinaEmbedder.embedText(query);
+
+  // 2. Search in workspace collection
+  const results = await lanceDbClient.similaritySearch(
+    `workspace_${workspaceId}`,
+    queryEmbedding,
+    5
+  );
+
+  return results;
+}
+```
+
+### 5. Directory Structure
+
+```
+project_root/
+├── storage/
+│   ├── lancedb/        # LanceDB storage
+│   ├── vector-cache/   # Cache for vectors
+│   └── documents/      # Original documents
+├── utils/
+│   └── vectorDb/
+│       └── lance/
+│           └── index.ts
+└── .env
+```
+
+This implementation provides a simple yet robust way to manage vector embeddings using LanceDB with local storage. It includes basic CRUD operations and similarity search functionality, which can be extended based on specific requirements.
+
+The guide can be integrated into the main requirements document under the "Implementation Details" section, providing concrete implementation steps for the vector database component.
+
+## 5. AI Integration
+
+### 5.1 Vector Database Configuration
+```typescript
+interface LanceDBConfig {
+  uri: string;
+  dimension: number; // Based on Jina AI embedding size
+  similarity: string;
+  indexes: string[];
+}
+```
+
+### 5.2 Embedding Service
+```typescript
+interface JinaEmbeddingService {
   apiKey: string;
   baseUrl: string;
   modelName: string;
   dimension: number;
-}
-
-class JinaEmbeddingService {
-  private config: JinaConfig;
-
-  constructor(config: JinaConfig) {
-    this.config = config;
-  }
-
-  async generateEmbedding(text: string): Promise<number[]> {
-    try {
-      const response = await fetch(`${this.config.baseUrl}/embeddings`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.config.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          input: text,
-          model: this.config.modelName
-        })
-      });
-
-      const data = await response.json();
-      return data.data[0].embedding;
-    } catch (error) {
-      console.error('Error generating embedding:', error);
-      throw error;
-    }
-  }
-
-  async generateBatchEmbeddings(texts: string[]): Promise<number[][]> {
-    try {
-      const response = await fetch(`${this.config.baseUrl}/embeddings`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.config.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          input: texts,
-          model: this.config.modelName
-        })
-      });
-
-      const data = await response.json();
-      return data.data.map((item: any) => item.embedding);
-    } catch (error) {
-      console.error('Error generating batch embeddings:', error);
-      throw error;
-    }
-  }
+  batchSize: number;
 }
 ```
 
-## 2. Enhanced Knowledge Base Service with Jina Integration
+### 5.3 LangChain Integration
+- Document loaders
+- Text splitters
+- Vector store integration
+- Chain templates for Q&A
 
-```typescript
-// src/lib/services/class-group-knowledge.ts
-interface ClassGroupKnowledgeConfig {
-  dimension: number;
-  similarityMetric: string;
-  jinaConfig: JinaConfig;
-}
+## 6. Implementation Instructions
 
-class ClassGroupKnowledgeBase {
-  private milvusClient: MilvusClient;
-  private jinaService: JinaEmbeddingService;
-  private config: ClassGroupKnowledgeConfig;
-
-  constructor(config: ClassGroupKnowledgeConfig) {
-    this.config = config;
-    this.milvusClient = new MilvusClient(process.env.MILVUS_URL);
-    this.jinaService = new JinaEmbeddingService(config.jinaConfig);
-  }
-
-  async createCollection(classGroupId: string) {
-    const collectionName = `class_group_${classGroupId}`;
-    
-    await this.milvusClient.createCollection({
-      collection_name: collectionName,
-      fields: [
-        {
-          name: 'id',
-          data_type: DataType.VARCHAR,
-          is_primary_key: true,
-          max_length: 100
-        },
-        {
-          name: 'content',
-          data_type: DataType.VARCHAR,
-          max_length: 65535
-        },
-        {
-          name: 'embedding',
-          data_type: DataType.FLOAT_VECTOR,
-          dim: this.config.dimension
-        },
-        {
-          name: 'metadata',
-          data_type: DataType.JSON
-        }
-      ]
-    });
-
-    // Create index for vector field
-    await this.milvusClient.createIndex({
-      collection_name: collectionName,
-      field_name: 'embedding',
-      extra_params: {
-        metric_type: this.config.similarityMetric
-      }
-    });
-  }
-
-  async addDocument(classGroupId: string, document: Document) {
-    const embedding = await this.jinaService.generateEmbedding(document.content);
-    
-    await this.milvusClient.insert({
-      collection_name: `class_group_${classGroupId}`,
-      data: [{
-        id: document.id,
-        content: document.content,
-        embedding,
-        metadata: JSON.stringify({
-          title: document.title,
-          type: document.type,
-          created: new Date().toISOString()
-        })
-      }]
-    });
-  }
-
-  async searchSimilarDocuments(classGroupId: string, query: string, limit: number = 5) {
-    const embedding = await this.jinaService.generateEmbedding(query);
-    
-    return this.milvusClient.search({
-      collection_name: `class_group_${classGroupId}`,
-      vector: embedding,
-      limit,
-      output_fields: ['content', 'metadata']
-    });
-  }
-}
-```
-
-## 3. Environment Configuration
-
-```env
-# .env
+### 6.1 Setup Environment
+```bash
+# Required environment variables
 JINA_API_KEY=your_jina_api_key
 JINA_BASE_URL=https://api.jina.ai/v1
 JINA_MODEL_NAME=jina-embedding-v2
-JINA_EMBEDDING_DIMENSION=512
-
-MILVUS_URL=localhost:19530
-MILVUS_USERNAME=root
-MILVUS_PASSWORD=milvus
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_BASE_URL=your_openai_api_key
+OPENAI_MODEL=your_openai_api_key
+LANCEDB_URI=your_lancedb_uri
 ```
 
-## 4. API Routes Implementation
+### 6.2 Database Schema Updates
+1. Create new tables for knowledge base management
+2. Add workspace-related tables
+3. Update class tables with workspace references
 
+### 6.3 Implementation Steps
+
+1. **Set up Centralized Knowledge Base**
 ```typescript
-// src/app/api/class-group/[id]/knowledge/route.ts
-import { ClassGroupKnowledgeBase } from '@/lib/services/class-group-knowledge';
+// Initialize knowledge base service
+const knowledgeBase = new CentralizedKnowledgeBase({
+  embedder: new JinaEmbeddingService(config),
+  vectorStore: new LanceDBStore(dbConfig)
+});
+```
 
-const knowledgeConfig = {
-  dimension: parseInt(process.env.JINA_EMBEDDING_DIMENSION),
-  similarityMetric: 'L2',
-  jinaConfig: {
-    apiKey: process.env.JINA_API_KEY,
-    baseUrl: process.env.JINA_BASE_URL,
-    modelName: process.env.JINA_MODEL_NAME,
-    dimension: parseInt(process.env.JINA_EMBEDDING_DIMENSION)
-  }
-};
-
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const knowledgeBase = new ClassGroupKnowledgeBase(knowledgeConfig);
-  const { document } = await req.json();
-
-  try {
-    await knowledgeBase.addDocument(params.id, document);
-    return Response.json({ success: true });
-  } catch (error) {
-    console.error('Error adding document:', error);
-    return Response.json({ error: 'Failed to add document' }, { status: 500 });
-  }
-}
-
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const knowledgeBase = new ClassGroupKnowledgeBase(knowledgeConfig);
-  const { searchParams } = new URL(req.url);
-  const query = searchParams.get('query');
-
-  if (!query) {
-    return Response.json({ error: 'Query parameter required' }, { status: 400 });
-  }
-
-  try {
-    const results = await knowledgeBase.searchSimilarDocuments(params.id, query);
-    return Response.json(results);
-  } catch (error) {
-    console.error('Error searching documents:', error);
-    return Response.json({ error: 'Search failed' }, { status: 500 });
-  }
+2. **Implement Workspace Creation**
+```typescript
+// On class creation
+async function createClassWorkspace(classId: string) {
+  const workspace = await Workspace.create({
+    type: 'CLASS',
+    classId,
+    vectorCollection: `class_${classId}_vectors`
+  });
+  
+  await initializeVectorCollection(workspace.vectorCollection);
 }
 ```
 
-## 5. Integration Requirements
+3. **Document Management**
+```typescript
+// Document processing pipeline
+async function processDocument(file: File, folderId: string) {
+  const document = await DocumentProcessor.extract(file);
+  const chunks = await TextSplitter.split(document.content);
+  const embeddings = await jinaEmbedder.embedChunks(chunks);
+  
+  await lanceDB.insert(embeddings);
+  await saveDocument(document, folderId);
+}
+```
 
-1. **Jina API Integration**:
-   - Secure API key management
-   - Error handling for API rate limits
-   - Batch processing capabilities
-   - Retry mechanisms for failed requests
+4. **Workspace Document Attachment**
+```typescript
+async function attachDocumentToWorkspace(
+  documentId: string,
+  workspaceId: string
+) {
+  const sourceDoc = await Document.findById(documentId);
+  await WorkspaceDocument.create({
+    sourceDocumentId: documentId,
+    workspaceId,
+    metadata: sourceDoc.metadata
+  });
+}
+```
 
-2. **Vector Database Management**:
-   - Automatic collection creation for new class groups
-   - Index optimization for fast similarity search
-   - Regular maintenance and cleanup of unused collections
+### 6.4 API Endpoints
 
-3. **Performance Requirements**:
-   - Maximum embedding generation time: 2 seconds
-   - Maximum search response time: 1 second
-   - Support for batch processing up to 100 documents
+1. **Knowledge Base Management**
+```typescript
+// Document management routes
+POST /api/knowledge-base/documents
+GET /api/knowledge-base/documents
+PUT /api/knowledge-base/documents/:id
+DELETE /api/knowledge-base/documents/:id
 
-4. **Monitoring and Logging**:
-   - Track API usage and costs
-   - Monitor embedding quality
-   - Log search performance metrics
-   - Error tracking and reporting
+// Folder management routes
+POST /api/knowledge-base/folders
+GET /api/knowledge-base/folders
+PUT /api/knowledge-base/folders/:id
+DELETE /api/knowledge-base/folders/:id
+```
 
-5. **Security Requirements**:
-   - Secure storage of API keys
-   - Access control per class group
-   - Data encryption at rest
-   - Audit logging of all operations
+2. **Workspace Management**
+```typescript
+// Workspace routes
+POST /api/workspaces
+GET /api/workspaces
+GET /api/workspaces/:id/documents
+POST /api/workspaces/:id/documents
+DELETE /api/workspaces/:id/documents/:documentId
+```
+lance db implimenttaion 
 
-This implementation provides a robust foundation for integrating Jina embeddings with the class group knowledge base system, ensuring efficient document management and similarity search capabilities.
+## 7. Testing Requirements
+
+1. Unit Tests
+- Document processing
+- Embedding generation
+- Vector storage operations
+- Permission checks
+
+2. Integration Tests
+- Workspace creation flow
+- Document attachment process
+- Search functionality
+- Access control validation
+
+3. Performance Tests
+- Document processing pipeline
+- Vector search performance
+- Multi-user access scenarios
+
+.
