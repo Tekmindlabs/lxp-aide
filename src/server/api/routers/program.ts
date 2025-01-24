@@ -3,7 +3,7 @@ import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 
 export const programRouter = createTRPCRouter({
-	getAllPrograms: protectedProcedure
+	getAll: protectedProcedure
 		.input(
 			z.object({
 				page: z.number().min(1).default(1),
