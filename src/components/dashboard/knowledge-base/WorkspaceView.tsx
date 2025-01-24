@@ -5,7 +5,7 @@ import { WorkspaceWithSettings } from '@/types/workspace'
 import { WorkspaceChat } from './WorkspaceChat'
 import { WorkspaceSettings } from './WorkspaceSettings'
 import { useState } from 'react'
-import { toast } from '@/components/ui/use-toast'
+import { useToast } from "@/hooks/use-toast";
 
 interface WorkspaceViewProps {
 	workspace: WorkspaceWithSettings

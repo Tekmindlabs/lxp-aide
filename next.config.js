@@ -17,9 +17,23 @@ const nextConfig = {
         },
       }
     }
+
+    // Add configuration for binary files
+    config.module.rules.push({
+      test: /\.node$/,
+      use: 'node-loader',
+      // Alternatively, you can exclude the binary files
+      // test: /\.node$/,
+      // loader: "ignore-loader"
+    })
+
+    // Mark @lancedb/lancedb as external
+    config.externals.push({
+      '@lancedb/lancedb-win32-x64-msvc': 'commonjs @lancedb/lancedb-win32-x64-msvc'
+    })
+
     return config
   }
 }
 
 module.exports = nextConfig
-
