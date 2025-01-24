@@ -36,10 +36,17 @@ const utils = api.useContext();
 
 const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
 
-    const { data: programs, isLoading } = api.program.searchPrograms.useQuery(filters);
+const { data: programData, isLoading } = api.program.getAll.useQuery({
+    page: 1,
+    pageSize: 10,
+    ...filters
+});
+
+// Use programData.programs instead of programs directly
+const programs = programData?.programs || [];
     const { data: coordinators } = api.program.getAvailableCoordinators.useQuery();
 
-    const associateAcademicYear = api.program.associateAcademicYear.useMutation({
+    const associateCalendar = api.program.associateCalendar.useMutation({
         onSuccess: () => {
             utils.program.searchPrograms.invalidate();
         },
