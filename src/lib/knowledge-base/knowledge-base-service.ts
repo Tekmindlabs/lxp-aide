@@ -7,29 +7,41 @@ import { prisma } from '@/server/db';
 
 export class KnowledgeBaseService {
 	private readonly vectorDimension = 768; // Jina embedding dimension
+	private readonly prisma;
 
-	constructor() {}
+	constructor() {
+    this.prisma = prisma;
+}
 
-	async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
-		const folders = await prisma.folder.findMany({
-			where: {
-				workspaceId: knowledgeBaseId
-			},
-			include: {
-				children: true,
-				documents: true
-			}
-		});
+async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
 
-		return folders.map(folder => ({
-			id: folder.id,
-			name: folder.name,
-			description: folder.description || '',
-			parentFolderId: folder.parentId || undefined,
-			children: folder.children,
-			metadata: folder.metadata as Record<string, any>
-		}));
-	}
+    try {
+      const folders = await this.prisma.folder.findMany({
+        where: {
+          workspaceId: knowledgeBaseId
+        },
+        include: {
+          children: true,
+          documents: true
+        }
+      });
+
+
+      return folders.map(folder => ({
+        id: folder.id,
+        name: folder.name,
+        description: folder.description || '',
+        parentFolderId: folder.parentId || undefined,
+        children: folder.children,
+        metadata: folder.metadata as Record<string, any>
+      }));
+
+    } catch (error) {
+      console.error('Error fetching folders:', error);
+      throw error;
+    }
+  }
+
 
 	async getDocuments(folderId: string): Promise<Document[]> {
 		const documents = await prisma.document.findMany({
