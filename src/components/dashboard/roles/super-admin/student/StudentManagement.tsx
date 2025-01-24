@@ -26,7 +26,10 @@ export const StudentManagement = () => {
 
 	const { data: students, isLoading } = api.student.searchStudents.useQuery(filters);
 	const { data: classes } = api.class.searchClasses.useQuery({});
-	const { data: programs } = api.program.getAllPrograms.useQuery();
+	const { data: programs } = api.program.getAll.useQuery({
+		page: 1,
+		pageSize: 10
+	});
 
 	if (isLoading) {
 		return <div>Loading...</div>;

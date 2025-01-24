@@ -29,7 +29,10 @@ export const SubjectManagement = () => {
 
 	const { data: subjects, isLoading } = api.subject.searchSubjects.useQuery(filters);
 	const { data: classGroups } = api.classGroup.getAllClassGroups.useQuery();
-	const { data: programs } = api.program.getAllPrograms.useQuery();
+	const { data: programs } = api.program.getAll.useQuery({
+		page: 1,
+		pageSize: 10
+	});
 	const { data: teachers } = api.subject.getAvailableTeachers.useQuery();
 
 	const handleCreate = () => {

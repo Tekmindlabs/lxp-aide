@@ -12,7 +12,7 @@ export const ClassGroupManagement = () => {
 	const [activeTab, setActiveTab] = useState("list");
 	const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 	const { data: classGroups, isLoading } = api.classGroup.getAllClassGroups.useQuery();
-	const { data: programs } = api.program.getAllPrograms.useQuery({
+	const { data: programs } = api.program.getAll.useQuery({
 		page: 1,
 		pageSize: 10
 	});
