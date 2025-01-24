@@ -16,7 +16,8 @@ export const FolderSchema = z.object({
 	name: z.string(),
 	description: z.string().optional(),
 	parentFolderId: z.string().optional(),
-	metadata: z.record(z.any())
+	metadata: z.record(z.any()),
+	children: z.array(z.lazy(() => FolderSchema)).optional()
 });
 
 export const WorkspaceSchema = z.object({

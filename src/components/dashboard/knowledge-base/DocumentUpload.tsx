@@ -1,55 +1,53 @@
+'use client';
+
 import React from 'react';
-import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Upload } from 'lucide-react';
 
 interface DocumentUploadProps {
 	onUpload: (file: File) => Promise<void>;
 	folderId: string;
 }
 
-export const DocumentUpload: React.FC<DocumentUploadProps> = ({
-	onUpload,
-	folderId
-}) => {
-	const [isUploading, setIsUploading] = React.useState(false);
+export function DocumentUpload({ onUpload, folderId }: DocumentUploadProps) {
 	const fileInputRef = React.useRef<HTMLInputElement>(null);
+	const [isUploading, setIsUploading] = React.useState(false);
 
 	const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
-		if (!file) return;
+		if (!file || !folderId) return;
 
 		try {
 			setIsUploading(true);
 			await onUpload(file);
-			if (fileInputRef.current) {
-				fileInputRef.current.value = '';
-			}
 		} catch (error) {
 			console.error('Upload failed:', error);
 		} finally {
 			setIsUploading(false);
+			if (fileInputRef.current) {
+				fileInputRef.current.value = '';
+			}
 		}
 	};
 
 	return (
 		<div className="p-4 border-b">
-			<Input
-				ref={fileInputRef}
+			<input
 				type="file"
+				ref={fileInputRef}
 				onChange={handleFileChange}
 				className="hidden"
-				accept=".txt,.pdf,.doc,.docx"
+				accept=".pdf,.doc,.docx,.txt"
 			/>
 			<Button
-				variant="outline"
-				className="w-full"
 				onClick={() => fileInputRef.current?.click()}
-				disabled={isUploading}
+				disabled={isUploading || !folderId}
+				className="w-full"
 			>
 				<Upload className="mr-2 h-4 w-4" />
 				{isUploading ? 'Uploading...' : 'Upload Document'}
 			</Button>
 		</div>
 	);
-};
+}
+

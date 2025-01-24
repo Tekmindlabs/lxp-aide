@@ -3,11 +3,53 @@ import { Document, Folder, Workspace } from './types';
 import { nanoid } from 'nanoid';
 import { jinaEmbedder } from './embedding-service';
 import { DocumentProcessor } from './document-processor';
+import { prisma } from '@/server/db';
 
 export class KnowledgeBaseService {
 	private readonly vectorDimension = 768; // Jina embedding dimension
 
 	constructor() {}
+
+	async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
+		const folders = await prisma.folder.findMany({
+			where: {
+				workspaceId: knowledgeBaseId
+			},
+			include: {
+				children: true,
+				documents: true
+			}
+		});
+
+		return folders.map(folder => ({
+			id: folder.id,
+			name: folder.name,
+			description: folder.description || '',
+			parentFolderId: folder.parentId || undefined,
+			children: folder.children,
+			metadata: folder.metadata as Record<string, any>
+		}));
+	}
+
+	async getDocuments(folderId: string): Promise<Document[]> {
+		const documents = await prisma.document.findMany({
+			where: {
+				folderId
+			}
+		});
+
+		return documents.map(doc => ({
+			id: doc.id,
+			title: doc.title,
+			type: doc.type,
+			content: doc.content,
+			metadata: doc.metadata as Record<string, any>,
+			embeddings: [],  // We don't need to send embeddings to the client
+			folderId: doc.folderId,
+			createdAt: doc.createdAt,
+			updatedAt: doc.updatedAt
+		}));
+	}
 
 	async createWorkspace(workspace: Omit<Workspace, 'id' | 'vectorCollection'>): Promise<Workspace> {
 		const id = nanoid();

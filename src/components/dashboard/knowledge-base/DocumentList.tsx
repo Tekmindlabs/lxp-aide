@@ -1,68 +1,28 @@
+'use client';
+
 import React from 'react';
 import { Document } from '@/lib/knowledge-base/types';
-import { File, MoreVertical } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 interface DocumentListProps {
 	documents: Document[];
 	onDocumentSelect: (document: Document) => void;
-	onDocumentDelete?: (document: Document) => void;
 }
 
-export const DocumentList: React.FC<DocumentListProps> = ({
-	documents,
-	onDocumentSelect,
-	onDocumentDelete
-}) => {
+export function DocumentList({ documents, onDocumentSelect }: DocumentListProps) {
 	return (
-		<div className="flex-1 p-4">
-			<div className="grid gap-2">
-				{documents.map(doc => (
+		<div className="flex-1 overflow-auto p-4">
+			<div className="grid gap-4">
+				{documents.map((document) => (
 					<div
-						key={doc.id}
-						className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+						key={document.id}
+						className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50"
+						onClick={() => onDocumentSelect(document)}
 					>
-						<Button
-							variant="ghost"
-							className="flex items-center gap-2 w-full justify-start"
-							onClick={() => onDocumentSelect(doc)}
-						>
-							<File size={16} />
-							<span>{doc.title}</span>
-							<span className="text-sm text-gray-500 ml-2">
-								{new Date(doc.createdAt).toLocaleDateString()}
-							</span>
-						</Button>
-						
-						{onDocumentDelete && (
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="ghost" size="sm">
-										<MoreVertical size={16} />
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent>
-									<DropdownMenuItem onClick={() => onDocumentDelete(doc)}>
-										Delete
-									</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-						)}
+						<h3 className="font-medium">{document.title}</h3>
+						<p className="text-sm text-gray-500">{document.type}</p>
 					</div>
 				))}
-				
-				{documents.length === 0 && (
-					<div className="text-center text-gray-500 py-8">
-						No documents in this folder
-					</div>
-				)}
 			</div>
 		</div>
 	);
-};
+}
