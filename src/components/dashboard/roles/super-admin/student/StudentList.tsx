@@ -4,37 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Status } from "@prisma/client";
-
-interface Student {
-	id: string;
-	name: string;
-	email: string;
-	status: Status;
-	studentProfile: {
-		dateOfBirth: Date;
-		class?: {
-			name: string;
-			classGroup: {
-				name: string;
-				program: {
-					name: string;
-				};
-			};
-		};
-		parent?: {
-			user: {
-				name: string;
-			};
-		};
-		attendance: {
-			status: string;
-		}[];
-		activities: {
-			status: string;
-			grade?: number;
-		}[];
-	};
-}
+import { Student } from "@/types/user";
 
 interface StudentListProps {
 	students: Student[];
@@ -94,7 +64,7 @@ export const StudentList = ({ students, onSelect }: StudentListProps) => {
 								{calculateAverageGrade(student.studentProfile.activities)}
 							</TableCell>
 							<TableCell>
-								<Badge variant={student.status === "ACTIVE" ? "success" : "secondary"}>
+								<Badge variant={student.status === "ACTIVE" ? "default" : "secondary"}>
 									{student.status}
 								</Badge>
 							</TableCell>

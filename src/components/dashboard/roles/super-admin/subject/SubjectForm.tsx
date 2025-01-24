@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api } from "@/utils/api";
 import { Status } from "@prisma/client";
 
+
 interface SubjectFormData {
 	name: string;
 	code: string;
@@ -150,7 +151,7 @@ export const SubjectForm = ({
 							label: `${group.name} (${group.program.name})`,
 							value: group.id,
 						}))}
-						selected={formData.classGroupIds}
+						value={formData.classGroupIds}
 						onChange={(values) => setFormData({ ...formData, classGroupIds: values })}
 						placeholder="Select class groups"
 					/>
@@ -163,7 +164,7 @@ export const SubjectForm = ({
 							label: teacher.user.name || "Unnamed Teacher",
 							value: teacher.id,
 						}))}
-						selected={formData.teacherIds}
+						value={formData.teacherIds}
 						onChange={(values) => setFormData({ ...formData, teacherIds: values })}
 						placeholder="Select teachers"
 					/>
@@ -192,8 +193,8 @@ export const SubjectForm = ({
 					<Button variant="outline" type="button" onClick={onSuccess}>
 						Cancel
 					</Button>
-					<Button type="submit" disabled={createMutation.isLoading || updateMutation.isLoading}>
-						{createMutation.isLoading || updateMutation.isLoading ? "Saving..." : selectedSubject ? "Update" : "Create"}
+					<Button type="submit" disabled={createMutation.status === 'pending' || updateMutation.status === 'pending'}>
+						{createMutation.status === 'pending' || updateMutation.status === 'pending' ? "Saving..." : selectedSubject ? "Update" : "Create"}
 					</Button>
 				</div>
 			</form>

@@ -164,7 +164,7 @@ model Week {
 
 model Program {
   id            String    @id @default(cuid())
-  name          String    @unique
+  name          String?    @unique
   description   String?
   status        Status    @default(ACTIVE)
   coordinator   CoordinatorProfile? @relation(fields: [coordinatorId], references: [id])

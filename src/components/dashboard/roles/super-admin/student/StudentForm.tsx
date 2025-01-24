@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/utils/api";
+import { Student } from "@/types/user";
 
 // First, modify the form schema to handle the date properly
 const formSchema = z.object({
@@ -31,17 +32,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface StudentFormProps {
-	selectedStudent?: {
-		id: string;
-		name: string;
-		email: string;
-		status: Status;
-		studentProfile: {
-			dateOfBirth: Date;
-			class?: { id: string };
-			parent?: { id: string };
-		};
-	};
+	selectedStudent?: Student;
 	classes: { id: string; name: string; classGroup: { name: string } }[];
 	onSuccess: () => void;
 }

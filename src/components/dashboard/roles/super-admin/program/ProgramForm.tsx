@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/utils/api";
 import { Status } from "@prisma/client";
 import { toast } from "@/hooks/use-toast";
-import type { TRPCClientError } from "@trpc/client";
+import type { TRPCClientErrorLike } from "@trpc/client";
 
 
 interface ProgramFormData {
@@ -31,15 +31,15 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 		description: selectedProgram?.description || "",
 		calendarId: selectedProgram?.calendarId || "none",
 		coordinatorId: selectedProgram?.coordinatorId || "none",
-		status: selectedProgram?.status || Status.ACTIVE,
+    status: selectedProgram?.status || Status.ACTIVE,
 	}));
 
 	const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
 	const utils = api.useContext();
 
-	const createMutation = api.program.createProgram.useMutation({
+	const createMutation = api.program.create.useMutation({
 		onSuccess: () => {
-			utils.program.getAllPrograms.invalidate();
+			utils.program.getAll.invalidate();
 			resetForm();
 			onSuccess();
 			toast({
@@ -47,7 +47,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 				description: "Program created successfully",
 			});
 		},
-		onError: (error) => {
+		onError: (error: TRPCClientErrorLike<any>) => {
 			toast({
 				title: "Error",
 				description: error.message,
@@ -56,9 +56,9 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 		},
 	});
 
-	const updateMutation = api.program.updateProgram.useMutation({
+	const updateMutation = api.program.update.useMutation({
 		onSuccess: () => {
-			utils.program.getAllPrograms.invalidate();
+			utils.program.getAll.invalidate();
 			resetForm();
 			onSuccess();
 			toast({
@@ -66,7 +66,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 				description: "Program updated successfully",
 			});
 		},
-		onError: (error) => {
+		onError: (error: TRPCClientErrorLike<any>) => {
 			toast({
 				title: "Error",
 				description: error.message,
@@ -97,9 +97,15 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 			updateMutation.mutate({
 				id: selectedProgram.id,
 				...submissionData,
+        calendarId: submissionData.calendarId === "none" ? undefined : submissionData.calendarId,
+        coordinatorId: submissionData.coordinatorId === "none" ? undefined : submissionData.coordinatorId,
 			});
 		} else {
-			createMutation.mutate(submissionData);
+			createMutation.mutate({
+        ...submissionData,
+        calendarId: submissionData.calendarId === "none" ? undefined : submissionData.calendarId,
+        coordinatorId: submissionData.coordinatorId === "none" ? undefined : submissionData.coordinatorId,
+      });
 		}
 	};
 
@@ -129,7 +135,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 
     <select
         id="calendar"
-        value={formData.calendarId}
+        value={formData.calendarId || ""}
         onChange={(e) => setFormData({ ...formData, calendarId: e.target.value })}
         className="w-full border p-2 rounded"
         required
@@ -155,7 +161,7 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 				<Label htmlFor="coordinator">Coordinator</Label>
 				<select
 					id="coordinator"
-					value={formData.coordinatorId}
+					value={formData.coordinatorId || ""}
 					onChange={(e) => setFormData({ ...formData, coordinatorId: e.target.value })}
 					className="w-full border p-2 rounded"
 					title="Select program coordinator"
@@ -186,8 +192,8 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 				</select>
 			</div>
 
-			<Button type="submit" disabled={createMutation.isLoading || updateMutation.isLoading}>
-				{createMutation.isLoading || updateMutation.isLoading ? 'Saving...' : selectedProgram ? "Update" : "Create"} Program
+			<Button type="submit" disabled={createMutation.status === 'pending' || updateMutation.status === 'pending'}>
+				{createMutation.status === 'pending' || updateMutation.status === 'pending' ? 'Saving...' : selectedProgram ? "Update" : "Create"} Program
 			</Button>
 		</form>
 	);
