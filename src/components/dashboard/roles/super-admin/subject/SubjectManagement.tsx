@@ -82,7 +82,7 @@ export const SubjectManagement = () => {
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="all">All Programs</SelectItem>
-									{programs?.map((program) => (
+									{programs?.programs?.map((program: any) => (
 										<SelectItem key={program.id} value={program.id}>
 											{program.name}
 										</SelectItem>
