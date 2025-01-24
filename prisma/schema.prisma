@@ -10,40 +10,38 @@ datasource db {
 // Core User Models
 model User {
   id                String    @id @default(cuid())
-  name             String?
-  email            String?   @unique
-  emailVerified    DateTime?
-  image            String?
-  password         String?
-  status           Status    @default(ACTIVE)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  deleted          DateTime?
+  name              String?
+  email             String?   @unique
+  emailVerified     DateTime?
+  image             String?
+  password          String?
+  status            Status    @default(ACTIVE)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deleted           DateTime?
   dataRetentionDate DateTime?
 
-
   // userRoles relation
-  userType    UserType?
-  userRoles         UserRole[]
-
+  userType  UserType?
+  userRoles UserRole[]
 
   // Profile Relations
-  studentProfile    StudentProfile?
-  teacherProfile    TeacherProfile?
-  coordinatorProfile CoordinatorProfile?
-  parentProfile     ParentProfile?
+  studentProfile       StudentProfile?
+  teacherProfile       TeacherProfile?
+  coordinatorProfile   CoordinatorProfile?
+  parentProfile        ParentProfile?
   notificationSettings NotificationSettings?
 
   // Communication Relations
-  sentNotifications     Notification[]  @relation("SentNotifications")
+  sentNotifications     Notification[]            @relation("SentNotifications")
   receivedNotifications NotificationRecipient[]
-  sentMessages         Message[]       @relation("SentMessages")
-  receivedMessages     MessageRecipient[]
-  conversations        ConversationParticipant[]
-  messageReactions     MessageReaction[]
-  
+  sentMessages          Message[]                 @relation("SentMessages")
+  receivedMessages      MessageRecipient[]
+  conversations         ConversationParticipant[]
+  messageReactions      MessageReaction[]
+
   // Activity Tracking
-  activityLogs     ActivityLog[]
+  activityLogs ActivityLog[]
 }
 
 // Activity Tracking
@@ -80,295 +78,292 @@ enum Visibility {
 
 // Academic Structure
 model Calendar {
-  id            String    @id @default(cuid())
-  name          String
-  description   String?
-  startDate     DateTime
-  endDate       DateTime
-  type          CalendarType @default(PRIMARY)
-  status        Status    @default(ACTIVE)
-  isDefault     Boolean   @default(false)
-  events        Event[]
-  programs      Program[]
-  terms         Term[]
-  visibility    Visibility @default(ALL)
-  metadata      Json?     // For additional calendar-specific data
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  type        CalendarType @default(PRIMARY)
+  status      Status       @default(ACTIVE)
+  isDefault   Boolean      @default(false)
+  events      Event[]
+  programs    Program[]
+  terms       Term[]
+  visibility  Visibility   @default(ALL)
+  metadata    Json? // For additional calendar-specific data
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@unique([name, type])
 }
 
 model Event {
-  id            String    @id @default(cuid())
-  title         String
-  description   String?
-  eventType     EventType
-  startDate     DateTime
-  endDate       DateTime
-  calendar      Calendar  @relation(fields: [calendarId], references: [id])
-  calendarId    String
-  status        Status    @default(ACTIVE)
-  priority      Priority  @default(MEDIUM)
-  visibility    Visibility @default(ALL)
-  recurrence    Json?     // Store recurrence pattern
-  metadata      Json?     // For additional event-specific data
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  eventType   EventType
+  startDate   DateTime
+  endDate     DateTime
+  calendar    Calendar   @relation(fields: [calendarId], references: [id])
+  calendarId  String
+  status      Status     @default(ACTIVE)
+  priority    Priority   @default(MEDIUM)
+  visibility  Visibility @default(ALL)
+  recurrence  Json? // Store recurrence pattern
+  metadata    Json? // For additional event-specific data
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model Term {
-  id              String          @id @default(cuid())
-  name            String
-  calendar        Calendar        @relation(fields: [calendarId], references: [id])
-  calendarId      String
-  startDate       DateTime
-  endDate         DateTime
-  status          Status          @default(ACTIVE)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  timetables      Timetable[]
-  gradingPeriods  GradingPeriod[]
-  weeks           Week[]
+  id             String          @id @default(cuid())
+  name           String
+  calendar       Calendar        @relation(fields: [calendarId], references: [id])
+  calendarId     String
+  startDate      DateTime
+  endDate        DateTime
+  status         Status          @default(ACTIVE)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  timetables     Timetable[]
+  gradingPeriods GradingPeriod[]
+  weeks          Week[]
 
   @@unique([name, calendarId])
 }
 
 model GradingPeriod {
-  id          String    @id @default(cuid())
-  name        String
-  term        Term      @relation(fields: [termId], references: [id])
-  termId      String
-  startDate   DateTime
-  endDate     DateTime
-  weight      Int       @default(50)
-  status      Status    @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  term      Term     @relation(fields: [termId], references: [id])
+  termId    String
+  startDate DateTime
+  endDate   DateTime
+  weight    Int      @default(50)
+  status    Status   @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Week {
-  id          String    @id @default(cuid())
-  weekNumber  Int
-  term        Term      @relation(fields: [termId], references: [id])
-  termId      String
-  startDate   DateTime
-  endDate     DateTime
-  status      Status    @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String   @id @default(cuid())
+  weekNumber Int
+  term       Term     @relation(fields: [termId], references: [id])
+  termId     String
+  startDate  DateTime
+  endDate    DateTime
+  status     Status   @default(ACTIVE)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
-
-
-
 model Program {
-  id            String    @id @default(cuid())
-  name          String?    @unique
+  id            String              @id @default(cuid())
+  name          String?             @unique
   description   String?
-  status        Status    @default(ACTIVE)
+  status        Status              @default(ACTIVE)
   coordinator   CoordinatorProfile? @relation(fields: [coordinatorId], references: [id])
   coordinatorId String?
-  calendar      Calendar  @relation(fields: [calendarId], references: [id])
+  calendar      Calendar            @relation(fields: [calendarId], references: [id])
   calendarId    String
   classGroups   ClassGroup[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 }
 
 model ClassGroup {
-  id          String    @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
   description String?
-  program     Program   @relation(fields: [programId], references: [id])
+  program     Program         @relation(fields: [programId], references: [id])
   programId   String
   classes     Class[]
   subjects    Subject[]
   timetable   Timetable?
   activities  ClassActivity[]
-  status      Status    @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  status      Status          @default(ACTIVE)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   @@unique([name, programId])
 }
 
 model Subject {
-  id          String    @id @default(cuid())
+  id          String           @id @default(cuid())
   name        String
-  code        String    @unique
+  code        String           @unique
   description String?
-  status      Status    @default(ACTIVE)
+  status      Status           @default(ACTIVE)
   classGroups ClassGroup[]
   teachers    TeacherSubject[]
   periods     Period[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model Class {
-  id          String    @id @default(cuid())
-  name        String
-  classGroup  ClassGroup @relation(fields: [classGroupId], references: [id])
+  id           String           @id @default(cuid())
+  name         String
+  classGroup   ClassGroup       @relation(fields: [classGroupId], references: [id])
   classGroupId String
-  capacity    Int
-  students    StudentProfile[]
-  teachers    TeacherClass[]
-  activities  ClassActivity[]
-  timetable   Timetable?
-  status      Status    @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  capacity     Int
+  students     StudentProfile[]
+  teachers     TeacherClass[]
+  activities   ClassActivity[]
+  timetable    Timetable?
+  status       Status           @default(ACTIVE)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   @@unique([name, classGroupId])
 }
 
 // Profile Models
 model StudentProfile {
-  id          String    @id @default(cuid())
-  user        User      @relation(fields: [userId], references: [id])
-  userId      String    @unique
+  id          String            @id @default(cuid())
+  user        User              @relation(fields: [userId], references: [id])
+  userId      String            @unique
   dateOfBirth DateTime?
-  class       Class?    @relation(fields: [classId], references: [id])
+  class       Class?            @relation(fields: [classId], references: [id])
   classId     String?
   activities  StudentActivity[]
   attendance  Attendance[]
-  parent      ParentProfile? @relation(fields: [parentId], references: [id])
+  parent      ParentProfile?    @relation(fields: [parentId], references: [id])
   parentId    String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 }
 
 model TeacherProfile {
-  id            String    @id @default(cuid())
-  user          User      @relation(fields: [userId], references: [id])
-  userId        String    @unique
+  id             String           @id @default(cuid())
+  user           User             @relation(fields: [userId], references: [id])
+  userId         String           @unique
   specialization String?
-  subjects      TeacherSubject[]
-  classes       TeacherClass[]
-  availability  String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  subjects       TeacherSubject[]
+  classes        TeacherClass[]
+  availability   String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model TeacherSubject {
-  id          String    @id @default(cuid())
-  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
-  teacherId   String
-  subject     Subject   @relation(fields: [subjectId], references: [id])
-  subjectId   String
-  status      Status    @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String         @id @default(cuid())
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id])
+  teacherId String
+  subject   Subject        @relation(fields: [subjectId], references: [id])
+  subjectId String
+  status    Status         @default(ACTIVE)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@unique([teacherId, subjectId])
 }
 
 model TeacherClass {
-  id          String    @id @default(cuid())
-  teacher     TeacherProfile @relation(fields: [teacherId], references: [id])
-  teacherId   String
-  class       Class     @relation(fields: [classId], references: [id])
-  classId     String
-  status      Status    @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String         @id @default(cuid())
+  teacher   TeacherProfile @relation(fields: [teacherId], references: [id])
+  teacherId String
+  class     Class          @relation(fields: [classId], references: [id])
+  classId   String
+  status    Status         @default(ACTIVE)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@unique([teacherId, classId])
 }
 
 model CoordinatorProfile {
-  id          String    @id @default(cuid())
-  user        User      @relation(fields: [userId], references: [id])
-  userId      String    @unique
-  programs    Program[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String    @unique
+  programs  Program[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 model ParentProfile {
-  id          String    @id @default(cuid())
-  user        User      @relation(fields: [userId], references: [id])
-  userId      String    @unique
-  children    StudentProfile[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String           @id @default(cuid())
+  user      User             @relation(fields: [userId], references: [id])
+  userId    String           @unique
+  children  StudentProfile[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 }
 
 // Attendance Models
 model Attendance {
-  id          String    @id @default(cuid())
-  student     StudentProfile @relation(fields: [studentId], references: [id])
-  studentId   String
-  date        DateTime
-  status      AttendanceStatus
-  notes       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String           @id @default(cuid())
+  student   StudentProfile   @relation(fields: [studentId], references: [id])
+  studentId String
+  date      DateTime
+  status    AttendanceStatus
+  notes     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 }
 
 // Activity & Assessment Models
 model ClassActivity {
-  id              String    @id @default(cuid())
+  id              String            @id @default(cuid())
   title           String
   description     String?
   type            ActivityType
-  classGroup      ClassGroup? @relation(fields: [classGroupId], references: [id])
+  classGroup      ClassGroup?       @relation(fields: [classGroupId], references: [id])
   classGroupId    String?
-  class           Class?    @relation(fields: [classId], references: [id])
+  class           Class?            @relation(fields: [classId], references: [id])
   classId         String?
   deadline        DateTime?
   gradingCriteria String?
   resources       Resource[]
   submissions     StudentActivity[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 }
 
 model StudentActivity {
-  id            String    @id @default(cuid())
-  student       StudentProfile @relation(fields: [studentId], references: [id])
-  studentId     String
-  activity      ClassActivity @relation(fields: [activityId], references: [id])
-  activityId    String
-  status        ActivityStatus @default(PENDING)
-  grade         Float?
-  feedback      String?
+  id             String         @id @default(cuid())
+  student        StudentProfile @relation(fields: [studentId], references: [id])
+  studentId      String
+  activity       ClassActivity  @relation(fields: [activityId], references: [id])
+  activityId     String
+  status         ActivityStatus @default(PENDING)
+  grade          Float?
+  feedback       String?
   submissionDate DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 }
 
 model Resource {
-  id          String    @id @default(cuid())
-  title       String
-  type        ResourceType
-  url         String
-  activity    ClassActivity @relation(fields: [activityId], references: [id])
-  activityId  String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String        @id @default(cuid())
+  title      String
+  type       ResourceType
+  url        String
+  activity   ClassActivity @relation(fields: [activityId], references: [id])
+  activityId String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 }
 
 // Timetable & Classroom Models
 model Timetable {
-  id          String    @id @default(cuid())
-  term        Term      @relation(fields: [termId], references: [id])
-  termId      String
-  classGroup  ClassGroup? @relation(fields: [classGroupId], references: [id])
-  classGroupId String?   @unique
-  class       Class?    @relation(fields: [classId], references: [id])
-  classId     String?   @unique
-  periods     Period[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           String      @id @default(cuid())
+  term         Term        @relation(fields: [termId], references: [id])
+  termId       String
+  classGroup   ClassGroup? @relation(fields: [classGroupId], references: [id])
+  classGroupId String?     @unique
+  class        Class?      @relation(fields: [classId], references: [id])
+  classId      String?     @unique
+  periods      Period[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
 model Period {
   id          String    @id @default(cuid())
   startTime   DateTime
   endTime     DateTime
-  dayOfWeek   Int       // 1-7 representing Monday-Sunday
+  dayOfWeek   Int // 1-7 representing Monday-Sunday
   subject     Subject   @relation(fields: [subjectId], references: [id])
   subjectId   String
   classroom   Classroom @relation(fields: [classroomId], references: [id])
@@ -380,57 +375,57 @@ model Period {
 }
 
 model Classroom {
-  id          String    @id @default(cuid())
-  name      String    @unique
-  capacity    Int
-  resources   String?   // JSON string of available resources
-  periods     Period[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  name      String   @unique
+  capacity  Int
+  resources String? // JSON string of available resources
+  periods   Period[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Communication Models
 model Notification {
-  id          String    @id @default(cuid())
-  title       String
-  content     String
-  type        NotificationType
-  sender      User      @relation("SentNotifications", fields: [senderId], references: [id])
-  senderId    String
-  recipients  NotificationRecipient[]
-  entityType  String?   // e.g., "TIMETABLE", "ASSIGNMENT", "GRADE"
-  entityId    String?   // Reference to the entity that triggered the notification
-  metadata    Json?     // Additional context about the notification
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String                  @id @default(cuid())
+  title      String
+  content    String
+  type       NotificationType
+  sender     User                    @relation("SentNotifications", fields: [senderId], references: [id])
+  senderId   String
+  recipients NotificationRecipient[]
+  entityType String? // e.g., "TIMETABLE", "ASSIGNMENT", "GRADE"
+  entityId   String? // Reference to the entity that triggered the notification
+  metadata   Json? // Additional context about the notification
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
 }
 
 model NotificationRecipient {
-  id            String    @id @default(cuid())
-  notification  Notification @relation(fields: [notificationId], references: [id])
+  id             String       @id @default(cuid())
+  notification   Notification @relation(fields: [notificationId], references: [id])
   notificationId String
-  recipient     User      @relation(fields: [recipientId], references: [id])
-  recipientId   String
-  read          Boolean   @default(false)
-  readAt        DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  recipient      User         @relation(fields: [recipientId], references: [id])
+  recipientId    String
+  read           Boolean      @default(false)
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@unique([notificationId, recipientId])
 }
 
 model Message {
-  id            String    @id @default(cuid())
-  content       String
-  sender        User      @relation("SentMessages", fields: [senderId], references: [id])
-  senderId      String
-  recipients    MessageRecipient[]
-  conversation  Conversation @relation(fields: [conversationId], references: [id])
+  id             String              @id @default(cuid())
+  content        String
+  sender         User                @relation("SentMessages", fields: [senderId], references: [id])
+  senderId       String
+  recipients     MessageRecipient[]
+  conversation   Conversation        @relation(fields: [conversationId], references: [id])
   conversationId String
-  attachments   MessageAttachment[]
-  reactions     MessageReaction[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  attachments    MessageAttachment[]
+  reactions      MessageReaction[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 }
 
 model MessageRecipient {
@@ -448,68 +443,67 @@ model MessageRecipient {
 }
 
 model MessageAttachment {
-  id          String    @id @default(cuid())
-  message     Message   @relation(fields: [messageId], references: [id])
-  messageId   String
-  type        AttachmentType
-  url         String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String         @id @default(cuid())
+  message   Message        @relation(fields: [messageId], references: [id])
+  messageId String
+  type      AttachmentType
+  url       String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 }
 
 model MessageReaction {
-  id          String    @id @default(cuid())
-  message     Message   @relation(fields: [messageId], references: [id])
-  messageId   String
-  user        User      @relation(fields: [userId], references: [id])
-  userId      String
-  type        String    // e.g., "THUMBS_UP", "HEART", "SMILE"
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  message   Message  @relation(fields: [messageId], references: [id])
+  messageId String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      String // e.g., "THUMBS_UP", "HEART", "SMILE"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([messageId, userId, type])
 }
 
 model Conversation {
-  id          String    @id @default(cuid())
-  title       String?
-  type        ConversationType @default(DIRECT)
-  messages    Message[]
+  id           String                    @id @default(cuid())
+  title        String?
+  type         ConversationType          @default(DIRECT)
+  messages     Message[]
   participants ConversationParticipant[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
 }
 
 model NotificationSettings {
-  id                    String    @id @default(cuid())
-  user                  User      @relation(fields: [userId], references: [id])
-  userId                String    @unique
-  emailNotifications    Boolean   @default(true)
-  pushNotifications     Boolean   @default(true)
-  timetableChanges      Boolean   @default(true)
-  assignmentUpdates     Boolean   @default(true)
-  gradeUpdates         Boolean   @default(true)
-  systemUpdates        Boolean   @default(true)
-  doNotDisturb         Boolean   @default(false)
-  doNotDisturbStart    DateTime?
-  doNotDisturbEnd      DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  user               User      @relation(fields: [userId], references: [id])
+  userId             String    @unique
+  emailNotifications Boolean   @default(true)
+  pushNotifications  Boolean   @default(true)
+  timetableChanges   Boolean   @default(true)
+  assignmentUpdates  Boolean   @default(true)
+  gradeUpdates       Boolean   @default(true)
+  systemUpdates      Boolean   @default(true)
+  doNotDisturb       Boolean   @default(false)
+  doNotDisturbStart  DateTime?
+  doNotDisturbEnd    DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 model ConversationParticipant {
-  id            String    @id @default(cuid())
-  conversation  Conversation @relation(fields: [conversationId], references: [id])
+  id             String          @id @default(cuid())
+  conversation   Conversation    @relation(fields: [conversationId], references: [id])
   conversationId String
-  user          User      @relation(fields: [userId], references: [id])
-  userId        String
-  role          ParticipantRole @default(MEMBER)
-  joinedAt      DateTime  @default(now())
-  leftAt        DateTime?
+  user           User            @relation(fields: [userId], references: [id])
+  userId         String
+  role           ParticipantRole @default(MEMBER)
+  joinedAt       DateTime        @default(now())
+  leftAt         DateTime?
 
   @@unique([conversationId, userId])
 }
-
 
 // UserRole model
 model UserRole {
@@ -519,20 +513,21 @@ model UserRole {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@unique([userId, roleId])
 }
 
 model Role {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  description String?
-  userRoles   UserRole[]
-  permissions RolePermission[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                  String               @id @default(cuid())
+  name                String               @unique
+  description         String?
+  userRoles           UserRole[]
+  permissions         RolePermission[]
+  documentPermissions DocumentPermission[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model Permission {
@@ -545,18 +540,17 @@ model Permission {
 }
 
 model RolePermission {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   roleId       String
   permissionId String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId])
 }
-
 
 enum UserType {
   ADMIN
@@ -640,109 +634,111 @@ enum ParticipantRole {
 
 // Knowledge Base Models
 model KnowledgeBase {
-  id          String   @id @default(cuid())
+  id          String           @id @default(cuid())
   name        String
   description String?
   folders     DocumentFolder[]
   documents   Document[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@map("knowledge_bases")
 }
 
 model DocumentFolder {
-  id            String   @id @default(cuid())
-  name          String
-  description   String?
-  parentFolder  DocumentFolder?  @relation("FolderHierarchy", fields: [parentFolderId], references: [id])
-  parentFolderId String?
-  subFolders    DocumentFolder[] @relation("FolderHierarchy")
-  documents     Document[]
-  metadata      Json?
-  knowledgeBase KnowledgeBase   @relation(fields: [knowledgeBaseId], references: [id])
+  id              String           @id @default(cuid())
+  name            String
+  description     String?
+  parentFolder    DocumentFolder?  @relation("FolderHierarchy", fields: [parentFolderId], references: [id])
+  parentFolderId  String?
+  subFolders      DocumentFolder[] @relation("FolderHierarchy")
+  documents       Document[]
+  metadata        Json?
+  knowledgeBase   KnowledgeBase    @relation(fields: [knowledgeBaseId], references: [id])
   knowledgeBaseId String
 
   @@map("document_folders")
 }
 
 model Document {
-  id          String   @id @default(cuid())
-  title       String
-  type        String
-  content     String   @db.Text
-  metadata    Json?
-  embeddings  Float[]
-  folder      DocumentFolder @relation(fields: [folderId], references: [id])
-  folderId    String
-  workspaces  WorkspaceDocument[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String              @id @default(cuid())
+  title           String
+  type            String
+  content         String              @db.Text
+  metadata        Json?
+  embeddings      Float[]
+  folder          DocumentFolder      @relation(fields: [folderId], references: [id])
+  folderId        String
+  workspaces      WorkspaceDocument[]
+  knowledgeBase   KnowledgeBase       @relation(fields: [knowledgeBaseId], references: [id])
+  knowledgeBaseId String
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
   @@map("documents")
 }
 
 model WorkspaceDocument {
-  id              String   @id @default(cuid())
-  sourceDocument  Document @relation(fields: [sourceDocumentId], references: [id])
+  id               String               @id @default(cuid())
+  sourceDocument   Document             @relation(fields: [sourceDocumentId], references: [id])
   sourceDocumentId String
-  workspaceId     String
-  metadata        Json?
-  permissions     DocumentPermission[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  workspaceId      String
+  metadata         Json?
+  permissions      DocumentPermission[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
 
   @@map("workspace_documents")
 }
 
 model DocumentPermission {
-  id              String   @id @default(cuid())
-  document        WorkspaceDocument @relation(fields: [documentId], references: [id])
-  documentId      String
-  role            Role     @relation(fields: [roleId], references: [id])
-  roleId          String
-  permissions     String[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id          String            @id @default(cuid())
+  document    WorkspaceDocument @relation(fields: [documentId], references: [id])
+  documentId  String
+  role        Role              @relation(fields: [roleId], references: [id])
+  roleId      String
+  permissions String[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   @@map("document_permissions")
 }
 
 model WorkspaceSettings {
-  id            String   @id @default(cuid())
-  workspaceId   String   @unique
-  messageLimit  Int      @default(100)
-  aiProvider    String   @default("openai")
-  aiModel       String   @default("gpt-3.5-turbo")
-  maxTokens     Int      @default(2000)
-  temperature   Float    @default(0.7)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String   @id @default(cuid())
+  workspaceId  String   @unique
+  messageLimit Int      @default(100)
+  aiProvider   String   @default("openai")
+  aiModel      String   @default("gpt-3.5-turbo")
+  maxTokens    Int      @default(2000)
+  temperature  Float    @default(0.7)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@map("workspace_settings")
 }
 
 model WorkspaceChat {
-  id            String   @id @default(cuid())
+  id            String                 @id @default(cuid())
   workspaceId   String
   userId        String
-  messageCount  Int      @default(0)
-  lastMessageAt DateTime @default(now())
+  messageCount  Int                    @default(0)
+  lastMessageAt DateTime               @default(now())
   messages      WorkspaceChatMessage[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
 
   @@map("workspace_chats")
 }
 
 model WorkspaceChatMessage {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   chatId    String
-  content   String   @db.Text
+  content   String        @db.Text
   role      String
   tokens    Int
   chat      WorkspaceChat @relation(fields: [chatId], references: [id])
-  createdAt DateTime @default(now())
+  createdAt DateTime      @default(now())
 
   @@map("workspace_chat_messages")
 }

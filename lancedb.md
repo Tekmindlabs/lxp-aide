@@ -25,7 +25,7 @@ DOCUMENTS_DIR=./storage/documents
 Create a new file `utils/vectorDb/lance/index.ts`:
 
 ```typescript
-import lancedb from '@lancedb/lancedb';
+import { connect } from '@lancedb/lancedb';
 import { TextSplitter } from '../TextSplitter';
 
 export class LanceDbClient {
