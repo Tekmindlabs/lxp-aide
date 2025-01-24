@@ -112,55 +112,15 @@ export const StudentManagement = () => {
 							/>
 						) : (
 							<>
-								<StudentList
-									students={students?.map(student => ({
-										...student,
-										name: student.name || "",
-										email: student.email || "",
-										studentProfile: student.studentProfile ? {
-											dateOfBirth: student.studentProfile.dateOfBirth,
-											class: student.studentProfile.class ? {
-												name: student.studentProfile.class.name,
-												classGroup: {
-													name: student.studentProfile.class.classGroup.name,
-													program: {
-														name: student.studentProfile.class.classGroup.program.name
-													}
-												}
-											} : undefined,
-											parent: student.studentProfile.parent ? {
-												user: {
-													name: student.studentProfile.parent.user.name
-												}
-											} : undefined,
-											attendance: student.studentProfile.attendance,
-											activities: student.studentProfile.activities,
-										} : {
-											dateOfBirth: new Date(),
-											attendance: [],
-											activities: [],
-										}
-									})) || []}
+								<StudentList 
+									students={students || []} 
 									onSelect={(id) => {
 										setSelectedStudentId(id);
 										setShowDetails(true);
 									}}
 								/>
-								<StudentForm
-									selectedStudent={students?.find(s => s.id === selectedStudentId) ? {
-										...students?.find(s => s.id === selectedStudentId)!,
-										name: students?.find(s => s.id === selectedStudentId)?.name || "",
-										email: students?.find(s => s.id === selectedStudentId)?.email || "",
-										studentProfile: students?.find(s => s.id === selectedStudentId)?.studentProfile ? {
-											dateOfBirth: students?.find(s => s.id === selectedStudentId)!.studentProfile.dateOfBirth,
-											class: students?.find(s => s.id === selectedStudentId)!.studentProfile.class ? {
-												id: students?.find(s => s.id === selectedStudentId)!.studentProfile.class!.id
-											} : undefined,
-											parent: students?.find(s => s.id === selectedStudentId)!.studentProfile.parent ? {
-												id: students?.find(s => s.id === selectedStudentId)!.studentProfile.parent.id
-											} : undefined,
-										} : undefined
-									} : undefined}
+								<StudentForm 
+									selectedStudent={students?.find(s => s.id === selectedStudentId)}
 									classes={classes || []}
 									onSuccess={() => setSelectedStudentId(null)}
 								/>

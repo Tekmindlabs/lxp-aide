@@ -58,11 +58,15 @@ export const ClassGroupForm = ({ selectedClassGroup, programs, onSuccess }: Clas
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+		if (formData.programId === "none") {
+			alert("Please select a program");
+			return;
+		}
+	
 		const submissionData = {
 			...formData,
-			programId: formData.programId === "none" ? undefined : formData.programId,
 		};
-
+	
 		if (selectedClassGroup) {
 			updateMutation.mutate({
 				id: selectedClassGroup.id,
