@@ -41,6 +41,7 @@ interface ClassFormProps {
 
 export const ClassForm = ({ isOpen, onClose, selectedClass, classGroups, teachers }: ClassFormProps) => {
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const { toast } = useToast();
 	const utils = api.useContext();
 
 	const form = useForm<FormValues>({
