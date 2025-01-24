@@ -25,7 +25,10 @@ export default function ProgramPage() {
 	const { toast } = useToast();
 	
 const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
-	const { data: programs, refetch: refetchPrograms } = api.program.getAll.useQuery();
+const { data: programData, refetch: refetchPrograms } = api.program.getAll.useQuery({
+	page: 1,
+	pageSize: 10
+  });
 	
 	const createProgram = api.program.create.useMutation({
 		onSuccess: () => {
@@ -144,7 +147,7 @@ const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
 							<CardTitle>Programs Overview</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<DataTable columns={columns} data={programs ?? []} />
+						<DataTable columns={columns} data={programData?.programs ?? []} />
 						</CardContent>
 					</Card>
 				</TabsContent>
