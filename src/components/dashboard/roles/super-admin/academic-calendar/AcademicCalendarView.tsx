@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +24,8 @@ export const AcademicCalendarView = () => {
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
   const [isAddCalendarOpen, setIsAddCalendarOpen] = useState(false);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<typeof events extends undefined ? never : (typeof events)[number] | null>(null);
+  type CalendarEvent = NonNullable<typeof events>[number];
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   const { toast } = useToast();
 
@@ -87,7 +88,7 @@ export const AcademicCalendarView = () => {
     });
   };
 
-  const getEventStyles = (date: Date) => {
+  const getEventStyles = (date: Date): CSSProperties => {
     if (!events) return {};
     const dayEvents = getDayEvents(date);
     if (dayEvents.length === 0) return {};
@@ -97,23 +98,12 @@ export const AcademicCalendarView = () => {
       color: 'white',
       fontWeight: 'bold',
       position: 'relative',
-      '&::after': {
-      content: `'${dayEvents.length}'`,
-      position: 'absolute',
-      bottom: '2px',
-      right: '2px',
-      fontSize: '0.7rem',
-      backgroundColor: 'white',
-      color: 'var(--primary)',
-      borderRadius: '50%',
-      width: '16px',
-      height: '16px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-      }
-    };
+      '--event-count': `"${dayEvents.length}"`,
+      className: 'event-day'
+    } as CSSProperties;
   };
+
+
 
   const getDayEvents = (date: Date) => {
     if (!events) return [];
@@ -133,6 +123,23 @@ export const AcademicCalendarView = () => {
 
   return (
     <div className="space-y-4">
+      <style jsx>{`
+        .event-day::after {
+          content: var(--event-count);
+          position: absolute;
+          bottom: 2px;
+          right: 2px;
+          font-size: 0.7rem;
+          background-color: white;
+          color: var(--primary);
+          border-radius: 50%;
+          width: 16px;
+          height: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      `}</style>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Calendar Management</CardTitle>
@@ -171,7 +178,7 @@ export const AcademicCalendarView = () => {
                     <Badge>{calendar.type}</Badge>
                     <Badge variant="outline">{calendar.visibility}</Badge>
                   </div>
-                  <Button 
+                  <Button
                     variant={selectedCalendarId === calendar.id ? "default" : "outline"}
                     className="w-full mt-2"
                     onClick={() => setSelectedCalendarId(calendar.id)}
@@ -255,9 +262,9 @@ export const AcademicCalendarView = () => {
               modifiers={{
               event: (date) => isDateInEvent(date),
               }}
-              modifiersStyles={{
-              event: (date) => getEventStyles(date),
-              }}
+                modifiersStyles={{
+                event: getEventStyles(selectedDate)
+                }}
               weekStartsOn={1}
               showOutsideDays
             />
@@ -331,9 +338,8 @@ export const AcademicCalendarView = () => {
       </CardContent>
     </Card>
   )}
-  </div>
-
   <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
+
     <DialogContent>
       <DialogHeader>
         <DialogTitle>{selectedEvent?.title}</DialogTitle>
@@ -358,5 +364,5 @@ export const AcademicCalendarView = () => {
     </DialogContent>
   </Dialog>
   </div>
-);
+  );
 };
