@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
+import { CalendarIcon } from "lucide-react";
 import { api } from "@/utils/api";
 import { EventType, Status, CalendarType, Visibility } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
@@ -80,6 +82,29 @@ export const AcademicCalendarView = () => {
       const eventEnd = new Date(event.endDate);
       return date >= eventStart && date <= eventEnd;
     });
+  };
+
+  const getEventStyles = (date: Date) => {
+    if (!events) return {};
+    const dayEvents = getDayEvents(date);
+    if (dayEvents.length === 0) return {};
+    
+    return {
+      backgroundColor: 'var(--primary)',
+      color: 'white',
+      position: 'relative',
+      '&::after': {
+        content: '""',
+        position: 'absolute',
+        bottom: '2px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '4px',
+        height: '4px',
+        borderRadius: '50%',
+        backgroundColor: 'white'
+      }
+    };
   };
 
   const getDayEvents = (date: Date) => {
@@ -223,7 +248,7 @@ export const AcademicCalendarView = () => {
               event: (date) => isDateInEvent(date),
               }}
               modifiersStyles={{
-              event: { backgroundColor: 'var(--primary)', color: 'white' },
+              event: (date) => getEventStyles(date),
               }}
               weekStartsOn={1}
               showOutsideDays
@@ -245,22 +270,30 @@ export const AcademicCalendarView = () => {
             </div>
             )}
 
-          <div className="mt-4">
-            <h3 className="text-lg font-medium">Events on {format(selectedDate, 'MMMM d, yyyy')}</h3>
-            <div className="mt-2 space-y-2">
-                {getDayEvents(selectedDate)
-
-                .map(event => (
-                  <Card key={event.id} className="p-4">
-                    <h4 className="font-medium">{event.title}</h4>
-                    <p className="text-sm text-gray-500">{event.description}</p>
-                    <p className="text-sm text-gray-500">
-                      {format(new Date(event.startDate), 'MMM d, yyyy')} - {format(new Date(event.endDate), 'MMM d, yyyy')}
-                    </p>
-                  </Card>
-                ))}
+            <div className="mt-4">
+            <h3 className="text-lg font-medium mb-4">Events on {format(selectedDate, 'MMMM d, yyyy')}</h3>
+            <div className="grid gap-4">
+              {getDayEvents(selectedDate).map(event => (
+              <Card key={event.id} className="p-4 hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start">
+                <div>
+                  <h4 className="font-medium text-lg">{event.title}</h4>
+                  <p className="text-sm text-gray-500 mt-1">{event.description}</p>
+                </div>
+                <Badge variant={event.eventType === 'ACADEMIC' ? 'default' : 'secondary'}>
+                  {event.eventType}
+                </Badge>
+                </div>
+                <div className="mt-4 flex items-center text-sm text-gray-500">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                <span>
+                  {format(new Date(event.startDate), 'MMM d, yyyy')} - {format(new Date(event.endDate), 'MMM d, yyyy')}
+                </span>
+                </div>
+              </Card>
+              ))}
             </div>
-          </div>
+            </div>
         </div>
       </CardContent>
     </Card>

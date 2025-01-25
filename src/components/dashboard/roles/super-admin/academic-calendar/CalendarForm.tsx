@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface CalendarFormProps {
 	calendar?: Partial<CalendarModel>;
@@ -112,24 +115,58 @@ export const CalendarForm = ({ calendar, onSubmit }: CalendarFormProps) => {
 				</div>
 			</div>
 
-			<div className="space-y-2">
+			<div className="space-y-4">
 				<Label>Date Range</Label>
-				<div className="grid grid-cols-2 gap-4">
-					<div>
+				<div className="flex flex-row gap-4">
+					<div className="flex-1 space-y-2">
 						<Label>Start Date</Label>
-						<Calendar
-							mode="single"
-							selected={formData.startDate}
-							onSelect={(date) => date && setFormData({ ...formData, startDate: date })}
-						/>
+						<Popover>
+							<PopoverTrigger asChild>
+								<Button
+									variant={"outline"}
+									className={cn(
+										"w-full justify-start text-left font-normal",
+										!formData.startDate && "text-muted-foreground"
+									)}
+								>
+									<CalendarIcon className="mr-2 h-4 w-4" />
+									{formData.startDate ? format(formData.startDate, "PPP") : <span>Pick a date</span>}
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent className="w-auto p-0" align="start">
+								<Calendar
+									mode="single"
+									selected={formData.startDate}
+									onSelect={(date) => date && setFormData({ ...formData, startDate: date })}
+									initialFocus
+								/>
+							</PopoverContent>
+						</Popover>
 					</div>
-					<div>
+					<div className="flex-1 space-y-2">
 						<Label>End Date</Label>
-						<Calendar
-							mode="single"
-							selected={formData.endDate}
-							onSelect={(date) => date && setFormData({ ...formData, endDate: date })}
-						/>
+						<Popover>
+							<PopoverTrigger asChild>
+								<Button
+									variant={"outline"}
+									className={cn(
+										"w-full justify-start text-left font-normal",
+										!formData.endDate && "text-muted-foreground"
+									)}
+								>
+									<CalendarIcon className="mr-2 h-4 w-4" />
+									{formData.endDate ? format(formData.endDate, "PPP") : <span>Pick a date</span>}
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent className="w-auto p-0" align="start">
+								<Calendar
+									mode="single"
+									selected={formData.endDate}
+									onSelect={(date) => date && setFormData({ ...formData, endDate: date })}
+									initialFocus
+								/>
+							</PopoverContent>
+						</Popover>
 					</div>
 				</div>
 			</div>
