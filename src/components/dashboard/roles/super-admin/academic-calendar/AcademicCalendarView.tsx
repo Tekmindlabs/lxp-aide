@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { CalendarIcon } from "lucide-react";
@@ -23,8 +24,10 @@ export const AcademicCalendarView = () => {
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
   const [isAddCalendarOpen, setIsAddCalendarOpen] = useState(false);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<typeof events extends undefined ? never : (typeof events)[number] | null>(null);
 
   const { toast } = useToast();
+
 
 
   // Fetch calendars
@@ -92,17 +95,22 @@ export const AcademicCalendarView = () => {
     return {
       backgroundColor: 'var(--primary)',
       color: 'white',
+      fontWeight: 'bold',
       position: 'relative',
       '&::after': {
-        content: '""',
-        position: 'absolute',
-        bottom: '2px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '4px',
-        height: '4px',
-        borderRadius: '50%',
-        backgroundColor: 'white'
+      content: `'${dayEvents.length}'`,
+      position: 'absolute',
+      bottom: '2px',
+      right: '2px',
+      fontSize: '0.7rem',
+      backgroundColor: 'white',
+      color: 'var(--primary)',
+      borderRadius: '50%',
+      width: '16px',
+      height: '16px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
       }
     };
   };
@@ -255,18 +263,39 @@ export const AcademicCalendarView = () => {
             />
             ) : (
             <div className="grid grid-cols-7 gap-2">
-              {calendarDays?.map((day) => (
-              <div
+              {calendarDays?.map((day) => {
+              const dayEvents = getDayEvents(day);
+              return (
+                <div
                 key={day.toISOString()}
-                className={`p-2 border rounded-md ${
-                isDateInEvent(day) ? 'bg-primary text-white' : ''
-                }`}
+                className={cn(
+                  "p-4 border rounded-md cursor-pointer hover:border-primary transition-colors",
+                  isDateInEvent(day) ? 'bg-primary/10' : '',
+                  format(day, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd') ? 'ring-2 ring-primary' : ''
+                )}
                 onClick={() => setSelectedDate(day)}
-              >
-                <div className="font-medium">{format(day, 'EEE')}</div>
-                <div>{format(day, 'd')}</div>
-              </div>
-              ))}
+                >
+                <div className="font-medium text-center">{format(day, 'EEE')}</div>
+                <div className="text-center mb-2">{format(day, 'd')}</div>
+                <div className="space-y-1">
+                  {dayEvents.slice(0, 2).map((event, idx) => (
+                  <div
+                    key={event.id}
+                    className="text-xs p-1 rounded bg-primary/20 truncate"
+                    title={event.title}
+                  >
+                    {event.title}
+                  </div>
+                  ))}
+                  {dayEvents.length > 2 && (
+                  <div className="text-xs text-center text-muted-foreground">
+                    +{dayEvents.length - 2} more
+                  </div>
+                  )}
+                </div>
+                </div>
+              );
+              })}
             </div>
             )}
 
@@ -274,7 +303,11 @@ export const AcademicCalendarView = () => {
             <h3 className="text-lg font-medium mb-4">Events on {format(selectedDate, 'MMMM d, yyyy')}</h3>
             <div className="grid gap-4">
               {getDayEvents(selectedDate).map(event => (
-              <Card key={event.id} className="p-4 hover:shadow-md transition-shadow">
+                <Card 
+                key={event.id} 
+                className="p-4 hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => setSelectedEvent(event)}
+                >
                 <div className="flex justify-between items-start">
                 <div>
                   <h4 className="font-medium text-lg">{event.title}</h4>
@@ -298,6 +331,32 @@ export const AcademicCalendarView = () => {
       </CardContent>
     </Card>
   )}
+  </div>
+
+  <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>{selectedEvent?.title}</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div>
+          <Label>Description</Label>
+          <p className="text-sm text-gray-500">{selectedEvent?.description}</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Badge>{selectedEvent?.eventType}</Badge>
+          <Badge variant="outline">{selectedEvent?.status}</Badge>
+        </div>
+        <div className="flex items-center text-sm text-gray-500">
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          <span>
+            {selectedEvent && format(new Date(selectedEvent.startDate), 'PPP')} - 
+            {selectedEvent && format(new Date(selectedEvent.endDate), 'PPP')}
+          </span>
+        </div>
+      </div>
+    </DialogContent>
+  </Dialog>
   </div>
 );
 };
