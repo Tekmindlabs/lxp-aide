@@ -3,6 +3,7 @@ import { userRouter } from "./routers/user";
 import { roleRouter } from "./routers/role";
 import { permissionRouter } from "./routers/permission";
 import { knowledgeBaseRouter } from "./routers/knowledge-base";
+import { workspaceRouter } from "./routers/workspace";
 import { calendarRouter } from "./routers/calendar";
 import { academicCalendarRouter } from "./routers/academic-calendar";
 import { programRouter } from "./routers/program";
@@ -39,6 +40,7 @@ export const appRouter = createTRPCRouter({
   calendar: calendarRouter,
   coordinator: coordinatorRouter,
   knowledgeBase: knowledgeBaseRouter,
+  workspace: workspaceRouter,
 });
 
 export type AppRouter = typeof appRouter;

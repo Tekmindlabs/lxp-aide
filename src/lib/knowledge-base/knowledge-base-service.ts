@@ -1,5 +1,5 @@
 import { lanceDbClient } from '../vectorDb/lance';
-import { Document, Folder, Workspace } from './types';
+import { Document, Folder, KnowledgeBase } from './types';
 import { nanoid } from 'nanoid';
 import { jinaEmbedder } from './embedding-service';
 import { DocumentProcessor } from './document-processor';
@@ -10,38 +10,58 @@ export class KnowledgeBaseService {
 	private readonly prisma;
 
 	constructor() {
-    this.prisma = prisma;
-}
+		this.prisma = prisma;
+	}
 
-async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
+	async createKnowledgeBase(data: { name: string; description?: string }): Promise<KnowledgeBase> {
+		const id = nanoid();
+		const vectorCollection = `kb_${id}_vectors`;
+		
+		// Initialize vector collection
+		await lanceDbClient.createOrGetCollection(vectorCollection, {
+			vector: Array(this.vectorDimension).fill(0),
+			documentId: '',
+			content: '',
+			metadata: {}
+		});
 
-    try {
-      const folders = await this.prisma.folder.findMany({
-        where: {
-          workspaceId: knowledgeBaseId
-        },
-        include: {
-          children: true,
-          documents: true
-        }
-      });
+		return await this.prisma.knowledgeBase.create({
+			data: {
+				id,
+				vectorCollection,
+				...data,
+				createdAt: new Date(),
+				updatedAt: new Date()
+			}
+		});
+	}
 
+	async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
+		try {
+			const folders = await this.prisma.documentFolder.findMany({
+				where: {
+					knowledgeBaseId
+				},
+				include: {
+					subFolders: true,
+					documents: true
+				}
+			});
 
-      return folders.map(folder => ({
-        id: folder.id,
-        name: folder.name,
-        description: folder.description || '',
-        parentFolderId: folder.parentId || undefined,
-        children: folder.children,
-        metadata: folder.metadata as Record<string, any>
-      }));
-
-    } catch (error) {
-      console.error('Error fetching folders:', error);
-      throw error;
-    }
-  }
-
+			return folders.map(folder => ({
+				id: folder.id,
+				name: folder.name,
+				description: folder.description || '',
+				parentFolderId: folder.parentFolderId || undefined,
+				knowledgeBaseId: folder.knowledgeBaseId,
+				children: folder.subFolders,
+				metadata: folder.metadata as Record<string, any>
+			}));
+		} catch (error) {
+			console.error('Error fetching folders:', error);
+			throw error;
+		}
+	}
 
 	async getDocuments(folderId: string): Promise<Document[]> {
 		const documents = await prisma.document.findMany({
@@ -63,35 +83,18 @@ async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
 		}));
 	}
 
-	async createWorkspace(workspace: Omit<Workspace, 'id' | 'vectorCollection'>): Promise<Workspace> {
-		const id = nanoid();
-		const vectorCollection = `workspace_${id}_vectors`;
-		
-		// Initialize vector collection
-		await lanceDbClient.createOrGetCollection(vectorCollection, {
-			vector: Array(this.vectorDimension).fill(0),
-			documentId: '',
-			content: '',
-			metadata: {}
-		});
-
-		return {
-			id,
-			vectorCollection,
-			...workspace
-		};
-	}
-
 	async createFolder(folder: Omit<Folder, 'id'>): Promise<Folder> {
-		return {
-			id: nanoid(),
-			...folder
-		};
+		return await this.prisma.documentFolder.create({
+			data: {
+				id: nanoid(),
+				...folder
+			}
+		});
 	}
 
 	async addDocument(
 		document: Omit<Document, 'id' | 'createdAt' | 'updatedAt'>, 
-		workspaceId: string
+		knowledgeBaseId: string
 	): Promise<Document> {
 		const now = new Date();
 		const id = nanoid();
@@ -100,9 +103,13 @@ async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
 		const chunks = DocumentProcessor.chunkText(document.content);
 		const embeddings = await jinaEmbedder.embedChunks(chunks);
 		
+		const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
+			where: { id: knowledgeBaseId }
+		});
+		
 		// Store document chunks with embeddings
 		await lanceDbClient.addDocumentEmbeddings(
-			`workspace_${workspaceId}_vectors`,
+			knowledgeBase.vectorCollection,
 			embeddings,
 			chunks.map((chunk, index) => ({
 				documentId: id,
@@ -123,22 +130,33 @@ async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
 	}
 
 	async searchDocuments(
-		workspaceId: string,
+		knowledgeBaseId: string,
 		query: string,
 		limit: number = 5
 	) {
+		const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
+			where: { id: knowledgeBaseId }
+		});
+		
 		// Generate embedding for search query
 		const queryEmbedding = await jinaEmbedder.embedText(query);
 		
 		return await lanceDbClient.similaritySearch(
-			`workspace_${workspaceId}_vectors`,
+			knowledgeBase.vectorCollection,
 			queryEmbedding,
 			limit
 		);
 	}
 
-	async deleteWorkspace(workspaceId: string): Promise<void> {
-		await lanceDbClient.deleteCollection(`workspace_${workspaceId}_vectors`);
+	async deleteKnowledgeBase(knowledgeBaseId: string): Promise<void> {
+		const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
+			where: { id: knowledgeBaseId }
+		});
+		
+		await lanceDbClient.deleteCollection(knowledgeBase.vectorCollection);
+		await this.prisma.knowledgeBase.delete({
+			where: { id: knowledgeBaseId }
+		});
 	}
 }
 

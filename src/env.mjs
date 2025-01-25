@@ -12,6 +12,10 @@ export const env = createEnv({
     EMAIL_SERVER_USER: z.string().min(1),
     EMAIL_SERVER_PASSWORD: z.string().min(1),
     EMAIL_FROM: z.string().email(),
+    STORAGE_DIR: z.string().min(1),
+    JINA_API_KEY: z.string().min(1),
+    JINA_BASE_URL: z.string().url(),
+    JINA_MODEL_NAME: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -27,6 +31,10 @@ export const env = createEnv({
     EMAIL_SERVER_PASSWORD: process.env.EMAIL_SERVER_PASSWORD,
     EMAIL_FROM: process.env.EMAIL_FROM,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    STORAGE_DIR: process.env.STORAGE_DIR,
+    JINA_API_KEY: process.env.JINA_API_KEY,
+    JINA_BASE_URL: process.env.JINA_BASE_URL,
+    JINA_MODEL_NAME: process.env.JINA_MODEL_NAME,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
 });

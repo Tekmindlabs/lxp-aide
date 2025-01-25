@@ -1,37 +1,59 @@
-import { connect } from '@lancedb/lancedb';
-import { CreateTableOptions } from '@lancedb/lancedb';
+import path from 'path';
+import fs from 'fs';
 
-// Add interfaces for type safety
-export interface SearchResult {
-  score: number;
-  content: string;
-  documentId: string;
-  metadata: Record<string, unknown>;
-}
+let lancedb: any = null;
 
-export interface DocumentMetadata {
-  content: string;
-  documentId: string;
-  metadata: Record<string, unknown>;
+// Only load on server side
+if (typeof window === 'undefined') {
+  try {
+    // Try to load the native module with absolute path
+    const nativeModulePath = path.join('E:', 'Q1 2025', 'lxp-aide', 'node_modules', '@lancedb', 'lancedb-win32-x64-msvc', 'lancedb.win32-x64-msvc.node');
+    const dataPath = path.join('E:', 'Q1 2025', 'lxp-aide', 'data', 'lancedb');
+    
+    if (fs.existsSync(nativeModulePath)) {
+      // Load the native module
+      const nativeModule = require.resolve('@lancedb/lancedb-win32-x64-msvc');
+      lancedb = require(nativeModule);
+      console.log('LanceDB loaded successfully');
+      
+      // Ensure data directory exists
+      if (!fs.existsSync(dataPath)) {
+        fs.mkdirSync(dataPath, { recursive: true });
+      }
+    } else {
+      console.error('LanceDB native module not found at:', nativeModulePath);
+    }
+  } catch (error) {
+    console.error('Failed to load LanceDB:', error);
+  }
 }
 
 export class LanceDbClient {
   private uri: string;
+  private db: any;
   
   constructor() {
-    this.uri = `${process.env.STORAGE_DIR ? `${process.env.STORAGE_DIR}/` : "./storage/"}lancedb`;
+    this.uri = path.join('E:', 'Q1 2025', 'lxp-aide', 'data', 'lancedb').replace(/\\/g, '/');
   }
+
 
   async connect() {
-    try {
-      return await connect(this.uri);
-    } catch (error) {
-      console.error('Failed to connect to LanceDB:', error);
-      throw error;
+    if (!lancedb) {
+      throw new Error('LanceDB module not loaded - only available server-side');
     }
+    
+    if (!this.db) {
+      try {
+        this.db = await lancedb.connect(this.uri);
+      } catch (error) {
+        console.error('Failed to connect to LanceDB:', error);
+        throw error;
+      }
+    }
+    return this.db;
   }
 
-  async createOrGetCollection(name: string, schema?: Partial<CreateTableOptions>) {
+  async createOrGetCollection(name: string, schema?: any) {
     const db = await this.connect();
     try {
       const existingTable = await db.openTable(name);
@@ -41,11 +63,7 @@ export class LanceDbClient {
     }
   }
 
-  async addDocumentEmbeddings(
-    collectionName: string,
-    embeddings: number[][],
-    metadata: DocumentMetadata[]
-  ) {
+  async addDocumentEmbeddings(collectionName: string, embeddings: number[][], metadata: any[]) {
     const collection = await this.createOrGetCollection(collectionName);
     const data = embeddings.map((embedding, index) => ({
       vector: embedding,
@@ -54,18 +72,12 @@ export class LanceDbClient {
     await collection.add(data);
   }
 
-  async similaritySearch(
-    collectionName: string,
-    queryEmbedding: number[],
-    limit: number = 5
-  ): Promise<SearchResult[]> {
+  async similaritySearch(collectionName: string, queryEmbedding: number[], limit: number = 5) {
     const collection = await this.createOrGetCollection(collectionName);
-    
-    // Create search query and execute
     const searchQuery = collection.search(queryEmbedding).limit(limit);
     const results = await searchQuery.execute();
     
-    const searchResults: SearchResult[] = [];
+    const searchResults = [];
     for await (const batch of results) {
       for (const row of batch) {
         searchResults.push({
@@ -76,7 +88,6 @@ export class LanceDbClient {
         });
       }
     }
-  
     return searchResults;
   }
 
