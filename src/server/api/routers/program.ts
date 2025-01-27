@@ -14,6 +14,13 @@ export const programRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
+      if (!ctx.session?.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "You must be logged in to access this resource",
+        });
+      }
+
       try {
         const where = {
           ...(input.search && {
@@ -25,34 +32,35 @@ export const programRouter = createTRPCRouter({
           ...(input.status && { status: input.status }),
         };
 
-        const programs = await ctx.prisma.program.findMany({
-          where,
-          skip: (input.page - 1) * input.pageSize,
-          take: input.pageSize,
-          include: {
-            coordinator: {
-              include: {
-                user: true,
+        const [programs, totalCount] = await Promise.all([
+          ctx.prisma.program.findMany({
+            where,
+            skip: (input.page - 1) * input.pageSize,
+            take: input.pageSize,
+            include: {
+              coordinator: {
+                include: {
+                  user: true,
+                },
               },
-            },
-            calendar: true,
-            classGroups: {
-              include: {
-                classes: {
-                  include: {
-                    students: true,
-                    teachers: true,
+              calendar: true,
+              classGroups: {
+                include: {
+                  classes: {
+                    include: {
+                      students: true,
+                      teachers: true,
+                    },
                   },
                 },
               },
             },
-          },
-          orderBy: {
-            name: 'asc',
-          },
-        });
-
-        const totalCount = await ctx.prisma.program.count({ where });
+            orderBy: {
+              name: 'asc',
+            },
+          }),
+          ctx.prisma.program.count({ where })
+        ]);
 
         return {
           programs,
@@ -64,9 +72,10 @@ export const programRouter = createTRPCRouter({
           },
         };
       } catch (error) {
+        console.error("Error in getAll procedure:", error);
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch programs',
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch programs",
           cause: error,
         });
       }

@@ -19,6 +19,10 @@ export function Providers({
 }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
+      queries: {
+        retry: 1,
+        refetchOnWindowFocus: false,
+      },
       mutations: {
         onSuccess: async () => {
           await queryClient.invalidateQueries();
@@ -40,29 +44,30 @@ export function Providers({
           headers() {
             return {
               cookie: cookieHeader,
-              'x-trpc-source': 'react',
-            };
-          },
-          transformer: superjson, // Add the required transformer
+                'x-trpc-source': 'react',
+                'x-trpc-batch': '1',
+              };
+              },
+              transformer: superjson,
         }),
       ],
     })
   );
 
   return (
-    <api.Provider client={trpcClient} queryClient={queryClient}>
+    <SessionProvider session={session}>
+      <api.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <SessionProvider session={session}>
-          <ThemeProvider 
-            attribute="class" 
-            defaultTheme="system" 
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
-        </SessionProvider>
+        <ThemeProvider 
+        attribute="class" 
+        defaultTheme="system" 
+        enableSystem
+        disableTransitionOnChange
+        >
+        {children}
+        </ThemeProvider>
       </QueryClientProvider>
-    </api.Provider>
+      </api.Provider>
+    </SessionProvider>
   );
 }

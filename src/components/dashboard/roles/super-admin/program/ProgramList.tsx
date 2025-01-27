@@ -13,12 +13,17 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 interface ProgramListProps {
 	programs: Array<{
 		id: string;
-		name: string;
+		name: string | null; 
 		description?: string | null;
 		status: string;
 		calendar?: { name: string } | null;
 		coordinator?: { user: { name: string } } | null;
-		classGroups?: any[];
+		classGroups?: Array<{
+			classes: Array<{
+				students: any[];
+				teachers: any[];
+			}>;
+		}>;
 	}>;
 	onSelect: (id: string) => void;
 	calendars: Array<{ id: string; name: string }>;

@@ -144,10 +144,13 @@ export const authOptions: NextAuthOptions = {
 export const getServerAuthSession = async () => {
   try {
     const session = await getServerSession(authOptions);
+    if (!session) {
+      console.warn("No session found in getServerAuthSession");
+    }
     return session;
   } catch (error) {
     console.error("Error getting session:", error);
-    return null;
+    throw error; // Let the error propagate to be handled by TRPC error handlers
   }
 };
 

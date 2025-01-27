@@ -158,8 +158,15 @@ async function seedDemoData() {
 
     // 1. Create Demo Calendar
     console.log('Creating demo calendar...');
-    const calendar = await prisma.calendar.create({
-      data: {
+    const calendar = await prisma.calendar.upsert({
+      where: {
+      name_type: {
+        name: '2024-2025 Academic Calendar',
+        type: 'PRIMARY'
+      }
+      },
+      update: {},
+      create: {
       name: '2024-2025 Academic Calendar',
       description: 'Main academic calendar for 2024-2025',
       startDate: new Date('2024-08-01'),
@@ -291,8 +298,15 @@ async function seedDemoData() {
     // 3. Create Demo Terms with Grading Periods and Weeks
     console.log('Creating demo terms...');
     const terms = await Promise.all([
-      prisma.term.create({
-      data: {
+      prisma.term.upsert({
+      where: {
+        name_calendarId: {
+        name: 'Fall Semester 2024',
+        calendarId: calendar.id
+        }
+      },
+      update: {},
+      create: {
         name: 'Fall Semester 2024',
         startDate: new Date('2024-08-01'),
         endDate: new Date('2024-12-20'),
@@ -326,8 +340,15 @@ async function seedDemoData() {
         }
       }
       }),
-      prisma.term.create({
-      data: {
+      prisma.term.upsert({
+      where: {
+        name_calendarId: {
+        name: 'Spring Semester 2025',
+        calendarId: calendar.id
+        }
+      },
+      update: {},
+      create: {
         name: 'Spring Semester 2025',
         startDate: new Date('2025-01-06'),
         endDate: new Date('2025-05-30'),
@@ -366,29 +387,35 @@ async function seedDemoData() {
     // 4. Create Demo Programs
     console.log('Creating demo programs...');
     const programs = await Promise.all([
-      prisma.program.create({
-        data: {
-          name: 'Elementary Education',
-          description: 'K-6 Elementary Education Program',
-          status: Status.ACTIVE,
-          calendarId: calendar.id,
-        }
+      prisma.program.upsert({
+      where: { name: 'Elementary Education' },
+      update: {},
+      create: {
+        name: 'Elementary Education',
+        description: 'K-6 Elementary Education Program',
+        status: Status.ACTIVE,
+        calendarId: calendar.id,
+      }
       }),
-      prisma.program.create({
-        data: {
-          name: 'Middle School Program',
-          description: 'Grades 7-9 Middle School Education',
-          status: Status.ACTIVE,
-          calendarId: calendar.id,
-        }
+      prisma.program.upsert({
+      where: { name: 'Middle School Program' },
+      update: {},
+      create: {
+        name: 'Middle School Program',
+        description: 'Grades 7-9 Middle School Education',
+        status: Status.ACTIVE,
+        calendarId: calendar.id,
+      }
       }),
-      prisma.program.create({
-        data: {
-          name: 'High School Program',
-          description: 'Grades 10-12 High School Education',
-          status: Status.ACTIVE,
-          calendarId: calendar.id,
-        }
+      prisma.program.upsert({
+      where: { name: 'High School Program' },
+      update: {},
+      create: {
+        name: 'High School Program',
+        description: 'Grades 10-12 High School Education',
+        status: Status.ACTIVE,
+        calendarId: calendar.id,
+      }
       })
     ]);
 
