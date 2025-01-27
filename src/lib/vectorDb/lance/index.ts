@@ -5,28 +5,22 @@ let lancedb: any = null;
 
 // Only load on server side
 if (typeof window === 'undefined') {
-  try {
-    // Try to load the native module with absolute path
-    const nativeModulePath = require.resolve('@lancedb/lancedb-win32-x64-msvc');
-
-    const dataPath = path.join('E:', 'Q1 2025', 'lxp-aide', 'data', 'lancedb');
-    
-    if (fs.existsSync(nativeModulePath)) {
-      // Load the native module
-      const nativeModule = require.resolve('@lancedb/lancedb-win32-x64-msvc');
-      lancedb = require(nativeModule);
-      console.log('LanceDB loaded successfully');
-      
-      // Ensure data directory exists
-      if (!fs.existsSync(dataPath)) {
-        fs.mkdirSync(dataPath, { recursive: true });
-      }
-    } else {
-      console.error('LanceDB native module not found at:', nativeModulePath);
-    }
-  } catch (error) {
-    console.error('Failed to load LanceDB:', error);
+  const dataPath = path.join(process.cwd(), 'data', 'lancedb');
+  
+  // Create data directory if it doesn't exist
+  if (!fs.existsSync(dataPath)) {
+    fs.mkdirSync(dataPath, { recursive: true });
   }
+
+  // Dynamic import with better error handling
+  import('@lancedb/lancedb')
+    .then((module) => {
+      lancedb = module;
+      console.log('LanceDB loaded successfully');
+    })
+    .catch((error) => {
+      console.error('Failed to load LanceDB:', error);
+    });
 }
 
 export class LanceDbClient {
@@ -34,7 +28,7 @@ export class LanceDbClient {
   private db: any;
   
   constructor() {
-    this.uri = path.join('E:', 'Q1 2025', 'lxp-aide', 'data', 'lancedb').replace(/\\/g, '/');
+    this.uri = path.join(process.cwd(), 'data', 'lancedb');
   }
 
 

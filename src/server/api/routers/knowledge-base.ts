@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { knowledgeBaseService } from "../../../lib/knowledge-base/knowledge-base-service";
 import { DocumentProcessor } from "../../../lib/knowledge-base/document-processor";
 import { FolderSchema } from "../../../lib/knowledge-base/types";
+import { prisma } from "../../db";
 
 export const knowledgeBaseRouter = createTRPCRouter({
 	getFolders: protectedProcedure
@@ -39,8 +41,40 @@ export const knowledgeBaseRouter = createTRPCRouter({
 				input.metadata
 			);
 			
-			return await knowledgeBaseService.addDocument(document, input.knowledgeBaseId);
+			return await knowledgeBaseService.addDocument({
+				...document,
+				embeddings: [], // embeddings will be generated in the service
+			}, input.knowledgeBaseId);
 		}),
+
+		getWorkspace: protectedProcedure
+			.input(z.object({
+				workspaceId: z.string()
+			}))
+			.query(async ({ input }) => {
+				const knowledgeBase = await prisma.knowledgeBase.findFirst({
+					where: {
+						id: input.workspaceId
+					},
+					include: {
+						folders: {
+							include: {
+								documents: true
+							}
+						}
+					}
+				});
+
+				if (!knowledgeBase) {
+					throw new TRPCError({
+						code: 'NOT_FOUND',
+						message: 'Knowledge base not found'
+					});
+				}
+
+				return knowledgeBase;
+			}),
+
 
 	searchDocuments: protectedProcedure
 		.input(z.object({
