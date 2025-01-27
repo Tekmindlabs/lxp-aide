@@ -4,10 +4,11 @@ export const KnowledgeBaseSchema = z.object({
 	id: z.string(),
 	name: z.string(),
 	description: z.string().optional(),
-	vectorCollection: z.string(),
+	vector_collection: z.string(), // Add this field to match Prisma schema
+	vectorCollection: z.string(), // Add this as an alias if needed
 	createdAt: z.date(),
 	updatedAt: z.date()
-});
+  });
 
 // Fix recursive folder type
 type FolderSchemaType = z.ZodObject<{

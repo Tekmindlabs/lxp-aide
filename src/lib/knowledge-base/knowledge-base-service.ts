@@ -16,30 +16,34 @@ export class KnowledgeBaseService {
   async createKnowledgeBase(data: { name: string; description?: string }): Promise<KnowledgeBase> {
     try {
       const id = nanoid();
-      const vectorCollection = `kb_${id}_vectors`;
+      const collectionName = `kb_${id}_vectors`;
       
-      await milvusDbClient.createOrGetCollection(vectorCollection);
+      await milvusDbClient.createOrGetCollection(collectionName);
 
       const knowledgeBase = await this.prisma.knowledgeBase.create({
         data: {
           id,
           name: data.name,
-          description: data.description,
-          vector_collection: vectorCollection
+          description: data.description || '',
+          vector_collection: collectionName
         }
       });
 
       return {
-        ...knowledgeBase,
-        vectorCollection: knowledgeBase.vector_collection
+        id: knowledgeBase.id,
+        name: knowledgeBase.name,
+        description: knowledgeBase.description || '',
+        vector_collection: collectionName,
+        vectorCollection: collectionName,
+        createdAt: knowledgeBase.createdAt,
+        updatedAt: knowledgeBase.updatedAt
       };
-
-      } catch (error) {
-        if (error instanceof Error) {
-        throw new Error(`Failed to create knowledge base: ${error.message}`);
-        }
-        throw new Error('Failed to create knowledge base: Unknown error');
-    }
+	} catch (error) {
+	  if (error instanceof Error) {
+		throw new Error(`Failed to create knowledge base: ${error.message}`);
+	  }
+	  throw new Error('Failed to create knowledge base: Unknown error');
+	}
   }
 
   async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
@@ -51,14 +55,14 @@ export class KnowledgeBaseService {
         }
       });
 
-        return folders.map(folder => ({
+      return folders.map(folder => ({
         id: folder.id,
         name: folder.name,
         description: folder.description || '',
         knowledgeBaseId: folder.knowledgeBaseId,
         children: folder.subFolders,
         metadata: folder.metadata ? (folder.metadata as Record<string, any>) : {},
-        parentFolderId: folder.parentFolderId ?? undefined
+        parentFolderId: folder.parentFolderId === null ? undefined : folder.parentFolderId
       }));
     } catch (error) {
       if (error instanceof Error) {
@@ -109,7 +113,7 @@ export class KnowledgeBaseService {
           knowledgeBase: {
             select: {
               id: true,
-              vectorCollection: true
+              vector_collection: true
             }
           }
         }
@@ -136,7 +140,7 @@ export class KnowledgeBaseService {
         embeddings = newEmbeddings.flat();
 
         await milvusDbClient.addDocuments(
-          document.knowledgeBase.vectorCollection,
+          document.knowledgeBase.vector_collection,
           processedChunks.map((chunk, index) => ({
             vector: newEmbeddings[index],
             content: chunk.content,
@@ -150,14 +154,14 @@ export class KnowledgeBaseService {
         data: {
           ...data,
           embeddings,
-          metadata: data.metadata || document.metadata,
+          metadata: data.metadata || undefined,
           updatedAt: new Date()
         }
       });
 
       return {
         ...updatedDocument,
-        metadata: (updatedDocument.metadata as Record<string, any>) || {}
+        metadata: updatedDocument.metadata as Record<string, any> || {}
       };
     } catch (error) {
       if (error instanceof Error) {
@@ -194,14 +198,14 @@ export class KnowledgeBaseService {
       // Store document with flattened embeddings
       const flattenedEmbeddings = embeddings.flat();
 
-      await milvusDbClient.addDocuments(
-        knowledgeBase.vector_collection,
+        await milvusDbClient.addDocuments(
+        knowledgeBase.vectorCollection,
         processedChunks.map((chunk, index) => ({
           vector: embeddings[index],
           content: chunk.content,
           metadata: chunk.metadata
         }))
-      );
+        );
 
         const newDocument = await this.prisma.document.create({
         data: {
@@ -216,7 +220,7 @@ export class KnowledgeBaseService {
         });
 
         await milvusDbClient.addDocuments(
-        knowledgeBase.vectorCollection,
+        knowledgeBase.vector_collection,
         processedChunks.map((chunk, index) => ({
           vector: embeddings[index],
           content: chunk.content,
@@ -259,21 +263,20 @@ export class KnowledgeBaseService {
         metadata: document.metadata as Record<string, any>
       };
     } catch (error) {
-      throw new Error(`Failed to get document: ${error.message}`);
+        if (error instanceof Error) {
+        throw new Error(`Failed to get document: ${error.message}`);
+        }
+        throw new Error('Failed to get document: Unknown error');
     }
   }
 
-  async searchDocuments(
-    knowledgeBaseId: string,
-    query: string,
-    limit: number = 5
-  ): Promise<Document[]> {
+  async searchDocuments(knowledgeBaseId: string, query: string, limit: number = 5): Promise<Document[]> {
     try {
       const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
         where: { id: knowledgeBaseId },
         select: {
           id: true,
-          vectorCollection: true
+          vector_collection: true
         }
       });
 
@@ -284,7 +287,7 @@ export class KnowledgeBaseService {
       const queryEmbedding = await jinaEmbedder.embedText(query);
       
       const results = await milvusDbClient.similaritySearch(
-        knowledgeBase.vectorCollection,
+        knowledgeBase.vector_collection,
         queryEmbedding,
         limit
       );
@@ -297,10 +300,11 @@ export class KnowledgeBaseService {
         }
       });
 
-      return documents.map(doc => ({
+        return documents.map(doc => ({
         ...doc,
-        metadata: doc.metadata ? (doc.metadata as Record<string, any>) : {}
-      }));
+        metadata: doc.metadata as Record<string, any> || {}
+        }));
+
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to search documents: ${error.message}`);
@@ -315,7 +319,7 @@ export class KnowledgeBaseService {
         where: { id: knowledgeBaseId },
         select: {
           id: true,
-          vectorCollection: true
+          vector_collection: true
         }
       });
 
@@ -324,11 +328,12 @@ export class KnowledgeBaseService {
       }
 
       await this.prisma.$transaction(async (tx) => {
-        await milvusDbClient.deleteCollection(knowledgeBase.vectorCollection);
+        await milvusDbClient.deleteCollection(knowledgeBase.vector_collection);
         await tx.knowledgeBase.delete({
           where: { id: knowledgeBaseId }
         });
       });
+
     } catch (error) {
       if (error instanceof Error) {
         throw new Error(`Failed to delete knowledge base: ${error.message}`);

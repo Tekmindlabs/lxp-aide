@@ -24,7 +24,13 @@ export class DocumentProcessor {
 		return chunks;
 	}
 
-	static processDocument(content: string, metadata: Record<string, any> = {}) {
+	static processDocument(content: string, metadata: { 
+		documentId: string; 
+		title: string; 
+		type: string; 
+		knowledgeBaseId: string; 
+		[key: string]: any 
+	}) {
 		const chunks = this.chunkText(content);
 		return chunks.map((chunk, index) => ({
 			content: chunk,
@@ -38,7 +44,11 @@ export class DocumentProcessor {
 
 	static async processDocumentFromFile(
 		file: File, 
-		metadata: Record<string, any> = {}
+		metadata: { 
+			knowledgeBaseId: string;
+			folderId?: string;
+			[key: string]: any 
+		}
 	): Promise<Omit<Document, 'id' | 'createdAt' | 'updatedAt' | 'embeddings'>> {
 		const content = await this.extractText(file);
 		
@@ -51,7 +61,8 @@ export class DocumentProcessor {
 				size: file.size,
 				lastModified: new Date(file.lastModified)
 			},
-			folderId: metadata.folderId || 'root'
+			folderId: metadata.folderId || 'root',
+			knowledgeBaseId: metadata.knowledgeBaseId
 		};
 	}
 
