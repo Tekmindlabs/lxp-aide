@@ -1,8 +1,12 @@
-import { getMilvusClient } from './client';
-import { createCollection, deleteCollection } from './collections';
-import { insertVector, searchSimilarContent } from './vectors';
+import { getMilvusClient } from './client.js';
+import { createCollection, deleteCollection } from './collections.js';
+import { insertVector, searchSimilarContent } from './vectors.js';
 import dotenv from 'dotenv';
-import { resolve } from 'path';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Load environment variables
 dotenv.config({ path: resolve(__dirname, '../../../../.env') });
@@ -14,6 +18,11 @@ interface MilvusError {
 }
 
 async function testMilvusConnection() {
+  if (!process.env.MILVUS_ADDRESS || !process.env.MILVUS_TOKEN) {
+    console.error('Missing required environment variables: MILVUS_ADDRESS and/or MILVUS_TOKEN');
+    process.exit(1);
+  }
+
   try {
     console.log('Testing Milvus connection...');
     console.log('Environment:', {
@@ -48,4 +57,8 @@ async function testMilvusConnection() {
   }
 }
 
-testMilvusConnection();
+// Add proper promise handling
+testMilvusConnection().catch(error => {
+  console.error('Unhandled error:', error);
+  process.exit(1);
+});
