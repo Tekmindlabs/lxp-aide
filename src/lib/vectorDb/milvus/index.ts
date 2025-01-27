@@ -14,7 +14,7 @@ interface SimilaritySearchResult {
 }
 
 export class MilvusDbClient {
-	private client: typeof MilvusClient;
+	private client: MilvusClient;
 	private dimension: number = 1536; // Default OpenAI embedding dimension
 
 	constructor() {

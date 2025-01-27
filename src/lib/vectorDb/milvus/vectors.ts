@@ -22,7 +22,7 @@ export async function insertVector(
     await client.loadCollectionSync({ collection_name: 'content_vectors' });
 
     const vectorId = uuidv4();
-    const data = {
+    const data = [{  // Changed to array of objects
       id: vectorId,
       user_id: userId,
       content_type: contentType,
@@ -32,7 +32,7 @@ export async function insertVector(
         ...metadata,
         timestamp: new Date().toISOString()
       })
-    };
+    }];
 
     await client.insert({
       collection_name: 'content_vectors',
@@ -50,6 +50,8 @@ export async function insertVector(
     };
   } catch (error) {
     handleMilvusError(error, 'vector insertion');
+    // Add explicit return for error case
+    throw error; // This ensures the function always returns or throws
   }
 }
 
@@ -87,5 +89,7 @@ export async function searchSimilarContent(
     };
   } catch (error) {
     handleMilvusError(error, 'similarity search');
+    // Add explicit return for error case
+    throw error; // This ensures the function always returns or throws
   }
 }

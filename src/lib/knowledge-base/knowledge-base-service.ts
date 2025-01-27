@@ -1,174 +1,341 @@
-// External dependencies
 import { nanoid } from 'nanoid';
-
-// Database clients
 import { prisma } from '@/server/db';
 import { milvusDbClient } from '../vectorDb/milvus';
-
-// Types
 import { Document, Folder, KnowledgeBase } from './types';
-
-// Services
 import { jinaEmbedder } from './embedding-service';
 import { DocumentProcessor } from './document-processor';
+import { Prisma } from '@prisma/client';
 
 export class KnowledgeBaseService {
-	private readonly vectorDimension = 1536; // OpenAI embedding dimension
-	private readonly prisma;
+  private readonly prisma;
 
-	constructor() {
-		this.prisma = prisma;
-	}
+  constructor() {
+    this.prisma = prisma;
+  }
 
-	async createKnowledgeBase(data: { name: string; description?: string }): Promise<KnowledgeBase> {
-		const id = nanoid();
-		const vectorCollection = `kb_${id}_vectors`;
-		
-		// Initialize vector collection
-		await milvusDbClient.createOrGetCollection(vectorCollection);
+  async createKnowledgeBase(data: { name: string; description?: string }): Promise<KnowledgeBase> {
+    try {
+      const id = nanoid();
+      const vectorCollection = `kb_${id}_vectors`;
+      
+      await milvusDbClient.createOrGetCollection(vectorCollection);
 
+      const knowledgeBase = await this.prisma.knowledgeBase.create({
+        data: {
+          id,
+          name: data.name,
+          description: data.description,
+          vector_collection: vectorCollection
+        }
+      });
 
+      return {
+        ...knowledgeBase,
+        vectorCollection: knowledgeBase.vector_collection
+      };
 
-		return await this.prisma.knowledgeBase.create({
-			data: {
-				id,
-				vectorCollection,
-				...data,
-				createdAt: new Date(),
-				updatedAt: new Date()
-			}
-		});
-	}
+      } catch (error) {
+        if (error instanceof Error) {
+        throw new Error(`Failed to create knowledge base: ${error.message}`);
+        }
+        throw new Error('Failed to create knowledge base: Unknown error');
+    }
+  }
 
-	async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
-		try {
-			const folders = await this.prisma.documentFolder.findMany({
-				where: {
-					knowledgeBaseId
-				},
-				include: {
-					subFolders: true,
-					documents: true
-				}
-			});
+  async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
+    try {
+      const folders = await this.prisma.documentFolder.findMany({
+        where: { knowledgeBaseId },
+        include: {
+          subFolders: true
+        }
+      });
 
-			return folders.map(folder => ({
-				id: folder.id,
-				name: folder.name,
-				description: folder.description || '',
-				parentFolderId: folder.parentFolderId || undefined,
-				knowledgeBaseId: folder.knowledgeBaseId,
-				children: folder.subFolders,
-				metadata: folder.metadata as Record<string, any>
-			}));
-		} catch (error) {
-			console.error('Error fetching folders:', error);
-			throw error;
-		}
-	}
+        return folders.map(folder => ({
+        id: folder.id,
+        name: folder.name,
+        description: folder.description || '',
+        knowledgeBaseId: folder.knowledgeBaseId,
+        children: folder.subFolders,
+        metadata: folder.metadata ? (folder.metadata as Record<string, any>) : {},
+        parentFolderId: folder.parentFolderId ?? undefined
+      }));
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to get folders: ${error.message}`);
+      }
+      throw new Error('Failed to get folders: Unknown error');
+    }
+  }
 
-	async getDocuments(folderId: string): Promise<Document[]> {
-		const documents = await prisma.document.findMany({
-			where: {
-				folderId
-			}
-		});
+  async createFolder(folder: Omit<Folder, 'id' | 'children'>): Promise<Folder> {
+    try {
+      const newFolder = await this.prisma.documentFolder.create({
+        data: {
+          id: nanoid(),
+          name: folder.name,
+          description: folder.description,
+          knowledgeBaseId: folder.knowledgeBaseId,
+          parentFolderId: folder.parentFolderId,
+            metadata: folder.metadata || Prisma.JsonNull
+        },
+        include: {
+          subFolders: true
+        }
+      });
 
-		return documents.map(doc => ({
-			id: doc.id,
-			title: doc.title,
-			type: doc.type,
-			content: doc.content,
-			metadata: doc.metadata as Record<string, any>,
-			embeddings: [],  // We don't need to send embeddings to the client
-			folderId: doc.folderId,
-			createdAt: doc.createdAt,
-			updatedAt: doc.updatedAt
-		}));
-	}
+      return {
+        ...newFolder,
+        description: newFolder.description || '',
+        children: newFolder.subFolders,
+        metadata: newFolder.metadata ? (newFolder.metadata as Record<string, any>) : {}
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to create folder: ${error.message}`);
+      }
+      throw new Error('Failed to create folder: Unknown error');
+    }
+  }
 
-	async createFolder(folder: Omit<Folder, 'id'>): Promise<Folder> {
-		return await this.prisma.documentFolder.create({
-			data: {
-				id: nanoid(),
-				...folder
-			}
-		});
-	}
+  async updateDocument(
+    documentId: string,
+    data: Partial<Omit<Document, 'id' | 'createdAt' | 'updatedAt' | 'embeddings'>>
+  ): Promise<Document> {
+    try {
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+        include: {
+          knowledgeBase: {
+            select: {
+              id: true,
+              vectorCollection: true
+            }
+          }
+        }
+      });
 
-	async addDocument(
-		document: Omit<Document, 'id' | 'createdAt' | 'updatedAt'>, 
-		knowledgeBaseId: string
-	): Promise<Document> {
-		const now = new Date();
-		const id = nanoid();
-		
-		// Process document into optimized chunks
-		const processedChunks = DocumentProcessor.processDocument(document.content, {
-			documentId: id,
-			title: document.title,
-			type: document.type,
-			...document.metadata
-		});
-		
-		// Generate embeddings for chunks
-		const embeddings = await jinaEmbedder.embedChunks(
-			processedChunks.map(chunk => chunk.content)
-		);
-		
-		const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
-			where: { id: knowledgeBaseId }
-		});
-		
-		// Store document chunks with embeddings in Milvus
-		await milvusDbClient.addDocuments(
-			knowledgeBase.vectorCollection,
-			processedChunks.map((chunk, index) => ({
-				vector: embeddings[index],
-				content: chunk.content,
-				metadata: chunk.metadata
-			}))
-		);
+      if (!document) {
+        throw new Error(`Document not found: ${documentId}`);
+      }
 
-		const newDocument = {
-			id,
-			createdAt: now,
-			updatedAt: now,
-			...document
-		};
+      let embeddings = document.embeddings;
 
-		return newDocument;
-	}
+      if (data.content) {
+        const processedChunks = DocumentProcessor.processDocument(data.content, {
+          documentId,
+          title: data.title || document.title,
+          type: data.type || document.type,
+          ...data.metadata
+        });
 
-	async searchDocuments(
-		knowledgeBaseId: string,
-		query: string,
-		limit: number = 5
-	) {
-		const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
-			where: { id: knowledgeBaseId }
-		});
-		
-		// Generate embedding for search query
-		const queryEmbedding = await jinaEmbedder.embedText(query);
-		
-		return await milvusDbClient.similaritySearch(
-			knowledgeBase.vectorCollection,
-			queryEmbedding,
-			limit
-		);
-	}
+        const newEmbeddings = await jinaEmbedder.embedChunks(
+          processedChunks.map(chunk => chunk.content)
+        );
 
-	async deleteKnowledgeBase(knowledgeBaseId: string): Promise<void> {
-		const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
-			where: { id: knowledgeBaseId }
-		});
-		
-		await milvusDbClient.deleteCollection(knowledgeBase.vectorCollection);
-		await this.prisma.knowledgeBase.delete({
-			where: { id: knowledgeBaseId }
-		});
-	}
+        embeddings = newEmbeddings.flat();
+
+        await milvusDbClient.addDocuments(
+          document.knowledgeBase.vectorCollection,
+          processedChunks.map((chunk, index) => ({
+            vector: newEmbeddings[index],
+            content: chunk.content,
+            metadata: chunk.metadata
+          }))
+        );
+      }
+
+      const updatedDocument = await this.prisma.document.update({
+        where: { id: documentId },
+        data: {
+          ...data,
+          embeddings,
+          metadata: data.metadata || document.metadata,
+          updatedAt: new Date()
+        }
+      });
+
+      return {
+        ...updatedDocument,
+        metadata: (updatedDocument.metadata as Record<string, any>) || {}
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to update document: ${error.message}`);
+      }
+      throw new Error('Failed to update document: Unknown error');
+    }
+  }
+
+  async addDocument(
+    document: Omit<Document, 'id' | 'createdAt' | 'updatedAt' | 'embeddings'>,
+    knowledgeBaseId: string
+  ): Promise<Document> {
+    try {
+      const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
+        where: { id: knowledgeBaseId }
+      });
+
+      if (!knowledgeBase) {
+        throw new Error(`Knowledge base not found: ${knowledgeBaseId}`);
+      }
+
+      const processedChunks = DocumentProcessor.processDocument(document.content, {
+        documentId: nanoid(),
+        title: document.title,
+        type: document.type,
+        ...document.metadata
+      });
+
+      const embeddings = await jinaEmbedder.embedChunks(
+        processedChunks.map(chunk => chunk.content)
+      );
+
+      // Store document with flattened embeddings
+      const flattenedEmbeddings = embeddings.flat();
+
+      await milvusDbClient.addDocuments(
+        knowledgeBase.vector_collection,
+        processedChunks.map((chunk, index) => ({
+          vector: embeddings[index],
+          content: chunk.content,
+          metadata: chunk.metadata
+        }))
+      );
+
+        const newDocument = await this.prisma.document.create({
+        data: {
+          id: nanoid(),
+          ...document,
+          knowledgeBaseId,
+          embeddings: flattenedEmbeddings,
+            metadata: document.metadata || Prisma.JsonNull,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+        });
+
+        await milvusDbClient.addDocuments(
+        knowledgeBase.vectorCollection,
+        processedChunks.map((chunk, index) => ({
+          vector: embeddings[index],
+          content: chunk.content,
+          metadata: chunk.metadata
+        }))
+        );
+
+        return {
+        ...newDocument,
+        metadata: newDocument.metadata as Record<string, any>
+        };
+      } catch (error) {
+        if (error instanceof Error) {
+        throw new Error(`Failed to add document: ${error.message}`);
+        }
+        throw new Error('Failed to add document: Unknown error');
+    }
+  }
+
+  async getDocument(documentId: string): Promise<Document | null> {
+    try {
+      const document = await this.prisma.document.findUnique({
+        where: { id: documentId },
+        include: {
+          folder: true,
+          workspaces: {
+            include: {
+              permissions: true
+            }
+          }
+        }
+      });
+
+      if (!document) {
+        return null;
+      }
+
+      return {
+        ...document,
+        metadata: document.metadata as Record<string, any>
+      };
+    } catch (error) {
+      throw new Error(`Failed to get document: ${error.message}`);
+    }
+  }
+
+  async searchDocuments(
+    knowledgeBaseId: string,
+    query: string,
+    limit: number = 5
+  ): Promise<Document[]> {
+    try {
+      const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
+        where: { id: knowledgeBaseId },
+        select: {
+          id: true,
+          vectorCollection: true
+        }
+      });
+
+      if (!knowledgeBase) {
+        throw new Error(`Knowledge base not found: ${knowledgeBaseId}`);
+      }
+
+      const queryEmbedding = await jinaEmbedder.embedText(query);
+      
+      const results = await milvusDbClient.similaritySearch(
+        knowledgeBase.vectorCollection,
+        queryEmbedding,
+        limit
+      );
+
+      const documents = await this.prisma.document.findMany({
+        where: {
+          id: {
+            in: results.sourceDocuments.map(doc => doc.id)
+          }
+        }
+      });
+
+      return documents.map(doc => ({
+        ...doc,
+        metadata: doc.metadata ? (doc.metadata as Record<string, any>) : {}
+      }));
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to search documents: ${error.message}`);
+      }
+      throw new Error('Failed to search documents: Unknown error');
+    }
+  }
+
+  async deleteKnowledgeBase(knowledgeBaseId: string): Promise<void> {
+    try {
+      const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
+        where: { id: knowledgeBaseId },
+        select: {
+          id: true,
+          vectorCollection: true
+        }
+      });
+
+      if (!knowledgeBase) {
+        throw new Error(`Knowledge base not found: ${knowledgeBaseId}`);
+      }
+
+      await this.prisma.$transaction(async (tx) => {
+        await milvusDbClient.deleteCollection(knowledgeBase.vectorCollection);
+        await tx.knowledgeBase.delete({
+          where: { id: knowledgeBaseId }
+        });
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to delete knowledge base: ${error.message}`);
+      }
+      throw new Error('Failed to delete knowledge base: Unknown error');
+    }
+  }
 }
 
 export const knowledgeBaseService = new KnowledgeBaseService();

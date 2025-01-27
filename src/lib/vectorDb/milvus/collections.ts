@@ -1,5 +1,5 @@
-import { getMilvusClient } from './client';
-import { handleMilvusError } from './error-handler';
+import { getMilvusClient } from './client.js';
+import { handleMilvusError } from './error-handler.js';
 
 export async function createCollection(name: string, dimension: number = 1536) {
   try {
