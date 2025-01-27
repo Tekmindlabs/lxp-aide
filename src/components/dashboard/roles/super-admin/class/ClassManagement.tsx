@@ -9,7 +9,8 @@ import { Status } from "@prisma/client";
 import { api } from "@/trpc/react";
 import { ClassList } from "./ClassList";
 import { ClassForm } from "./ClassForm";
-import { Class } from "@/types/class"; // Import the shared interface
+import { Class } from "@/types/class";
+import { LuUsers, LuBookOpen, LuGraduationCap, LuUserCheck } from "react-icons/lu";
 
 interface SearchFilters {
     search: string;
@@ -86,21 +87,83 @@ export const ClassManagement = () => {
         return <div>Loading...</div>;
     }
 
+    const stats = {
+        totalClasses: classes.length,
+        activeClasses: classes.filter(c => c.status === 'ACTIVE').length,
+        totalStudents: classes.reduce((acc, c) => acc + c.students.length, 0),
+        totalTeachers: classes.reduce((acc, c) => acc + c.teachers.length, 0),
+    };
+
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h2 className="text-3xl font-bold tracking-tight">Class Management</h2>
+                <Button onClick={handleCreate}>Create Class</Button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Total Classes</CardTitle>
+                        <LuBookOpen className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalClasses}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {stats.activeClasses} active classes
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                        <LuUsers className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalStudents}</div>
+                        <p className="text-xs text-muted-foreground">
+                            Across all classes
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Total Teachers</CardTitle>
+                        <LuUserCheck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalTeachers}</div>
+                        <p className="text-xs text-muted-foreground">
+                            Subject teachers & tutors
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Class Groups</CardTitle>
+                        <LuGraduationCap className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{classGroupsData?.length || 0}</div>
+                        <p className="text-xs text-muted-foreground">
+                            Available class groups
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
+
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle>Class Management</CardTitle>
-                    <Button onClick={handleCreate}>Create Class</Button>
-                </CardHeader>
-                <CardContent>
+                <CardContent className="p-6">
                     <div className="mb-6 space-y-4">
-                        <div className="flex space-x-4">
+                        <div className="flex flex-col space-y-4 md:flex-row md:space-x-4 md:space-y-0">
                             <Input
                                 placeholder="Search classes..."
                                 value={filters.search}
                                 onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                                className="max-w-sm"
+                                className="md:w-[300px]"
                             />
                             <Select
                                 value={filters.classGroupId || "all"}
@@ -158,16 +221,17 @@ export const ClassManagement = () => {
                             classes={classes} 
                             onSelect={handleEdit}
                         />
-                        <ClassForm 
-                            isOpen={isFormOpen}
-                            onClose={handleCloseForm}
-                            selectedClass={classes.find(c => c.id === selectedClassId)}
-                            classGroups={classGroupsData || []}
-                            teachers={teachers}
-                        />
                     </div>
                 </CardContent>
             </Card>
+
+            <ClassForm 
+                isOpen={isFormOpen}
+                onClose={handleCloseForm}
+                selectedClass={classes.find(c => c.id === selectedClassId)}
+                classGroups={classGroupsData || []}
+                teachers={teachers}
+            />
         </div>
     );
 };

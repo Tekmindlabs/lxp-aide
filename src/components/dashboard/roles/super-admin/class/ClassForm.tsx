@@ -10,6 +10,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 
 import { api } from "@/utils/api";
@@ -19,7 +22,11 @@ const formSchema = z.object({
 	classGroupId: z.string().min(1, "Class Group is required"),
 	capacity: z.number().min(1, "Capacity must be at least 1"),
 	status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]),
+	classTutorId: z.string().optional(),
 	teacherIds: z.array(z.string()).optional(),
+	description: z.string().optional(),
+	academicYear: z.string().optional(),
+	semester: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -110,153 +117,221 @@ export const ClassForm = ({ isOpen, onClose, selectedClass, classGroups, teacher
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>{selectedClass ? "Edit" : "Create"} Class</DialogTitle>
-				</DialogHeader>
-				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+		  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+			<DialogHeader>
+			  <DialogTitle>{selectedClass ? "Edit" : "Create"} Class</DialogTitle>
+			</DialogHeader>
+			<Form {...form}>
+			  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+				<Tabs defaultValue="basic" className="w-full">
+				  <TabsList className="grid w-full grid-cols-3">
+					<TabsTrigger value="basic">Basic Information</TabsTrigger>
+					<TabsTrigger value="teachers">Teachers</TabsTrigger>
+					<TabsTrigger value="additional">Additional Details</TabsTrigger>
+				  </TabsList>
+
+				  <TabsContent value="basic" className="space-y-4">
 				<FormField
-					control={form.control}
-					name="name"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Class Name</FormLabel>
-							<FormControl>
-								<Input {...field} />
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
+				  control={form.control}
+				  name="name"
+				  render={({ field }) => (
+					<FormItem>
+					  <FormLabel>Class Name</FormLabel>
+					  <FormControl>
+						<Input {...field} />
+					  </FormControl>
+					  <FormMessage />
+					</FormItem>
+				  )}
 				/>
 
-<FormField
-  control={form.control}
-  name="classGroupId"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Class Group</FormLabel>
-      <Select 
-        onValueChange={field.onChange} 
-        value={field.value || undefined}  // Ensures an undefined value shows the placeholder
-      >
-        <FormControl>
-          <SelectTrigger>
-            <SelectValue placeholder="Select a class group" />
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent>
-          {classGroups.map((group) => {
-            // Ensure group.id is not an empty string
-            const groupId = group.id || 'undefined'; // Replace 'undefined' with a suitable placeholder
-            return (
-              <SelectItem key={groupId} value={groupId}>
-                {group.name}
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
+				<div className="grid grid-cols-2 gap-4">
+				  <FormField
+					control={form.control}
+					name="classGroupId"
+					render={({ field }) => (
+					  <FormItem>
+						<FormLabel>Class Group</FormLabel>
+						<Select onValueChange={field.onChange} value={field.value}>
+						  <FormControl>
+							<SelectTrigger>
+							  <SelectValue placeholder="Select a class group" />
+							</SelectTrigger>
+						  </FormControl>
+						  <SelectContent>
+							{classGroups.map((group) => (
+							  <SelectItem key={group.id} value={group.id}>
+								{group.name}
+							  </SelectItem>
+							))}
+						  </SelectContent>
+						</Select>
+						<FormMessage />
+					  </FormItem>
+					)}
+				  />
 
-
-
-
-				<FormField
+				  <FormField
 					control={form.control}
 					name="capacity"
 					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Capacity</FormLabel>
-							<FormControl>
-								<Input 
-									type="number" 
-									{...field} 
-									onChange={e => field.onChange(parseInt(e.target.value))}
-								/>
-							</FormControl>
-							<FormMessage />
-						</FormItem>
+					  <FormItem>
+						<FormLabel>Capacity</FormLabel>
+						<FormControl>
+						  <Input 
+							type="number" 
+							{...field} 
+							onChange={e => field.onChange(parseInt(e.target.value))}
+						  />
+						</FormControl>
+						<FormMessage />
+					  </FormItem>
 					)}
-				/>
-
-
-<FormField
-  control={form.control}
-  name="status"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Status</FormLabel>
-      <Select 
-        onValueChange={field.onChange} 
-        value={field.value || Status.ACTIVE}  // Changed from defaultValue
-      >
-        <FormControl>
-          <SelectTrigger>
-            <SelectValue placeholder="Select status" />
-          </SelectTrigger>
-        </FormControl>
-        <SelectContent>
-          {Object.values(Status).map((status) => (
-            <SelectItem key={status} value={status}>
-              {status}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
-
+				  />
+				</div>
 
 				<FormField
-					control={form.control}
-					name="teacherIds"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Teachers</FormLabel>
-							<div className="flex flex-wrap gap-2">
-								{teachers.map((teacher) => (
-									<div
-										key={teacher.id}
-										className={`cursor-pointer rounded-md px-3 py-1 text-sm ${
-											field.value?.includes(teacher.id)
-												? 'bg-primary text-primary-foreground'
-												: 'bg-secondary'
-										}`}
-										onClick={() => {
-											const currentValues = field.value || [];
-											const newValues = currentValues.includes(teacher.id)
-												? currentValues.filter((v) => v !== teacher.id)
-												: [...currentValues, teacher.id];
-											field.onChange(newValues);
-										}}
-									>
-										{teacher.user.name || 'Unnamed Teacher'}
-									</div>
-								))}
-							</div>
-							<FormMessage />
-						</FormItem>
-					)}
+				  control={form.control}
+				  name="status"
+				  render={({ field }) => (
+					<FormItem>
+					  <FormLabel>Status</FormLabel>
+					  <Select onValueChange={field.onChange} value={field.value}>
+						<FormControl>
+						  <SelectTrigger>
+							<SelectValue placeholder="Select status" />
+						  </SelectTrigger>
+						</FormControl>
+						<SelectContent>
+						  {Object.values(Status).map((status) => (
+							<SelectItem key={status} value={status}>
+							  {status}
+							</SelectItem>
+						  ))}
+						</SelectContent>
+					  </Select>
+					  <FormMessage />
+					</FormItem>
+				  )}
+				/>
+			  </TabsContent>
+
+			  <TabsContent value="teachers" className="space-y-4">
+				<FormField
+				  control={form.control}
+				  name="classTutorId"
+				  render={({ field }) => (
+					<FormItem>
+					  <FormLabel>Class Tutor</FormLabel>
+					  <Select onValueChange={field.onChange} value={field.value || ""}>
+						<FormControl>
+						  <SelectTrigger>
+							<SelectValue placeholder="Select class tutor" />
+						  </SelectTrigger>
+						</FormControl>
+						<SelectContent>
+						  <SelectItem value="">None</SelectItem>
+						  {teachers.map((teacher) => (
+							<SelectItem key={teacher.id} value={teacher.id}>
+							  {teacher.user.name}
+							</SelectItem>
+						  ))}
+						</SelectContent>
+					  </Select>
+					  <FormMessage />
+					</FormItem>
+				  )}
 				/>
 
+				<FormField
+				  control={form.control}
+				  name="teacherIds"
+				  render={({ field }) => (
+					<FormItem>
+					  <FormLabel>Subject Teachers</FormLabel>
+					  <ScrollArea className="h-[200px] border rounded-md p-4">
+						<div className="space-y-2">
+						  {teachers.map((teacher) => (
+							<div key={teacher.id} className="flex items-center space-x-2">
+							  <Checkbox
+								checked={field.value?.includes(teacher.id)}
+								onCheckedChange={(checked) => {
+								  const currentValues = field.value || [];
+								  const newValues = checked
+									? [...currentValues, teacher.id]
+									: currentValues.filter(id => id !== teacher.id);
+								  field.onChange(newValues);
+								}}
+							  />
+							  <label className="text-sm">{teacher.user.name}</label>
+							</div>
+						  ))}
+						</div>
+					  </ScrollArea>
+					  <FormMessage />
+					</FormItem>
+				  )}
+				/>
+			  </TabsContent>
 
-				<div className="flex justify-end space-x-2">
-				  <Button variant="outline" type="button" onClick={onClose}>
-					Cancel
-				  </Button>
-				  <Button type="submit" disabled={isSubmitting}>
-					{isSubmitting ? "Saving..." : selectedClass ? "Update" : "Create"}
-				  </Button>
+			  <TabsContent value="additional" className="space-y-4">
+				<FormField
+				  control={form.control}
+				  name="description"
+				  render={({ field }) => (
+					<FormItem>
+					  <FormLabel>Description</FormLabel>
+					  <FormControl>
+						<Input {...field} />
+					  </FormControl>
+					  <FormMessage />
+					</FormItem>
+				  )}
+				/>
+
+				<div className="grid grid-cols-2 gap-4">
+				  <FormField
+					control={form.control}
+					name="academicYear"
+					render={({ field }) => (
+					  <FormItem>
+						<FormLabel>Academic Year</FormLabel>
+						<FormControl>
+						  <Input {...field} />
+						</FormControl>
+						<FormMessage />
+					  </FormItem>
+					)}
+				  />
+
+				  <FormField
+					control={form.control}
+					name="semester"
+					render={({ field }) => (
+					  <FormItem>
+						<FormLabel>Semester</FormLabel>
+						<FormControl>
+						  <Input {...field} />
+						</FormControl>
+						<FormMessage />
+					  </FormItem>
+					)}
+				  />
 				</div>
-			  </form>
-			</Form>
-		  </DialogContent>
-		</Dialog>
+			  </TabsContent>
+			</Tabs>
+
+			<div className="flex justify-end space-x-2">
+			  <Button variant="outline" type="button" onClick={onClose}>
+				Cancel
+			  </Button>
+			  <Button type="submit" disabled={isSubmitting}>
+				{isSubmitting ? "Saving..." : selectedClass ? "Update" : "Create"}
+			  </Button>
+			</div>
+		  </form>
+		</Form>
+	  </DialogContent>
+	</Dialog>
 	  );
 };

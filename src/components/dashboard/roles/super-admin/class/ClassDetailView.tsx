@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Status } from "@prisma/client";
 import { api } from "@/trpc/react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LuUsers, LuBookOpen, LuGraduationCap, LuUserCheck } from "react-icons/lu";
 
 interface StudentProfile {
 	id: string;
@@ -48,17 +50,69 @@ export const ClassDetailView = ({ isOpen, onClose, classId }: ClassDetailViewPro
 
 	if (!classDetails) return null;
 
+	const performanceData = [
+		{ name: 'Assignments', completed: 85, pending: 15 },
+		{ name: 'Attendance', present: 90, absent: 10 },
+		{ name: 'Quizzes', passed: 75, failed: 25 },
+	];
+
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="max-w-4xl">
+			<DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
-					<DialogTitle>{classDetails.name} - Class Dashboard</DialogTitle>
+					<DialogTitle className="text-2xl font-bold">{classDetails.name} - Class Dashboard</DialogTitle>
 				</DialogHeader>
+
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+					<Card>
+						<CardHeader className="flex flex-row items-center justify-between pb-2">
+							<CardTitle className="text-sm font-medium">Total Students</CardTitle>
+							<LuUsers className="h-4 w-4 text-muted-foreground" />
+						</CardHeader>
+						<CardContent>
+							<div className="text-2xl font-bold">{classDetails.students.length}</div>
+							<p className="text-xs text-muted-foreground">
+								Capacity: {classDetails.capacity}
+							</p>
+						</CardContent>
+					</Card>
+					
+					<Card>
+						<CardHeader className="flex flex-row items-center justify-between pb-2">
+							<CardTitle className="text-sm font-medium">Class Tutor</CardTitle>
+							<LuUserCheck className="h-4 w-4 text-muted-foreground" />
+						</CardHeader>
+						<CardContent>
+							<div className="text-2xl font-bold">{classDetails.teachers[0]?.teacher.user.name || 'Not Assigned'}</div>
+						</CardContent>
+					</Card>
+					
+					<Card>
+						<CardHeader className="flex flex-row items-center justify-between pb-2">
+							<CardTitle className="text-sm font-medium">Subject Teachers</CardTitle>
+							<LuBookOpen className="h-4 w-4 text-muted-foreground" />
+						</CardHeader>
+						<CardContent>
+							<div className="text-2xl font-bold">{classDetails.teachers.length}</div>
+						</CardContent>
+					</Card>
+					
+					<Card>
+						<CardHeader className="flex flex-row items-center justify-between pb-2">
+							<CardTitle className="text-sm font-medium">Program</CardTitle>
+							<LuGraduationCap className="h-4 w-4 text-muted-foreground" />
+						</CardHeader>
+						<CardContent>
+							<div className="text-lg font-bold">{classDetails.classGroup.program.name}</div>
+						</CardContent>
+					</Card>
+				</div>
 				<Tabs defaultValue="overview">
-					<TabsList>
+					<TabsList className="grid w-full grid-cols-4">
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="students">Students</TabsTrigger>
 						<TabsTrigger value="performance">Performance</TabsTrigger>
+						<TabsTrigger value="teachers">Teachers</TabsTrigger>
 					</TabsList>
 
 					<TabsContent value="overview">
@@ -130,10 +184,57 @@ export const ClassDetailView = ({ isOpen, onClose, classId }: ClassDetailViewPro
 					<TabsContent value="performance">
 						<Card>
 							<CardHeader>
-								<CardTitle>Class Performance</CardTitle>
+								<CardTitle>Class Performance Analytics</CardTitle>
 							</CardHeader>
 							<CardContent>
-								{/* Add performance metrics here */}
+								<div className="h-[300px] mt-4">
+									<ResponsiveContainer width="100%" height="100%">
+										<BarChart data={performanceData}>
+											<CartesianGrid strokeDasharray="3 3" />
+											<XAxis dataKey="name" />
+											<YAxis />
+											<Tooltip />
+											<Bar dataKey="completed" fill="#22c55e" stackId="a" name="Completed" />
+											<Bar dataKey="pending" fill="#f87171" stackId="a" name="Pending" />
+											<Bar dataKey="present" fill="#22c55e" stackId="b" name="Present" />
+											<Bar dataKey="absent" fill="#f87171" stackId="b" name="Absent" />
+											<Bar dataKey="passed" fill="#22c55e" stackId="c" name="Passed" />
+											<Bar dataKey="failed" fill="#f87171" stackId="c" name="Failed" />
+										</BarChart>
+									</ResponsiveContainer>
+								</div>
+							</CardContent>
+						</Card>
+					</TabsContent>
+
+					<TabsContent value="teachers">
+						<Card>
+							<CardHeader>
+								<CardTitle>Teaching Staff</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<Table>
+									<TableHeader>
+										<TableRow>
+											<TableHead>Name</TableHead>
+											<TableHead>Role</TableHead>
+											<TableHead>Subjects</TableHead>
+											<TableHead>Status</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{classDetails.teachers.map((teacher) => (
+											<TableRow key={teacher.teacher.id}>
+												<TableCell>{teacher.teacher.user.name}</TableCell>
+												<TableCell>{teacher.isClassTutor ? 'Class Tutor' : 'Subject Teacher'}</TableCell>
+												<TableCell>{teacher.subjects?.map(s => s.name).join(', ') || 'N/A'}</TableCell>
+												<TableCell>
+													<Badge variant="outline">Active</Badge>
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
 							</CardContent>
 						</Card>
 					</TabsContent>

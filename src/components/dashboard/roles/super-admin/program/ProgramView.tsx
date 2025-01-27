@@ -20,7 +20,7 @@ export function ProgramView({ programId, onBack }: ProgramViewProps) {
 		isLoading: programLoading, 
 		error: programError 
 	} = api.program.getById.useQuery(
-		{ id: programId },
+		programId,
 		{
 			retry: 1,
 			refetchOnWindowFocus: false

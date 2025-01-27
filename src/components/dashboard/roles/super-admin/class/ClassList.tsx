@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Class } from "@/types/class"; // Import the shared interface
 import { ClassDetailView } from "./ClassDetailView";
 
@@ -17,53 +18,73 @@ export const ClassList = ({ classes, onSelect }: ClassListProps) => {
 
     return (
         <>
-            <div className="rounded-md border">
+            <ScrollArea className="rounded-md border h-[600px]">
                 <Table>
                     <TableHeader>
-                        <TableRow>{/* Remove any whitespace between these tags */}
-                            <TableHead>Name</TableHead>
-                            <TableHead>Program</TableHead>
-                            <TableHead>Class Group</TableHead>
-                            <TableHead>Capacity</TableHead>
-                            <TableHead>Students</TableHead>
+                        <TableRow>
+                            <TableHead className="w-[200px]">Name</TableHead>
+                            <TableHead className="w-[200px]">Program</TableHead>
+                            <TableHead className="w-[200px]">Class Group</TableHead>
+                            <TableHead className="w-[100px] text-center">Capacity</TableHead>
+                            <TableHead className="w-[100px] text-center">Students</TableHead>
                             <TableHead>Teachers</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Actions</TableHead>
+                            <TableHead className="w-[100px]">Status</TableHead>
+                            <TableHead className="w-[150px] text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody>{/* Remove any whitespace between these tags */}
+                    <TableBody>
                         {classes.map((cls) => (
-                            <TableRow key={cls.id}>{/* Remove any whitespace between these tags */}
-                                <TableCell>{cls.name}</TableCell>
+                            <TableRow key={cls.id} className="hover:bg-muted/50">
+                                <TableCell className="font-medium">{cls.name}</TableCell>
                                 <TableCell>{cls.classGroup.program.name}</TableCell>
                                 <TableCell>{cls.classGroup.name}</TableCell>
-                                <TableCell>{cls.capacity}</TableCell>
-                                <TableCell>{cls.students?.length || 0}</TableCell>
-                                <TableCell>{cls.teachers.map((t) => t.teacher.user.name).join(", ")}</TableCell>
+                                <TableCell className="text-center">{cls.capacity}</TableCell>
+                                <TableCell className="text-center">
+                                    <Badge variant="outline">
+                                        {cls.students?.length || 0}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                        {cls.teachers.map((t, idx) => (
+                                            <Badge 
+                                                key={idx} 
+                                                variant="secondary"
+                                                className="whitespace-nowrap"
+                                            >
+                                                {t.teacher.user.name}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                </TableCell>
                                 <TableCell>
                                     <Badge variant={cls.status === "ACTIVE" ? "success" : "secondary"}>
                                         {cls.status}
                                     </Badge>
                                 </TableCell>
-                                <TableCell>
-                                    <div className="flex space-x-2">
+                                <TableCell className="text-right">
+                                    <div className="flex justify-end space-x-2">
                                         <Button
                                             variant="outline"
                                             size="sm"
                                             onClick={() => onSelect(cls.id)}
-                                        >Edit</Button>
+                                        >
+                                            Edit
+                                        </Button>
                                         <Button
                                             variant="secondary"
                                             size="sm"
                                             onClick={() => setSelectedClassId(cls.id)}
-                                        >View</Button>
+                                        >
+                                            View
+                                        </Button>
                                     </div>
                                 </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
-            </div>
+            </ScrollArea>
 
             {selectedClassId && (
                 <ClassDetailView

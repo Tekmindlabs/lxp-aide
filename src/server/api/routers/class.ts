@@ -9,10 +9,14 @@ export const classRouter = createTRPCRouter({
 			classGroupId: z.string(),
 			capacity: z.number(),
 			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).default(Status.ACTIVE),
+			description: z.string().optional(),
+			academicYear: z.string().optional(),
+			semester: z.string().optional(),
+			classTutorId: z.string().optional(),
 			teacherIds: z.array(z.string()).optional(),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			const { teacherIds, ...classData } = input;
+			const { teacherIds, classTutorId, ...classData } = input;
 			
 			const newClass = await ctx.prisma.class.create({
 				data: {
@@ -23,6 +27,7 @@ export const classRouter = createTRPCRouter({
 								teacher: {
 									connect: { id: teacherId }
 								},
+								isClassTutor: teacherId === classTutorId,
 								status: Status.ACTIVE,
 							})),
 						},
@@ -41,9 +46,14 @@ export const classRouter = createTRPCRouter({
 									user: true,
 								},
 							},
+							subjects: true,
 						},
 					},
-					students: true,
+					students: {
+						include: {
+							user: true,
+						},
+					},
 				},
 			});
 
@@ -57,23 +67,26 @@ export const classRouter = createTRPCRouter({
 			classGroupId: z.string().optional(),
 			capacity: z.number().optional(),
 			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).optional(),
+			description: z.string().optional(),
+			academicYear: z.string().optional(),
+			semester: z.string().optional(),
+			classTutorId: z.string().optional(),
 			teacherIds: z.array(z.string()).optional(),
 		}))
 		.mutation(async ({ ctx, input }) => {
-			const { id, teacherIds, ...data } = input;
+			const { id, teacherIds, classTutorId, ...data } = input;
 
 			if (teacherIds) {
-				// Remove existing teacher assignments
 				await ctx.prisma.teacherClass.deleteMany({
 					where: { classId: id },
 				});
 
-				// Add new teacher assignments
 				if (teacherIds.length > 0) {
 					await ctx.prisma.teacherClass.createMany({
 						data: teacherIds.map(teacherId => ({
 							classId: id,
 							teacherId,
+							isClassTutor: teacherId === classTutorId,
 							status: Status.ACTIVE,
 						})),
 					});
@@ -157,6 +170,7 @@ export const classRouter = createTRPCRouter({
 					...(search && {
 						OR: [
 							{ name: { contains: search, mode: 'insensitive' } },
+							{ description: { contains: search, mode: 'insensitive' } },
 						],
 					}),
 					...(classGroupId && { classGroupId }),
