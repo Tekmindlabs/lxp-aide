@@ -1,8 +1,8 @@
 import { Document } from './types';
 
 export class DocumentProcessor {
-	private static readonly DEFAULT_CHUNK_SIZE = 1000;
-	private static readonly DEFAULT_CHUNK_OVERLAP = 200;
+	private static readonly CHUNK_SIZE = 1024;
+	private static readonly CHUNK_OVERLAP = 50;
 
 	static async extractText(file: File): Promise<string> {
 		// For now, handle text files only
@@ -10,31 +10,33 @@ export class DocumentProcessor {
 		return await file.text();
 	}
 
-	static chunkText(text: string, chunkSize = this.DEFAULT_CHUNK_SIZE, overlap = this.DEFAULT_CHUNK_OVERLAP): string[] {
+	static chunkText(text: string): string[] {
+		const words = text.split(/\s+/);
 		const chunks: string[] = [];
-		let startIndex = 0;
-
-		while (startIndex < text.length) {
-			// Find the end of the current chunk
-			let endIndex = startIndex + chunkSize;
-			
-			// If not at the end of text, try to find a natural break point
-			if (endIndex < text.length) {
-				// Look for next period, question mark, or exclamation point
-				const nextBreak = text.substring(endIndex - 20, endIndex + 20).search(/[.!?]/);
-				if (nextBreak !== -1) {
-					endIndex = endIndex - 20 + nextBreak + 1;
-				}
+		
+		for (let i = 0; i < words.length; i += this.CHUNK_SIZE - this.CHUNK_OVERLAP) {
+			const chunk = words.slice(i, i + this.CHUNK_SIZE).join(' ');
+			if (chunk.length > 0) {
+				chunks.push(chunk);
 			}
-
-			chunks.push(text.substring(startIndex, endIndex).trim());
-			startIndex = endIndex - overlap;
 		}
-
+		
 		return chunks;
 	}
 
-	static async processDocument(
+	static processDocument(content: string, metadata: Record<string, any> = {}) {
+		const chunks = this.chunkText(content);
+		return chunks.map((chunk, index) => ({
+			content: chunk,
+			chunkIndex: index,
+			metadata: {
+				...metadata,
+				totalChunks: chunks.length
+			}
+		}));
+	}
+
+	static async processDocumentFromFile(
 		file: File, 
 		metadata: Record<string, any> = {}
 	): Promise<Omit<Document, 'id' | 'createdAt' | 'updatedAt' | 'embeddings'>> {
@@ -60,7 +62,7 @@ export class DocumentProcessor {
 		document: Omit<Document, 'id' | 'createdAt' | 'updatedAt' | 'embeddings'>,
 		chunks: string[]
 	}> {
-		const document = await this.processDocument(file, metadata);
+		const document = await this.processDocumentFromFile(file, metadata);
 		const chunks = this.chunkText(document.content);
 
 		return {

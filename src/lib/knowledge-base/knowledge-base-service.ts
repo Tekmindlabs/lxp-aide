@@ -1,12 +1,19 @@
-import { lanceDbClient } from '../vectorDb/lance';
-import { Document, Folder, KnowledgeBase } from './types';
+// External dependencies
 import { nanoid } from 'nanoid';
+
+// Database clients
+import { prisma } from '@/server/db';
+import { milvusDbClient } from '../vectorDb/milvus';
+
+// Types
+import { Document, Folder, KnowledgeBase } from './types';
+
+// Services
 import { jinaEmbedder } from './embedding-service';
 import { DocumentProcessor } from './document-processor';
-import { prisma } from '@/server/db';
 
 export class KnowledgeBaseService {
-	private readonly vectorDimension = 768; // Jina embedding dimension
+	private readonly vectorDimension = 1536; // OpenAI embedding dimension
 	private readonly prisma;
 
 	constructor() {
@@ -18,12 +25,9 @@ export class KnowledgeBaseService {
 		const vectorCollection = `kb_${id}_vectors`;
 		
 		// Initialize vector collection
-		await lanceDbClient.createOrGetCollection(vectorCollection, {
-			vector: Array(this.vectorDimension).fill(0),
-			documentId: '',
-			content: '',
-			metadata: {}
-		});
+		await milvusDbClient.createOrGetCollection(vectorCollection);
+
+
 
 		return await this.prisma.knowledgeBase.create({
 			data: {
@@ -99,23 +103,30 @@ export class KnowledgeBaseService {
 		const now = new Date();
 		const id = nanoid();
 		
-		// Generate embeddings for document chunks
-		const chunks = DocumentProcessor.chunkText(document.content);
-		const embeddings = await jinaEmbedder.embedChunks(chunks);
+		// Process document into optimized chunks
+		const processedChunks = DocumentProcessor.processDocument(document.content, {
+			documentId: id,
+			title: document.title,
+			type: document.type,
+			...document.metadata
+		});
+		
+		// Generate embeddings for chunks
+		const embeddings = await jinaEmbedder.embedChunks(
+			processedChunks.map(chunk => chunk.content)
+		);
 		
 		const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
 			where: { id: knowledgeBaseId }
 		});
 		
-		// Store document chunks with embeddings
-		await lanceDbClient.addDocumentEmbeddings(
+		// Store document chunks with embeddings in Milvus
+		await milvusDbClient.addDocuments(
 			knowledgeBase.vectorCollection,
-			embeddings,
-			chunks.map((chunk, index) => ({
-				documentId: id,
-				content: chunk,
-				chunkIndex: index,
-				metadata: document.metadata
+			processedChunks.map((chunk, index) => ({
+				vector: embeddings[index],
+				content: chunk.content,
+				metadata: chunk.metadata
 			}))
 		);
 
@@ -141,7 +152,7 @@ export class KnowledgeBaseService {
 		// Generate embedding for search query
 		const queryEmbedding = await jinaEmbedder.embedText(query);
 		
-		return await lanceDbClient.similaritySearch(
+		return await milvusDbClient.similaritySearch(
 			knowledgeBase.vectorCollection,
 			queryEmbedding,
 			limit
@@ -153,7 +164,7 @@ export class KnowledgeBaseService {
 			where: { id: knowledgeBaseId }
 		});
 		
-		await lanceDbClient.deleteCollection(knowledgeBase.vectorCollection);
+		await milvusDbClient.deleteCollection(knowledgeBase.vectorCollection);
 		await this.prisma.knowledgeBase.delete({
 			where: { id: knowledgeBaseId }
 		});
