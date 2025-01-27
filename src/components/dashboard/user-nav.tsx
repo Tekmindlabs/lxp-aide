@@ -28,7 +28,7 @@ export function UserNav() {
     .toUpperCase();
 
   const userRole = session.user.roles?.[0]?.toLowerCase() || '';
-  const profilePath = `/dashboard/${userRole}/profile`;
+  const profilePath = `/dashboard/profile`;
 
   const handleSignOut = async () => {
     await signOut({ redirect: true, callbackUrl: '/' });

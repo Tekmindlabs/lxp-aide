@@ -7,7 +7,8 @@ let lancedb: any = null;
 if (typeof window === 'undefined') {
   try {
     // Try to load the native module with absolute path
-    const nativeModulePath = path.join('E:', 'Q1 2025', 'lxp-aide', 'node_modules', '@lancedb', 'lancedb-win32-x64-msvc', 'lancedb.win32-x64-msvc.node');
+    const nativeModulePath = require.resolve('@lancedb/lancedb-win32-x64-msvc');
+
     const dataPath = path.join('E:', 'Q1 2025', 'lxp-aide', 'data', 'lancedb');
     
     if (fs.existsSync(nativeModulePath)) {
