@@ -637,7 +637,7 @@ model KnowledgeBase {
   id               String           @id @default(cuid())
   name             String
   description      String?
-  vectorCollection String           @map("vector_collection")
+  vectorCollection String
   folders          DocumentFolder[]
   documents        Document[]
   createdAt        DateTime         @default(now())

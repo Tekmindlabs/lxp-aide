@@ -25,7 +25,7 @@ export class KnowledgeBaseService {
           id,
           name: data.name,
           description: data.description || '',
-          vector_collection: collectionName
+          vectorCollection: collectionName
         }
       });
 
@@ -33,7 +33,6 @@ export class KnowledgeBaseService {
         id: knowledgeBase.id,
         name: knowledgeBase.name,
         description: knowledgeBase.description || '',
-        vector_collection: collectionName,
         vectorCollection: collectionName,
         createdAt: knowledgeBase.createdAt,
         updatedAt: knowledgeBase.updatedAt
@@ -62,7 +61,7 @@ export class KnowledgeBaseService {
         knowledgeBaseId: folder.knowledgeBaseId,
         children: folder.subFolders,
         metadata: folder.metadata ? (folder.metadata as Record<string, any>) : {},
-        parentFolderId: folder.parentFolderId === null ? undefined : folder.parentFolderId
+        parentFolderId: folder.parentFolderId ?? undefined
       }));
     } catch (error) {
       if (error instanceof Error) {
@@ -113,7 +112,7 @@ export class KnowledgeBaseService {
           knowledgeBase: {
             select: {
               id: true,
-              vector_collection: true
+          vectorCollection: true
             }
           }
         }
@@ -130,6 +129,7 @@ export class KnowledgeBaseService {
           documentId,
           title: data.title || document.title,
           type: data.type || document.type,
+          knowledgeBaseId: document.knowledgeBaseId,
           ...data.metadata
         });
 
@@ -140,7 +140,7 @@ export class KnowledgeBaseService {
         embeddings = newEmbeddings.flat();
 
         await milvusDbClient.addDocuments(
-          document.knowledgeBase.vector_collection,
+          document.knowledgeBase.vectorCollection,
           processedChunks.map((chunk, index) => ({
             vector: newEmbeddings[index],
             content: chunk.content,
@@ -220,7 +220,7 @@ export class KnowledgeBaseService {
         });
 
         await milvusDbClient.addDocuments(
-        knowledgeBase.vector_collection,
+        knowledgeBase.vectorCollection,
         processedChunks.map((chunk, index) => ({
           vector: embeddings[index],
           content: chunk.content,
@@ -276,7 +276,7 @@ export class KnowledgeBaseService {
         where: { id: knowledgeBaseId },
         select: {
           id: true,
-          vector_collection: true
+          vectorCollection: true
         }
       });
 
@@ -287,7 +287,7 @@ export class KnowledgeBaseService {
       const queryEmbedding = await jinaEmbedder.embedText(query);
       
       const results = await milvusDbClient.similaritySearch(
-        knowledgeBase.vector_collection,
+        knowledgeBase.vectorCollection,
         queryEmbedding,
         limit
       );
@@ -319,7 +319,7 @@ export class KnowledgeBaseService {
         where: { id: knowledgeBaseId },
         select: {
           id: true,
-          vector_collection: true
+          vectorCollection: true
         }
       });
 
@@ -328,7 +328,7 @@ export class KnowledgeBaseService {
       }
 
       await this.prisma.$transaction(async (tx) => {
-        await milvusDbClient.deleteCollection(knowledgeBase.vector_collection);
+      await milvusDbClient.deleteCollection(knowledgeBase.vectorCollection);
         await tx.knowledgeBase.delete({
           where: { id: knowledgeBaseId }
         });
