@@ -71,6 +71,8 @@
   },
   "devDependencies": {
     "@asteasolutions/zod-to-openapi": "^7.3.0",
+    "@swc/core": "^1.10.9",
+    "@swc/helpers": "^0.5.15",
     "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.11.19",

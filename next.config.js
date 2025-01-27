@@ -4,7 +4,6 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
   },
-  swcMinify: true,
   compiler: {
     removeConsole: false,
   },
@@ -42,4 +41,3 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
-

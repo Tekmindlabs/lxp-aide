@@ -1,92 +1,72 @@
-import path from 'path';
-import fs from 'fs';
-
-let lancedb: any = null;
-
-// Only load on server side
-if (typeof window === 'undefined') {
-  const dataPath = path.join(process.cwd(), 'data', 'lancedb');
-  
-  // Create data directory if it doesn't exist
-  if (!fs.existsSync(dataPath)) {
-    fs.mkdirSync(dataPath, { recursive: true });
-  }
-
-  // Dynamic import with better error handling
-  import('@lancedb/lancedb')
-    .then((module) => {
-      lancedb = module;
-      console.log('LanceDB loaded successfully');
-    })
-    .catch((error) => {
-      console.error('Failed to load LanceDB:', error);
-    });
-}
+import { connect } from '@lancedb/lancedb';
 
 export class LanceDbClient {
   private uri: string;
-  private db: any;
-  
-  constructor() {
-    this.uri = path.join(process.cwd(), 'data', 'lancedb');
-  }
 
+  constructor() {
+    this.uri = `${process.env.STORAGE_DIR ? `${process.env.STORAGE_DIR}/` : "./storage/"}lancedb`;
+  }
 
   async connect() {
-    if (!lancedb) {
-      throw new Error('LanceDB module not loaded - only available server-side');
-    }
-    
-    if (!this.db) {
-      try {
-        this.db = await lancedb.connect(this.uri);
-      } catch (error) {
-        console.error('Failed to connect to LanceDB:', error);
-        throw error;
+    try {
+      if (process.env.VECTOR_DB !== "lancedb") {
+        throw new Error("LanceDB::Invalid ENV settings");
       }
+      return await connect(this.uri);
+    } catch (error) {
+      console.error('Failed to connect to LanceDB:', error);
+      throw error;
     }
-    return this.db;
   }
 
-  async createOrGetCollection(name: string, schema?: any) {
+  distanceToSimilarity(distance: number | null = null): number {
+    if (distance === null || typeof distance !== "number") return 0.0;
+    if (distance >= 1.0) return 1;
+    if (distance < 0) return 1 - Math.abs(distance);
+    return 1 - distance;
+  }
+
+  async createOrGetCollection(name: string, data: any[] = []) {
     const db = await this.connect();
     try {
       const existingTable = await db.openTable(name);
+      if (data.length > 0) {
+        await existingTable.add(data);
+      }
       return existingTable;
     } catch {
-      return await db.createTable(name, [], schema);
+      return await db.createTable(name, data);
     }
   }
 
-  async addDocumentEmbeddings(collectionName: string, embeddings: number[][], metadata: any[]) {
+  async similaritySearch(
+    collectionName: string,
+    queryEmbedding: number[],
+    limit: number = 4,
+    similarityThreshold: number = 0.25
+  ) {
     const collection = await this.createOrGetCollection(collectionName);
-    const data = embeddings.map((embedding, index) => ({
-      vector: embedding,
-      ...metadata[index]
-    }));
-    await collection.add(data);
+    const results = await collection
+      .vectorSearch(queryEmbedding)
+      .distanceType('cosine')
+      .limit(limit)
+      .toArray();
+
+    return {
+      contextTexts: [],
+      sourceDocuments: results
+        .filter((item) => this.distanceToSimilarity(item._distance) >= similarityThreshold)
+        .map((item) => {
+          const { vector: _, ...metadata } = item;
+          return {
+            ...metadata,
+            score: this.distanceToSimilarity(item._distance),
+          };
+        }),
+    };
   }
 
-  async similaritySearch(collectionName: string, queryEmbedding: number[], limit: number = 5) {
-    const collection = await this.createOrGetCollection(collectionName);
-    const searchQuery = collection.search(queryEmbedding).limit(limit);
-    const results = await searchQuery.execute();
-    
-    const searchResults = [];
-    for await (const batch of results) {
-      for (const row of batch) {
-        searchResults.push({
-          score: row.score,
-          content: row.content,
-          documentId: row.documentId,
-          metadata: row.metadata
-        });
-      }
-    }
-    return searchResults;
-  }
-
-  async deleteCollection(name: string): Promise<void> {
+  async deleteCollection(name: string) {
     const db = await this.connect();
     try {
       await db.dropTable(name);
@@ -98,3 +78,4 @@ export class LanceDbClient {
 }
 
 export const lanceDbClient = new LanceDbClient();
+
