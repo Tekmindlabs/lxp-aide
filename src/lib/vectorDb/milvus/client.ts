@@ -5,16 +5,25 @@ class MilvusConnection {
 
   private constructor() {}
 
-  static async getInstance(): Promise<MilvusClient> {
+  public static async getInstance(): Promise<MilvusClient> {
     if (!MilvusConnection.instance) {
       if (!process.env.MILVUS_ADDRESS || !process.env.MILVUS_TOKEN) {
-        throw new Error('Milvus connection details not provided');
+        throw new Error('Milvus configuration missing');
       }
 
+      const address = process.env.MILVUS_ADDRESS
+        .replace(/^https?:\/\//, '')
+        .trim();
+
+      console.log('Connecting to Milvus at:', address);
+
       const config = {
-        address: process.env.MILVUS_ADDRESS.replace(/^https?:\/\//, ''),
+        address,
         token: process.env.MILVUS_TOKEN,
-        ssl: true
+        ssl: true,
+        tls: {
+          rejectUnauthorized: false
+        }
       };
 
       MilvusConnection.instance = new MilvusClient(config);
@@ -23,4 +32,5 @@ class MilvusConnection {
   }
 }
 
+// Make sure this export is present
 export const getMilvusClient = () => MilvusConnection.getInstance();
