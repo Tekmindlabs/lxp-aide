@@ -1,5 +1,19 @@
-import { connect } from '@lancedb/lancedb';
+import { connect, Table } from '@lancedb/lancedb';
 import path from 'path';
+
+interface SearchResult {
+  _distance?: number;
+  vector?: number[];
+  [key: string]: any;
+}
+
+interface SimilaritySearchResult {
+  contextTexts: string[];
+  sourceDocuments: Array<{
+    score: number;
+    [key: string]: any;
+  }>;
+}
 
 export class LanceDbClient {
   private uri: string;
@@ -31,16 +45,22 @@ export class LanceDbClient {
     return 1 - distance;
   }
 
-  async createOrGetCollection(name: string, data: any[] = []) {
+  async createOrGetCollection(name: string, data: Record<string, any>[] = []): Promise<Table> {
     const db = await this.connect();
     try {
-      const existingTable = await db.openTable(name);
-      if (data.length > 0) {
-        await existingTable.add(data);
+      let table: Table;
+      try {
+        table = await db.openTable(name);
+        if (data.length > 0) {
+          await table.add(data);
+        }
+      } catch {
+        table = await db.createTable(name, data);
       }
-      return existingTable;
-    } catch {
-      return await db.createTable(name, data);
+      return table;
+    } catch (error) {
+      console.error('Error in createOrGetCollection:', error);
+      throw error;
     }
   }
 
@@ -49,29 +69,31 @@ export class LanceDbClient {
     queryEmbedding: number[],
     limit: number = 4,
     similarityThreshold: number = 0.25
-  ) {
+  ): Promise<SimilaritySearchResult> {
     const collection = await this.createOrGetCollection(collectionName);
     const results = await collection
-      .vectorSearch(queryEmbedding)
+      .search(queryEmbedding)
       .distanceType('cosine')
       .limit(limit)
-      .toArray();
+      .execute();
 
     return {
       contextTexts: [],
       sourceDocuments: results
-        .filter((item) => this.distanceToSimilarity(item._distance) >= similarityThreshold)
-        .map((item) => {
-          const { vector: _, ...metadata } = item;
+        .filter((item: SearchResult) => 
+          this.distanceToSimilarity(item._distance) >= similarityThreshold
+        )
+        .map((item: SearchResult) => {
+          const { vector, _distance, ...metadata } = item;
           return {
             ...metadata,
-            score: this.distanceToSimilarity(item._distance),
+            score: this.distanceToSimilarity(_distance),
           };
         }),
     };
   }
 
-  async deleteCollection(name: string) {
+  async deleteCollection(name: string): Promise<void> {
     const db = await this.connect();
     try {
       await db.dropTable(name);
@@ -80,7 +102,20 @@ export class LanceDbClient {
       throw error;
     }
   }
+
+  // Additional utility methods
+  async createIndex(collectionName: string, columnName: string = 'vector'): Promise<void> {
+    const collection = await this.createOrGetCollection(collectionName);
+    await collection.createIndex(columnName);
+  }
+
+  async addDocuments(
+    collectionName: string, 
+    documents: Record<string, any>[]
+  ): Promise<void> {
+    const collection = await this.createOrGetCollection(collectionName);
+    await collection.add(documents);
+  }
 }
 
 export const lanceDbClient = new LanceDbClient();
-
