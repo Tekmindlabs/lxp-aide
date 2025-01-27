@@ -1,10 +1,14 @@
 import { connect } from '@lancedb/lancedb';
+import path from 'path';
 
 export class LanceDbClient {
   private uri: string;
 
   constructor() {
-    this.uri = `${process.env.STORAGE_DIR ? `${process.env.STORAGE_DIR}/` : "./storage/"}lancedb`;
+    // Use absolute path for storage
+    const baseDir = process.cwd();
+    const storageDir = process.env.STORAGE_DIR || './storage';
+    this.uri = path.resolve(baseDir, storageDir, 'lancedb');
   }
 
   async connect() {
@@ -12,6 +16,7 @@ export class LanceDbClient {
       if (process.env.VECTOR_DB !== "lancedb") {
         throw new Error("LanceDB::Invalid ENV settings");
       }
+      // Ensure directory exists
       return await connect(this.uri);
     } catch (error) {
       console.error('Failed to connect to LanceDB:', error);
