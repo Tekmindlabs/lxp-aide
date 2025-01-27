@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { Status } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 
 export const classGroupRouter = createTRPCRouter({
 	createClassGroup: protectedProcedure
@@ -83,11 +84,25 @@ export const classGroupRouter = createTRPCRouter({
 		}),
 
 	getByProgramId: protectedProcedure
-		.input(z.string())
+		.input(z.object({
+			programId: z.string().min(1, "Program ID is required")
+		}))
 		.query(async ({ ctx, input }) => {
 			try {
+				// First check if program exists
+				const program = await ctx.prisma.program.findUnique({
+					where: { id: input.programId }
+				});
+
+				if (!program) {
+					throw new TRPCError({
+						code: "NOT_FOUND",
+						message: "Program not found",
+					});
+				}
+
 				const classGroups = await ctx.prisma.classGroup.findMany({
-					where: { programId: input },
+					where: { programId: input.programId },
 					include: {
 						classes: {
 							include: {
@@ -98,10 +113,14 @@ export const classGroupRouter = createTRPCRouter({
 						program: true,
 						subjects: true,
 					},
+					orderBy: {
+						name: 'asc'
+					}
 				});
 
 				return classGroups;
 			} catch (error) {
+				if (error instanceof TRPCError) throw error;
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
 					message: "Failed to fetch class groups",

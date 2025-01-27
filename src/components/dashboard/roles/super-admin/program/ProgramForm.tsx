@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 import { api } from "@/utils/api";
 import { Status } from "@prisma/client";
 import { toast } from "@/hooks/use-toast";
@@ -36,7 +38,14 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
     status: selectedProgram?.status || Status.ACTIVE,
 	}));
 
-	const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
+	const { 
+		data: calendars, 
+		isLoading: calendarsLoading,
+		error: calendarsError 
+	} = api.academicCalendar.getAllCalendars.useQuery(undefined, {
+		retry: 1,
+		refetchOnWindowFocus: false
+	});
 	const utils = api.useContext();
 
 	const createMutation = api.program.create.useMutation({
@@ -89,6 +98,16 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+		
+		if (!formData.name.trim()) {
+			toast({
+				title: "Error",
+				description: "Program name is required",
+				variant: "destructive",
+			});
+			return;
+		}
+
 		const submissionData = {
 			...formData,
 			coordinatorId: formData.coordinatorId === "none" ? undefined : formData.coordinatorId,
@@ -110,6 +129,24 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
       });
 		}
 	};
+
+	if (calendarsError) {
+		return (
+			<Alert variant="destructive">
+				<AlertDescription>
+					Error loading calendars: {calendarsError.message}
+				</AlertDescription>
+			</Alert>
+		);
+	}
+
+	if (calendarsLoading) {
+		return (
+			<div className="flex items-center justify-center py-8">
+				<Loader2 className="h-8 w-8 animate-spin" />
+			</div>
+		);
+	}
 
 	return (
 		<Card className="mt-4">

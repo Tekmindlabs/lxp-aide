@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, PlusCircle } from "lucide-react";
 import { api } from "@/utils/api";
 import { useToast } from "@/hooks/use-toast";
 import { ProgramList } from "@/components/dashboard/roles/super-admin/program/ProgramList";
@@ -23,12 +24,37 @@ export default function ProgramPage() {
 	});
 
 	const { toast } = useToast();
-	const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
-	const { data: programData, refetch: refetchPrograms } = api.program.getAll.useQuery({
+	
+	const { 
+		data: calendars,
+		isLoading: calendarsLoading,
+		error: calendarsError
+	} = api.academicCalendar.getAllCalendars.useQuery(undefined, {
+		retry: 1,
+		refetchOnWindowFocus: false
+	});
+	
+	const { 
+		data: programData,
+		refetch: refetchPrograms,
+		isLoading: programsLoading,
+		error: programsError
+	} = api.program.getAll.useQuery({
 		page: 1,
 		pageSize: 10
+	}, {
+		retry: 1,
+		refetchOnWindowFocus: false
 	});
-	const { data: coordinators } = api.program.getAvailableCoordinators.useQuery();
+	
+	const { 
+		data: coordinators,
+		isLoading: coordinatorsLoading,
+		error: coordinatorsError
+	} = api.program.getAvailableCoordinators.useQuery(undefined, {
+		retry: 1,
+		refetchOnWindowFocus: false
+	});
 
 	const createProgram = api.program.create.useMutation({
 		onSuccess: () => {
@@ -51,8 +77,28 @@ export default function ProgramPage() {
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+		if (!formData.calendarId) {
+			toast({
+				title: "Error",
+				description: "Please select an academic year",
+				variant: "destructive",
+			});
+			return;
+		}
 		createProgram.mutate(formData);
 	};
+
+	if (calendarsError || programsError || coordinatorsError) {
+		return (
+			<Alert variant="destructive">
+				<AlertDescription>
+					{calendarsError?.message || programsError?.message || coordinatorsError?.message}
+				</AlertDescription>
+			</Alert>
+		);
+	}
+
+	const isLoading = calendarsLoading || programsLoading || coordinatorsLoading;
 
 	return (
 		<div className="space-y-6">
@@ -121,17 +167,25 @@ export default function ProgramPage() {
 					<CardTitle>Programs Overview</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<ProgramList 
-						programs={programData?.programs || []}
-						onSelect={setSelectedProgramId}
-						calendars={calendars || []}
-					/>
-					{selectedProgramId && (
-						<ProgramForm
-							coordinators={coordinators || []}
-							selectedProgram={programData?.programs?.find(p => p.id === selectedProgramId)}
-							onSuccess={() => setSelectedProgramId(null)}
-						/>
+					{isLoading ? (
+						<div className="flex items-center justify-center py-8">
+							<Loader2 className="h-8 w-8 animate-spin" />
+						</div>
+					) : (
+						<>
+							<ProgramList 
+								programs={programData?.programs || []}
+								onSelect={setSelectedProgramId}
+								calendars={calendars || []}
+							/>
+							{selectedProgramId && (
+								<ProgramForm
+									coordinators={coordinators || []}
+									selectedProgram={programData?.programs?.find(p => p.id === selectedProgramId)}
+									onSuccess={() => setSelectedProgramId(null)}
+								/>
+							)}
+						</>
 					)}
 				</CardContent>
 			</Card>

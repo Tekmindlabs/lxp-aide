@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "@/components/dashboard/roles/super-admin/class-group/columns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ProgramViewProps {
 	programId: string;
@@ -13,10 +15,66 @@ interface ProgramViewProps {
 }
 
 export function ProgramView({ programId, onBack }: ProgramViewProps) {
-	const { data: program } = api.program.getById.useQuery({ id: programId });
-	const { data: classGroups } = api.classGroup.getByProgramId.useQuery({ programId });
+	const { 
+		data: program, 
+		isLoading: programLoading, 
+		error: programError 
+	} = api.program.getById.useQuery(
+		{ id: programId },
+		{
+			retry: 1,
+			refetchOnWindowFocus: false
+		}
+	);
+	
+	const { 
+		data: classGroups, 
+		isLoading: classGroupsLoading,
+		error: classGroupsError 
+	} = api.classGroup.getByProgramId.useQuery(
+		{ programId },
+		{
+			retry: 1,
+			refetchOnWindowFocus: false,
+			enabled: !!program
+		}
+	);
 
-	if (!program) return null;
+	if (programLoading || classGroupsLoading) {
+		return (
+			<div className="flex items-center justify-center h-[400px]">
+				<Loader2 className="h-8 w-8 animate-spin" />
+			</div>
+		);
+	}
+
+	if (programError) {
+		return (
+			<Alert variant="destructive">
+				<AlertDescription>
+					Error loading program: {programError.message}
+				</AlertDescription>
+			</Alert>
+		);
+	}
+
+	if (!program) {
+		return (
+			<Alert>
+				<AlertDescription>Program not found</AlertDescription>
+			</Alert>
+		);
+	}
+
+	if (classGroupsError) {
+		return (
+			<Alert variant="destructive">
+				<AlertDescription>
+					Error loading class groups: {classGroupsError.message}
+				</AlertDescription>
+			</Alert>
+		);
+	}
 
 	const studentsByGroup = classGroups?.map(group => ({
 		name: group.name,
