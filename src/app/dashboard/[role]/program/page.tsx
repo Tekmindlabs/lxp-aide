@@ -3,19 +3,19 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DataTable } from "@/components/ui/data-table";
-import { PlusCircle } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlusCircle } from "lucide-react";
 import { api } from "@/utils/api";
 import { useToast } from "@/hooks/use-toast";
-
+import { ProgramList } from "@/components/dashboard/roles/super-admin/program/ProgramList";
+import { ProgramForm } from "@/components/dashboard/roles/super-admin/program/ProgramForm";
 
 export default function ProgramPage() {
 	const [isCreating, setIsCreating] = useState(false);
+	const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
 	const [formData, setFormData] = useState({
 		name: "",
 		description: "",
@@ -23,13 +23,13 @@ export default function ProgramPage() {
 	});
 
 	const { toast } = useToast();
-	
-const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
-const { data: programData, refetch: refetchPrograms } = api.program.getAll.useQuery({
-	page: 1,
-	pageSize: 10
-  });
-	
+	const { data: calendars } = api.academicCalendar.getAllCalendars.useQuery();
+	const { data: programData, refetch: refetchPrograms } = api.program.getAll.useQuery({
+		page: 1,
+		pageSize: 10
+	});
+	const { data: coordinators } = api.program.getAvailableCoordinators.useQuery();
+
 	const createProgram = api.program.create.useMutation({
 		onSuccess: () => {
 			toast({
@@ -48,25 +48,6 @@ const { data: programData, refetch: refetchPrograms } = api.program.getAll.useQu
 			});
 		},
 	});
-
-	const columns = [
-		{
-			accessorKey: "name",
-			header: "Program Name",
-		},
-		{
-			accessorKey: "description",
-			header: "Description",
-		},
-		{
-			accessorKey: "academicYear.name",
-			header: "Academic Year",
-		},
-		{
-			accessorKey: "status",
-			header: "Status",
-		},
-	];
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -135,23 +116,26 @@ const { data: programData, refetch: refetchPrograms } = api.program.getAll.useQu
 				</Dialog>
 			</div>
 
-			<Tabs defaultValue="all" className="space-y-4">
-				<TabsList>
-					<TabsTrigger value="all">All Programs</TabsTrigger>
-					<TabsTrigger value="active">Active</TabsTrigger>
-					<TabsTrigger value="archived">Archived</TabsTrigger>
-				</TabsList>
-				<TabsContent value="all" className="space-y-4">
-					<Card>
-						<CardHeader>
-							<CardTitle>Programs Overview</CardTitle>
-						</CardHeader>
-						<CardContent>
-						<DataTable columns={columns} data={programData?.programs ?? []} />
-						</CardContent>
-					</Card>
-				</TabsContent>
-			</Tabs>
+			<Card>
+				<CardHeader>
+					<CardTitle>Programs Overview</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<ProgramList 
+						programs={programData?.programs || []}
+						onSelect={setSelectedProgramId}
+						calendars={calendars || []}
+					/>
+					{selectedProgramId && (
+						<ProgramForm
+							coordinators={coordinators || []}
+							selectedProgram={programData?.programs?.find(p => p.id === selectedProgramId)}
+							onSuccess={() => setSelectedProgramId(null)}
+						/>
+					)}
+				</CardContent>
+			</Card>
 		</div>
 	);
 }
+

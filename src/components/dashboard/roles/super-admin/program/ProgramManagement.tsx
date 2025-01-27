@@ -46,11 +46,12 @@ const { data: programData, isLoading } = api.program.getAll.useQuery({
 const programs = programData?.programs || [];
     const { data: coordinators } = api.program.getAvailableCoordinators.useQuery();
 
-    const associateCalendar = api.program.associateCalendar.useMutation({
-        onSuccess: () => {
-            utils.program.searchPrograms.invalidate();
-        },
-    });
+const associateCalendar = api.program.associateCalendar.useMutation({
+	onSuccess: () => {
+		utils.program.getAll.invalidate();
+		utils.program.searchPrograms.invalidate();
+	},
+});
 
     if (isLoading) {
         return <div>Loading...</div>;
@@ -138,19 +139,20 @@ const programs = programData?.programs || [];
                         </div>
                     </div>
 
-                    <div className="space-y-4">
-                        <ProgramList 
-                            programs={programs || []} 
-                            onSelect={setSelectedProgramId}
-calendars={calendars || []}
-
-                        />
-                        <ProgramForm 
-                            coordinators={coordinators || []}
-                            selectedProgram={programs?.find((p: ProgramWithDetails) => p.id === selectedProgramId)}
-                            onSuccess={() => setSelectedProgramId(null)}
-                        />
-                    </div>
+<div className="space-y-4">
+	<ProgramList 
+		programs={programs || []} 
+		onSelect={setSelectedProgramId}
+		calendars={calendars || []}
+	/>
+	{selectedProgramId && (
+		<ProgramForm 
+			coordinators={coordinators || []}
+			selectedProgram={programs?.find((p: ProgramWithDetails) => p.id === selectedProgramId)}
+			onSuccess={() => setSelectedProgramId(null)}
+		/>
+	)}
+</div>
                 </CardContent>
             </Card>
         </div>

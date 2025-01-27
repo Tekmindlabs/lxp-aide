@@ -8,11 +8,15 @@ export default function SuperAdminLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="flex h-screen">
-			<SuperAdminSidebar />
-			<main className="flex-1 overflow-y-auto p-8">
-				{children}
-			</main>
+		<div className="container">
+			<div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0 pt-6">
+				<aside className="lg:w-1/5">
+					<SuperAdminSidebar />
+				</aside>
+				<div className="flex-1">
+					{children}
+				</div>
+			</div>
 		</div>
 	);
 }

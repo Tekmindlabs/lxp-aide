@@ -203,8 +203,8 @@ export default async function RoleLayout({
 	const navItems = getNavItems(currentRole);
 
 	return (
-		<div className="space-y-6 p-10 pb-16">
-			<div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
+		<div className="container">
+			<div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0 pt-6">
 				<aside className="lg:w-1/5">
 					<SidebarNav items={navItems} />
 				</aside>

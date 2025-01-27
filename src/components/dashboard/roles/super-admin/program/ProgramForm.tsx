@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/utils/api";
 import { Status } from "@prisma/client";
 import { toast } from "@/hooks/use-toast";
@@ -110,91 +112,96 @@ export const ProgramForm = ({ selectedProgram, coordinators, onSuccess }: Progra
 	};
 
 	return (
-		<form onSubmit={handleSubmit} className="space-y-4">
-			<div>
-				<Label htmlFor="name">Name</Label>
-				<Input
-					id="name"
-					value={formData.name}
-					onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-					required
-				/>
-			</div>
+		<Card className="mt-4">
+			<CardHeader>
+				<CardTitle>{selectedProgram ? "Edit" : "Create"} Program</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<form onSubmit={handleSubmit} className="space-y-4">
+					<div>
+						<Label htmlFor="name">Name</Label>
+						<Input
+							id="name"
+							value={formData.name}
+							onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+							required
+						/>
+					</div>
 
-			<div>
-				<Label htmlFor="description">Description</Label>
-				<Textarea
-					id="description"
-					value={formData.description}
-					onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-				/>
-			</div>
+					<div>
+						<Label htmlFor="description">Description</Label>
+						<Textarea
+							id="description"
+							value={formData.description}
+							onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+						/>
+					</div>
 
-			<div>
-				<Label htmlFor="calendar">Calendar</Label>
+					<div>
+						<Label htmlFor="calendar">Calendar</Label>
+						<Select
+							value={formData.calendarId}
+							onValueChange={(value) => setFormData({ ...formData, calendarId: value })}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue placeholder="Select Calendar" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="none">Select Calendar</SelectItem>
+								{calendars?.map((calendar) => (
+									<SelectItem key={calendar.id} value={calendar.id}>
+										{calendar.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
 
-    <select
-        id="calendar"
-        value={formData.calendarId || ""}
-        onChange={(e) => setFormData({ ...formData, calendarId: e.target.value })}
-        className="w-full border p-2 rounded"
-        required
-        title="Select academic calendar for this program"
-    >
+					<div>
+						<Label htmlFor="coordinator">Coordinator</Label>
+						<Select
+							value={formData.coordinatorId}
+							onValueChange={(value) => setFormData({ ...formData, coordinatorId: value })}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue placeholder="Select Coordinator" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="none">Select Coordinator</SelectItem>
+								{coordinators.map((coordinator) => (
+									<SelectItem key={coordinator.id} value={coordinator.id}>
+										{coordinator.user.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
 
-        <option value="none">Select Calendar</option>
+					<div>
+						<Label htmlFor="status">Status</Label>
+						<Select
+							value={formData.status}
+							onValueChange={(value) => setFormData({ ...formData, status: value as Status })}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue placeholder="Select Status" />
+							</SelectTrigger>
+							<SelectContent>
+								{Object.values(Status).map((status) => (
+									<SelectItem key={status} value={status}>
+										{status}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
 
-        {calendars?.map((calendar) => (
-
-            <option key={calendar.id} value={calendar.id}>
-
-                {calendar.name}
-
-            </option>
-
-        ))}
-
-    </select>
-			</div>
-
-			<div>
-				<Label htmlFor="coordinator">Coordinator</Label>
-				<select
-					id="coordinator"
-					value={formData.coordinatorId || ""}
-					onChange={(e) => setFormData({ ...formData, coordinatorId: e.target.value })}
-					className="w-full border p-2 rounded"
-					title="Select program coordinator"
-				>
-					<option value="none">Select Coordinator</option>
-					{coordinators.map((coordinator) => (
-						<option key={coordinator.id} value={coordinator.id}>
-							{coordinator.user.name}
-						</option>
-					))}
-				</select>
-			</div>
-
-			<div>
-				<Label htmlFor="status">Status</Label>
-				<select
-					id="status"
-					value={formData.status}
-					onChange={(e) => setFormData({ ...formData, status: e.target.value as Status })}
-					className="w-full border p-2 rounded"
-					title="Select program status"
-				>
-					{Object.values(Status).map((status) => (
-						<option key={status} value={status}>
-							{status}
-						</option>
-					))}
-				</select>
-			</div>
-
-			<Button type="submit" disabled={createMutation.status === 'pending' || updateMutation.status === 'pending'}>
-				{createMutation.status === 'pending' || updateMutation.status === 'pending' ? 'Saving...' : selectedProgram ? "Update" : "Create"} Program
-			</Button>
-		</form>
+					<Button type="submit" className="w-full" disabled={createMutation.status === 'pending' || updateMutation.status === 'pending'}>
+						{createMutation.status === 'pending' || updateMutation.status === 'pending' ? 'Saving...' : selectedProgram ? "Update" : "Create"} Program
+					</Button>
+				</form>
+			</CardContent>
+		</Card>
 	);
+
 };

@@ -84,17 +84,16 @@ export const programRouter = createTRPCRouter({
                 user: true,
               },
             },
+            calendar: true,
             classGroups: {
               include: {
                 classes: {
                   include: {
                     students: true,
-                    teachers: true,
                   },
                 },
               },
             },
-            calendar: true,
           },
         });
 
@@ -107,7 +106,48 @@ export const programRouter = createTRPCRouter({
 
         return program;
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch program",
+          cause: error,
+        });
+      }
+    }),
+
+  getByProgramId: protectedProcedure
+    .input(z.string())
+    .query(async ({ ctx, input }) => {
+      try {
+        const program = await ctx.prisma.program.findUnique({
+          where: { id: input },
+          include: {
+            coordinator: {
+              include: {
+                user: true,
+              },
+            },
+            calendar: true,
+            classGroups: {
+              include: {
+                classes: {
+                  include: {
+                    students: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!program) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Program not found",
+          });
+        }
+
+        return program;
+      } catch (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to fetch program",

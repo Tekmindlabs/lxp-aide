@@ -4,9 +4,12 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
 import { UserNav } from "@/components/dashboard/user-nav";
 import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 
 export function Header() {
   const { data: session } = useSession();
+  const pathname = usePathname();
+  const isDashboard = pathname?.startsWith('/dashboard');
 
   return (
     <header className="container mx-auto px-4 py-6 flex justify-between items-center">
@@ -17,12 +20,14 @@ export function Header() {
       
       <div className="flex items-center gap-4">
         <ThemeToggle />
-        {session ? (
-          <UserNav />
-        ) : (
-          <Link href="/auth/signin">
-            <Button size="lg">Sign In</Button>
-          </Link>
+        {!isDashboard && (
+          session ? (
+            <UserNav />
+          ) : (
+            <Link href="/auth/signin">
+              <Button size="lg">Sign In</Button>
+            </Link>
+          )
         )}
       </div>
     </header>

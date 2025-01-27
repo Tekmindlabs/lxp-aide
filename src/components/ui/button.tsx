@@ -8,7 +8,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90 p-6 text-xl font-bold rounded-lg shadow-lg transition-transform duration-200 ease-in-out cursor-pointer',
+        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
         destructive:
           'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         outline:
@@ -21,7 +21,7 @@ const buttonVariants = cva(
       size: {
         default: 'h-10 px-4 py-2',
         sm: 'h-9 rounded-md px-3',
-        lg: 'h-11 px-12 py-6', // Updated for larger size
+        lg: 'h-11 rounded-md px-8',
         icon: 'h-10 w-10',
       },
     },
@@ -41,34 +41,16 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
-
-    // Add hover effect handlers
-    const handleMouseOver = (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.currentTarget.style.transform = 'scale(1.05)';
-      props.onMouseOver?.(e);
-    };
-
-    const handleMouseOut = (e: React.MouseEvent<HTMLButtonElement>) => {
-      e.currentTarget.style.transform = 'scale(1)';
-      props.onMouseOut?.(e);
-    };
-
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
-        onMouseOver={handleMouseOver}
-        onMouseOut={handleMouseOut}
-        style={{
-          ...props.style,
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-          transition: 'transform 0.2s ease-in-out',
-        }}
         {...props}
       />
     );
   }
 );
+
 
 Button.displayName = 'Button';
 

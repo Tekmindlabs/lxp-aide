@@ -82,6 +82,34 @@ export const classGroupRouter = createTRPCRouter({
 			});
 		}),
 
+	getByProgramId: protectedProcedure
+		.input(z.string())
+		.query(async ({ ctx, input }) => {
+			try {
+				const classGroups = await ctx.prisma.classGroup.findMany({
+					where: { programId: input },
+					include: {
+						classes: {
+							include: {
+								students: true,
+								teachers: true,
+							},
+						},
+						program: true,
+						subjects: true,
+					},
+				});
+
+				return classGroups;
+			} catch (error) {
+				throw new TRPCError({
+					code: "INTERNAL_SERVER_ERROR",
+					message: "Failed to fetch class groups",
+					cause: error,
+				});
+			}
+		}),
+
 	addSubjectsToClassGroup: protectedProcedure
 		.input(z.object({
 			classGroupId: z.string(),
