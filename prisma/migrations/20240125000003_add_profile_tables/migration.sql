@@ -48,6 +48,9 @@ CREATE TABLE "ParentProfile" (
 ALTER TABLE "StudentProfile" ADD CONSTRAINT "StudentProfile_parentId_fkey" 
 	FOREIGN KEY ("parentId") REFERENCES "ParentProfile"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- Update Program table to add coordinator relationship
+-- Add coordinatorId column to Program table first
+ALTER TABLE "Program" ADD COLUMN "coordinatorId" TEXT;
+
+-- Then add the foreign key constraint
 ALTER TABLE "Program" ADD CONSTRAINT "Program_coordinatorId_fkey" 
 	FOREIGN KEY ("coordinatorId") REFERENCES "CoordinatorProfile"("id") ON DELETE SET NULL ON UPDATE CASCADE;

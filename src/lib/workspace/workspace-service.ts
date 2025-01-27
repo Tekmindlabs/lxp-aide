@@ -11,6 +11,14 @@ export class WorkspaceService {
 	}
 
 	async createWorkspace(data: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workspace> {
+		// If creating a default workspace, ensure no other default exists
+		if (data.isDefault) {
+			await this.prisma.workspace.updateMany({
+				where: { isDefault: true },
+				data: { isDefault: false }
+			});
+		}
+
 		// Create a knowledge base first
 		const knowledgeBase = await knowledgeBaseService.createKnowledgeBase({
 			name: `${data.name} Knowledge Base`,
@@ -28,7 +36,34 @@ export class WorkspaceService {
 		});
 	}
 
+	async getOrCreateDefaultWorkspace(): Promise<Workspace> {
+		let defaultWorkspace = await this.prisma.workspace.findFirst({
+			where: { isDefault: true }
+		});
+
+		if (!defaultWorkspace) {
+			defaultWorkspace = await this.createWorkspace({
+				name: 'Default Workspace',
+				description: 'Default workspace for the system',
+				isDefault: true,
+				knowledgeBaseId: '', // Will be set by createWorkspace
+				settings: {
+					messageLimit: 100,
+					aiProvider: 'openai',
+					aiModel: 'gpt-3.5-turbo',
+					maxTokens: 2000,
+					temperature: 0.7
+				}
+			});
+		}
+
+		return defaultWorkspace;
+	}
+
 	async getWorkspace(id: string): Promise<Workspace> {
+		if (id === 'workspace_default') {
+			return this.getOrCreateDefaultWorkspace();
+		}
 		return await this.prisma.workspace.findUnique({
 			where: { id }
 		});

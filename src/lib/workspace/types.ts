@@ -5,6 +5,7 @@ export const WorkspaceSchema = z.object({
 	name: z.string(),
 	description: z.string().optional(),
 	knowledgeBaseId: z.string(),
+	isDefault: z.boolean().default(false),
 	settings: z.object({
 		messageLimit: z.number().min(1).max(1000),
 		aiProvider: z.enum(['openai', 'anthropic', 'google']),

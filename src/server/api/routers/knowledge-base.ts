@@ -11,7 +11,23 @@ export const knowledgeBaseRouter = createTRPCRouter({
 		.input(z.object({
 			knowledgeBaseId: z.string()
 		}))
-		.query(async ({ input }) => {
+		.query(async ({ ctx, input }) => {
+			// Handle default workspace case
+			if (input.knowledgeBaseId === 'workspace_default') {
+				const defaultWorkspace = await ctx.prisma.workspace.findFirst({
+					where: { isDefault: true }
+				});
+				
+				if (!defaultWorkspace) {
+					throw new TRPCError({
+						code: 'NOT_FOUND',
+						message: 'Default workspace not found'
+					});
+				}
+				
+				return await knowledgeBaseService.getFolders(defaultWorkspace.id);
+			}
+			
 			return await knowledgeBaseService.getFolders(input.knowledgeBaseId);
 		}),
 
@@ -51,12 +67,35 @@ export const knowledgeBaseRouter = createTRPCRouter({
 			.input(z.object({
 				workspaceId: z.string()
 			}))
-			.query(async ({ input }) => {
-				const knowledgeBase = await prisma.knowledgeBase.findFirst({
-					where: {
-						id: input.workspaceId
-					},
+			.query(async ({ ctx, input }) => {
+				// Handle default workspace case
+				if (input.workspaceId === 'workspace_default') {
+					const defaultWorkspace = await ctx.prisma.workspace.findFirst({
+						where: { isDefault: true },
+						include: {
+							knowledgeBases: true,
+							folders: {
+								include: {
+									documents: true
+								}
+							}
+						}
+					});
+
+					if (!defaultWorkspace) {
+						throw new TRPCError({
+							code: 'NOT_FOUND',
+							message: 'Default workspace not found'
+						});
+					}
+
+					return defaultWorkspace;
+				}
+
+				const workspace = await ctx.prisma.workspace.findUnique({
+					where: { id: input.workspaceId },
 					include: {
+						knowledgeBases: true,
 						folders: {
 							include: {
 								documents: true
@@ -65,14 +104,14 @@ export const knowledgeBaseRouter = createTRPCRouter({
 					}
 				});
 
-				if (!knowledgeBase) {
+				if (!workspace) {
 					throw new TRPCError({
 						code: 'NOT_FOUND',
-						message: 'Knowledge base not found'
+						message: 'Workspace not found'
 					});
 				}
 
-				return knowledgeBase;
+				return workspace;
 			}),
 
 

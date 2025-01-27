@@ -45,12 +45,58 @@ export class KnowledgeBaseService {
 	}
   }
 
+  async getWorkspace(workspaceId: string) {
+    try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        include: {
+          knowledgeBases: true,
+          permissions: true
+        }
+      });
+
+      if (!workspace) {
+        throw new Error(`Workspace not found: ${workspaceId}`);
+      }
+
+      return {
+        id: workspace.id,
+        name: workspace.name,
+        description: workspace.description || '',
+        knowledgeBases: workspace.knowledgeBases,
+        permissions: workspace.permissions
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Failed to get workspace: ${error.message}`);
+      }
+      throw new Error('Failed to get workspace: Unknown error');
+    }
+  }
+
   async getFolders(knowledgeBaseId: string): Promise<Folder[]> {
     try {
+      // First verify the knowledge base exists
+      const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
+        where: { id: knowledgeBaseId }
+      });
+
+      if (!knowledgeBase) {
+        throw new Error(`Knowledge base not found: ${knowledgeBaseId}`);
+      }
+
       const folders = await this.prisma.documentFolder.findMany({
-        where: { knowledgeBaseId },
+        where: { 
+          knowledgeBaseId,
+          // Only get root level folders (those without parent)
+          parentFolderId: null
+        },
         include: {
-          subFolders: true
+          subFolders: {
+            include: {
+              subFolders: true // Include nested subfolders
+            }
+          }
         }
       });
 
@@ -176,6 +222,11 @@ export class KnowledgeBaseService {
     knowledgeBaseId: string
   ): Promise<Document> {
     try {
+      // Validate input
+      if (!document.content || !document.title || !document.type) {
+        throw new Error('Document must have content, title, and type');
+      }
+
       const knowledgeBase = await this.prisma.knowledgeBase.findUnique({
         where: { id: knowledgeBaseId }
       });
@@ -184,10 +235,12 @@ export class KnowledgeBaseService {
         throw new Error(`Knowledge base not found: ${knowledgeBaseId}`);
       }
 
+      const documentId = nanoid();
       const processedChunks = DocumentProcessor.processDocument(document.content, {
-        documentId: nanoid(),
+        documentId,
         title: document.title,
         type: document.type,
+        knowledgeBaseId,
         ...document.metadata
       });
 
@@ -198,45 +251,41 @@ export class KnowledgeBaseService {
       // Store document with flattened embeddings
       const flattenedEmbeddings = embeddings.flat();
 
-        await milvusDbClient.addDocuments(
-        knowledgeBase.vectorCollection,
-        processedChunks.map((chunk, index) => ({
-          vector: embeddings[index],
-          content: chunk.content,
-          metadata: chunk.metadata
-        }))
-        );
-
-        const newDocument = await this.prisma.document.create({
+      // First create the document in the database
+      const newDocument = await this.prisma.document.create({
         data: {
-          id: nanoid(),
+          id: documentId,
           ...document,
           knowledgeBaseId,
           embeddings: flattenedEmbeddings,
-            metadata: document.metadata || Prisma.JsonNull,
+          metadata: document.metadata || Prisma.JsonNull,
           createdAt: new Date(),
           updatedAt: new Date()
         }
-        });
+      });
 
-        await milvusDbClient.addDocuments(
+      // Then store the document chunks in the vector database
+      await milvusDbClient.addDocuments(
         knowledgeBase.vectorCollection,
         processedChunks.map((chunk, index) => ({
           vector: embeddings[index],
           content: chunk.content,
-          metadata: chunk.metadata
+          metadata: {
+            ...chunk.metadata,
+            documentId: newDocument.id
+          }
         }))
-        );
+      );
 
-        return {
+      return {
         ...newDocument,
         metadata: newDocument.metadata as Record<string, any>
-        };
-      } catch (error) {
-        if (error instanceof Error) {
+      };
+    } catch (error) {
+      if (error instanceof Error) {
         throw new Error(`Failed to add document: ${error.message}`);
-        }
-        throw new Error('Failed to add document: Unknown error');
+      }
+      throw new Error('Failed to add document: Unknown error');
     }
   }
 
