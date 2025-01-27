@@ -4,6 +4,10 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
   },
+  swcMinify: true,
+  compiler: {
+    removeConsole: false,
+  },
   webpack: (config, { isServer }) => {
     // Handle native modules
     config.module.rules.push({
@@ -25,18 +29,6 @@ const nextConfig = {
         path: false,
         crypto: false
       };
-
-      // Add externals for native modules
-      config.externals = {
-        ...config.externals,
-        '@lancedb/lancedb-win32-x64-msvc': 'commonjs @lancedb/lancedb-win32-x64-msvc'
-      };
-
-      // Specifically target Windows x64 MSVC build
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        '@lancedb/lancedb': '@lancedb/lancedb-win32-x64-msvc'
-      };
     }
 
     config.experiments = {
@@ -50,3 +42,4 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+
