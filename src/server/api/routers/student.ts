@@ -301,4 +301,35 @@ export const studentRouter = createTRPCRouter({
 				},
 			};
 		}),
+
+	getStudentProfile: protectedProcedure
+		.input(z.object({
+			id: z.string()
+		}))
+		.query(async ({ ctx, input }) => {
+			const studentProfile = await ctx.prisma.studentProfile.findUnique({
+				where: { id: input.id },
+				include: {
+					user: true,
+					activities: {
+						select: {
+							status: true,
+							grade: true
+						}
+					},
+					attendance: {
+						select: {
+							status: true,
+							date: true
+						}
+					}
+				}
+			});
+
+			if (!studentProfile) {
+				throw new Error("Student profile not found");
+			}
+
+			return studentProfile;
+		}),
 });

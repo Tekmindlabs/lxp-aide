@@ -300,6 +300,9 @@ model Attendance {
   notes     String?
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
+
+  @@unique([studentId, date])
+  @@map("attendances")
 }
 
 // Activity & Assessment Models

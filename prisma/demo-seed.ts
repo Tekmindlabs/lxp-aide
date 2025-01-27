@@ -137,6 +137,25 @@ async function seedDemoData() {
     // Create users first
     await createUsers();
 
+    // Create default knowledge base and workspace
+    console.log('Creating default knowledge base and workspace...');
+    const defaultKnowledgeBase = await prisma.knowledgeBase.create({
+      data: {
+      name: 'Default Knowledge Base',
+      description: 'Default knowledge base for the workspace',
+      vectorCollection: 'default_kb_vectors',
+      }
+    });
+
+    await prisma.workspace.create({
+      data: {
+      name: 'Default Workspace',
+      description: 'Default workspace for the system',
+      isDefault: true,
+      knowledgeBaseId: defaultKnowledgeBase.id
+      }
+    });
+
     // 1. Create Demo Calendar
     console.log('Creating demo calendar...');
     const calendar = await prisma.calendar.create({

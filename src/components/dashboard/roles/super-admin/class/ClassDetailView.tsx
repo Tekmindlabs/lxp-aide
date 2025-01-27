@@ -11,23 +11,37 @@ import { Status } from "@prisma/client";
 import { api } from "@/trpc/react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { LuUsers, LuBookOpen, LuGraduationCap, LuUserCheck } from "react-icons/lu";
+import { AttendanceList } from "../attendance/AttendanceList";
 
-interface StudentProfile {
-	id: string;
-	user: {
-		name: string;
-		email: string;
+interface TeacherDetails {
+	teacher: {
+		id: string;
+		user: {
+			name: string | null;
+			email: string | null;
+		};
 	};
-	dateOfBirth?: Date;
-	activities: {
-		status: string;
-		grade?: number;
-	}[];
-	attendance: {
-		status: string;
-		date: Date;
-	}[];
 }
+
+interface StudentActivity {
+	status: string;
+	grade: number | null;
+}
+
+interface StudentAttendance {
+	status: string;
+	date: Date;
+}
+
+interface StudentProfileData {
+	user: {
+		name: string | null;
+		email: string | null;
+	};
+	activities: StudentActivity[];
+	attendance: StudentAttendance[];
+}
+
 
 interface ClassDetailViewProps {
 	isOpen: boolean;
@@ -108,11 +122,12 @@ export const ClassDetailView = ({ isOpen, onClose, classId }: ClassDetailViewPro
 					</Card>
 				</div>
 				<Tabs defaultValue="overview">
-					<TabsList className="grid w-full grid-cols-4">
+					<TabsList className="grid w-full grid-cols-5">
 						<TabsTrigger value="overview">Overview</TabsTrigger>
 						<TabsTrigger value="students">Students</TabsTrigger>
 						<TabsTrigger value="performance">Performance</TabsTrigger>
 						<TabsTrigger value="teachers">Teachers</TabsTrigger>
+						<TabsTrigger value="attendance">Attendance</TabsTrigger>
 					</TabsList>
 
 					<TabsContent value="overview">
@@ -136,7 +151,7 @@ export const ClassDetailView = ({ isOpen, onClose, classId }: ClassDetailViewPro
 									</div>
 									<div>
 										<p className="text-sm font-medium">Status</p>
-										<Badge variant={classDetails.status === Status.ACTIVE ? "success" : "secondary"}>
+										<Badge variant={classDetails.status === Status.ACTIVE ? "default" : "secondary"}>
 											{classDetails.status}
 										</Badge>
 									</div>
@@ -223,18 +238,33 @@ export const ClassDetailView = ({ isOpen, onClose, classId }: ClassDetailViewPro
 										</TableRow>
 									</TableHeader>
 									<TableBody>
-										{classDetails.teachers.map((teacher) => (
-											<TableRow key={teacher.teacher.id}>
-												<TableCell>{teacher.teacher.user.name}</TableCell>
-												<TableCell>{teacher.isClassTutor ? 'Class Tutor' : 'Subject Teacher'}</TableCell>
-												<TableCell>{teacher.subjects?.map(s => s.name).join(', ') || 'N/A'}</TableCell>
+										{classDetails.teachers.map((teacherClass) => (
+											<TableRow key={teacherClass.teacher.id}>
+												<TableCell>{teacherClass.teacher.user.name}</TableCell>
+												<TableCell>Subject Teacher</TableCell>
+												<TableCell>N/A</TableCell>
 												<TableCell>
 													<Badge variant="outline">Active</Badge>
 												</TableCell>
 											</TableRow>
 										))}
+
 									</TableBody>
 								</Table>
+							</CardContent>
+						</Card>
+					</TabsContent>
+
+					<TabsContent value="attendance">
+						<Card>
+							<CardHeader>
+								<CardTitle>Attendance Management</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<AttendanceList 
+									classId={classId} 
+									date={new Date()} 
+								/>
 							</CardContent>
 						</Card>
 					</TabsContent>
@@ -255,10 +285,10 @@ export const ClassDetailView = ({ isOpen, onClose, classId }: ClassDetailViewPro
 									<div>
 										<h4 className="font-medium">Activities</h4>
 										<div className="mt-2">
-											{studentProfile.activities.map((activity, index) => (
+											{studentProfile.activities.map((activity: StudentActivity, index: number) => (
 												<div key={index} className="flex justify-between py-1">
 													<span>{activity.status}</span>
-													{activity.grade && <span>Grade: {activity.grade}</span>}
+													{activity.grade !== null && <span>Grade: {activity.grade}</span>}
 												</div>
 											))}
 										</div>
@@ -266,10 +296,10 @@ export const ClassDetailView = ({ isOpen, onClose, classId }: ClassDetailViewPro
 									<div>
 										<h4 className="font-medium">Attendance</h4>
 										<div className="mt-2">
-											{studentProfile.attendance.map((record, index) => (
+											{studentProfile.attendance.map((record: StudentAttendance, index: number) => (
 												<div key={index} className="flex justify-between py-1">
 													<span>{new Date(record.date).toLocaleDateString()}</span>
-													<Badge>{record.status}</Badge>
+													<Badge variant="outline">{record.status}</Badge>
 												</div>
 											))}
 										</div>

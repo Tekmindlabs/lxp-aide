@@ -46,7 +46,7 @@ export const classRouter = createTRPCRouter({
 									user: true,
 								},
 							},
-							subjects: true,
+
 						},
 					},
 					students: {
@@ -168,19 +168,17 @@ export const classRouter = createTRPCRouter({
 			return ctx.prisma.class.findMany({
 				where: {
 					...(search && {
-						OR: [
-							{ name: { contains: search, mode: 'insensitive' } },
-							{ description: { contains: search, mode: 'insensitive' } },
-						],
+						name: { contains: search, mode: 'insensitive' }
 					}),
 					...(classGroupId && { classGroupId }),
 					...(teacherId && {
 						teachers: {
-							some: { teacherId },
-						},
+							some: { teacherId }
+						}
 					}),
-					...(status && { status }),
+					...(status && { status })
 				},
+
 				include: {
 					classGroup: {
 						include: {
@@ -255,5 +253,63 @@ export const classRouter = createTRPCRouter({
 					},
 				},
 			});
+		}),
+
+	getTeacherClasses: protectedProcedure
+		.query(async ({ ctx }) => {
+			if (!ctx.session || !ctx.session.user || !ctx.session.user.id) {
+				return [];
+			}
+
+			const teacherProfile = await ctx.prisma.teacherProfile.findUnique({
+				where: { userId: ctx.session.user.id },
+				include: {
+					classes: {
+						include: {
+							class: {
+								include: {
+									classGroup: true
+								}
+							}
+						}
+					}
+				}
+			});
+
+			if (!teacherProfile) {
+				return [];
+			}
+
+			return teacherProfile?.classes.map(tc => ({
+				id: tc.class.id,
+				name: tc.class.name,
+				classGroup: tc.class.classGroup
+			})) ?? [];
+		}),
+
+	getClassStudents: protectedProcedure
+		.input(z.object({
+			classId: z.string()
+		}))
+		.query(async ({ ctx, input }) => {
+			const classData = await ctx.prisma.class.findUnique({
+				where: { id: input.classId },
+				include: {
+					students: {
+						include: {
+							user: true
+						}
+					}
+				}
+			});
+
+			if (!classData) {
+				throw new Error("Class not found");
+			}
+
+			return classData.students.map(student => ({
+				id: student.id,
+				name: student.user.name
+			}));
 		}),
 });
