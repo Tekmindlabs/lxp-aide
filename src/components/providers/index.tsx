@@ -1,22 +1,45 @@
 'use client';
 
-import { AuthProvider } from "./auth-provider";
+import { type AppRouter } from "@/server/api/root";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import { ThemeProvider } from "./theme-provider";
-import { Providers as TRPCProvider } from "@/app/providers";
-import { type Session } from "next-auth";
+import { SessionProvider } from "next-auth/react";
+import { httpBatchLink } from "@trpc/client";
+import { createTRPCNext } from "@trpc/next";
+import superjson from "superjson";
 
-export function Providers({ 
+function getBaseUrl() {
+  if (typeof window !== 'undefined') return '';
+  return 'http://localhost:3000';
+}
+
+export const trpc = createTRPCNext<AppRouter>({
+  config() {
+    return {
+      links: [
+        httpBatchLink({
+          url: `${getBaseUrl()}/api/trpc`,
+          transformer: superjson,
+        }),
+      ],
+    };
+  },
+  ssr: false,
+});
+
+function ProvidersInner({ 
   children, 
-  session, 
-  cookieHeader 
+  session 
 }: { 
-  children: React.ReactNode, 
-  session: any,
-  cookieHeader: string
+  children: React.ReactNode;
+  session: any;
 }) {
+  const [queryClient] = useState(() => new QueryClient());
+
   return (
-    <AuthProvider session={session}>
-      <TRPCProvider session={session} cookieHeader={cookieHeader}>
+    <SessionProvider session={session}>
+      <QueryClientProvider client={queryClient}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -25,7 +48,9 @@ export function Providers({
         >
           {children}
         </ThemeProvider>
-      </TRPCProvider>
-    </AuthProvider>
+      </QueryClientProvider>
+    </SessionProvider>
   );
 }
+
+export const Providers = trpc.withTRPC(ProvidersInner);
