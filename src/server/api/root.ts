@@ -5,8 +5,8 @@ import { permissionRouter } from "./routers/permission";
 import { attendanceRouter } from "./routers/attendance";
 import { knowledgeBaseRouter } from "./routers/knowledge-base";
 import { workspaceRouter } from "./routers/workspace";
-import { calendarRouter } from "./routers/calendar";
 import { academicCalendarRouter } from "./routers/academic-calendar";
+
 import { programRouter } from "./routers/program";
 import { classGroupRouter } from "./routers/class-group";
 import { classRouter } from "./routers/class";
@@ -38,8 +38,8 @@ export const appRouter = createTRPCRouter({
   message: messageRouter,
   notification: notificationRouter,
   classActivity: classActivityRouter,
-  calendar: calendarRouter,
   coordinator: coordinatorRouter,
+
   knowledgeBase: knowledgeBaseRouter,
   workspace: workspaceRouter,
   attendance: attendanceRouter,
