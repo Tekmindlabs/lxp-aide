@@ -567,46 +567,60 @@ async function seedDemoData() {
     console.log('Creating demo classrooms...');
     const classrooms = await Promise.all([
       prisma.classroom.upsert({
-        where: {
-          id: "room-101", // Provide a specific ID
-        },
-        update: {},
-        create: {
-          name: "Room 101",
-          capacity: 30,
-          resources: "Projector, Whiteboard"
-        }
+      where: { name: 'Room 101' },
+      update: {
+        capacity: 30,
+        resources: 'Projector, Whiteboard'
+      },
+      create: {
+        name: 'Room 101',
+        capacity: 30,
+        resources: 'Projector, Whiteboard'
+      }
       }),
       prisma.classroom.upsert({
       where: { name: 'Room 102' },
-      update: {},
+      update: {
+        capacity: 35,
+        resources: 'Smart Board, Computers'
+      },
       create: {
         name: 'Room 102',
         capacity: 35,
-        resources: 'Smart Board, Computers',
+        resources: 'Smart Board, Computers'
       }
       }),
       prisma.classroom.upsert({
       where: { name: 'Science Lab' },
-      update: {},
+      update: {
+        capacity: 25,
+        resources: 'Lab Equipment, Safety Gear'
+      },
       create: {
         name: 'Science Lab',
         capacity: 25,
-        resources: 'Lab Equipment, Safety Gear',
+        resources: 'Lab Equipment, Safety Gear'
       }
       })
     ]);
+
 
     // 9. Create Demo Timetables and Periods
     console.log('Creating timetables and periods...');
     const timetables = await Promise.all(
       classGroups.map(async (classGroup) => {
-        return prisma.timetable.create({
-          data: {
-            termId: terms[0].id,
-            classGroupId: classGroup.id,
-          }
-        });
+      return prisma.timetable.upsert({
+        where: {
+        classGroupId: classGroup.id
+        },
+        update: {
+        termId: terms[0].id
+        },
+        create: {
+        termId: terms[0].id,
+        classGroupId: classGroup.id,
+        }
+      });
       })
     );
 

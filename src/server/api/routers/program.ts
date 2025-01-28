@@ -343,12 +343,27 @@ export const programRouter = createTRPCRouter({
     .query(async ({ ctx }) => {
       try {
         const coordinators = await ctx.prisma.coordinatorProfile.findMany({
-          include: {
-            user: true,
+          where: {
+            user: {
+              status: 'ACTIVE'
+            }
           },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
+          }
         });
-
-        return coordinators;
+        
+        return coordinators.map(c => ({
+          id: c.user.id,
+          name: c.user.name,
+          email: c.user.email
+        }));
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -357,7 +372,6 @@ export const programRouter = createTRPCRouter({
         });
       }
     }),
-
 
   associateCalendar: protectedProcedure
     .input(
@@ -393,7 +407,7 @@ export const programRouter = createTRPCRouter({
               },
             },
           },
-        });
+});
 
         return program;
       } catch (error) {
@@ -432,6 +446,28 @@ export const programRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to search programs',
+          cause: error,
+        });
+      }
+    }),
+
+  getAllCalendars: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const calendars = await ctx.prisma.calendar.findMany({
+          include: {
+            events: true,
+          },
+          orderBy: {
+            name: 'asc',
+          },
+        });
+
+        return calendars;
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch calendars',
           cause: error,
         });
       }

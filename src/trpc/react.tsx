@@ -1,26 +1,40 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { loggerLink, unstable_httpBatchStreamLink } from '@trpc/client';
+import { httpBatchLink, loggerLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
 import { useState } from 'react';
-
 import { type AppRouter } from '@/server/api/root';
+import superjson from 'superjson';
 
-export const api = createTRPCReact<AppRouter>();
+const trpcReact = createTRPCReact<AppRouter>();
 
 export function TRPCReactProvider(props: { children: React.ReactNode; cookies: string }) {
-	const [queryClient] = useState(() => new QueryClient());
+	const [queryClient] = useState(
+		() =>
+			new QueryClient({
+				defaultOptions: {
+					queries: {
+						staleTime: 30000,
+						gcTime: 60000,
+						retry: 1,
+						refetchOnWindowFocus: false,
+					},
+				},
+			})
+	);
+
 	const [trpcClient] = useState(() =>
-		api.createClient({
+		trpcReact.createClient({
 			links: [
 				loggerLink({
 					enabled: (opts) =>
 						process.env.NODE_ENV === 'development' ||
 						(opts.direction === 'down' && opts.result instanceof Error),
 				}),
-				unstable_httpBatchStreamLink({
+				httpBatchLink({
 					url: '/api/trpc',
+					transformer: superjson,
 					headers() {
 						return {
 							cookie: props.cookies,
@@ -34,9 +48,11 @@ export function TRPCReactProvider(props: { children: React.ReactNode; cookies: s
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<api.Provider client={trpcClient} queryClient={queryClient}>
+			<trpcReact.Provider client={trpcClient} queryClient={queryClient}>
 				{props.children}
-			</api.Provider>
+			</trpcReact.Provider>
 		</QueryClientProvider>
 	);
 }
+
+export const api = trpcReact;
