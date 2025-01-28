@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { httpBatchLink, loggerLink } from '@trpc/client';
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "next-auth/react";
-import { api } from "@/utils/api";
-import superjson from "superjson";
+import { TRPCReactProvider } from "@/trpc/react";
 
 export function Providers({ 
   children, 
@@ -17,42 +15,18 @@ export function Providers({
   session: any,
   cookieHeader: string
 }) {
-  const [queryClient] = useState(() => new QueryClient());
-
-  const [trpcClient] = useState(() => 
-    api.createClient({
-      links: [
-        loggerLink({
-          enabled: (opts) =>
-            process.env.NODE_ENV === 'development' ||
-            (opts.direction === 'down' && opts.result instanceof Error),
-        }),
-        httpBatchLink({
-          url: '/api/trpc',
-          headers: () => ({
-            cookie: cookieHeader,
-            'x-trpc-source': 'react',
-          }),
-          transformer: superjson,
-        }),
-      ],
-    })
-  );
-
   return (
     <SessionProvider session={session}>
-      <api.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider 
-            attribute="class" 
-            defaultTheme="system" 
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
-        </QueryClientProvider>
-      </api.Provider>
+      <TRPCReactProvider cookies={cookieHeader}>
+        <ThemeProvider 
+          attribute="class" 
+          defaultTheme="system" 
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+      </TRPCReactProvider>
     </SessionProvider>
   );
 }
