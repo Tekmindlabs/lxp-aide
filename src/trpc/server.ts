@@ -4,7 +4,6 @@ import superjson from "superjson";
 
 const getBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return 'http://localhost:3000';
 };
 
@@ -15,7 +14,7 @@ export const api = createTRPCClient<AppRouter>({
         process.env.NODE_ENV === "development" ||
         (opts.direction === "down" && opts.result instanceof Error),
     }),
-    httpBatchLink({
+    httpLink({
       url: `${getBaseUrl()}/api/trpc`,
       headers() {
         return {

@@ -207,12 +207,28 @@ export const subjectRouter = createTRPCRouter({
 		}),
 
 	getAvailableTeachers: protectedProcedure
-		.query(async ({ ctx }) => {
+		.input(z.object({
+			classGroupId: z.string().optional(),
+			subjectId: z.string().optional(),
+		}).optional())
+		.query(async ({ ctx, input }) => {
+			const { classGroupId, subjectId } = input || {};
+
 			return ctx.prisma.teacherProfile.findMany({
 				where: {
 					user: {
 						status: Status.ACTIVE,
 					},
+					...(classGroupId && {
+						classGroups: {
+							some: { id: classGroupId },
+						},
+					}),
+					...(subjectId && {
+						subjects: {
+							some: { subjectId },
+						},
+					}),
 				},
 				include: {
 					user: true,
