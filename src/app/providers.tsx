@@ -17,19 +17,7 @@ export function Providers({
   session: any,
   cookieHeader: string
 }) {
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 1,
-        refetchOnWindowFocus: false,
-      },
-      mutations: {
-        onSuccess: async () => {
-          await queryClient.invalidateQueries();
-        },
-      },
-    },
-  }));
+  const [queryClient] = useState(() => new QueryClient());
 
   const [trpcClient] = useState(() => 
     api.createClient({
@@ -40,15 +28,11 @@ export function Providers({
             (opts.direction === 'down' && opts.result instanceof Error),
         }),
         httpBatchLink({
-          url: process.env.NODE_ENV === 'development' 
-          ? '/api/trpc'
-          : `${process.env.NEXT_PUBLIC_APP_URL}/api/trpc`,
-          headers() {
-          return {
+          url: '/api/trpc',
+          headers: () => ({
             cookie: cookieHeader,
             'x-trpc-source': 'react',
-          };
-          },
+          }),
           transformer: superjson,
         }),
       ],
@@ -58,16 +42,16 @@ export function Providers({
   return (
     <SessionProvider session={session}>
       <api.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider 
-        attribute="class" 
-        defaultTheme="system" 
-        enableSystem
-        disableTransitionOnChange
-        >
-        {children}
-        </ThemeProvider>
-      </QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider 
+            attribute="class" 
+            defaultTheme="system" 
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+          </ThemeProvider>
+        </QueryClientProvider>
       </api.Provider>
     </SessionProvider>
   );
