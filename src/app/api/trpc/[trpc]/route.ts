@@ -20,7 +20,7 @@ const handler = async (req: NextRequest) => {
   // Enhanced error handling and logging
   try {
     const response = await fetchRequestHandler({
-      endpoint: "/api/trpc",
+      endpoint: "/api/trpc/[trpc]",
       req,
       router: appRouter,
       createContext: async () => {
@@ -51,7 +51,7 @@ const handler = async (req: NextRequest) => {
 
     // Enhanced CORS and headers
     const headers = new Headers(response.headers);
-    headers.set('Access-Control-Allow-Origin', '*');
+    headers.set('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGINS || '*');
     headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     headers.set('Access-Control-Allow-Headers', '*');
     headers.set('X-TRPC-Diagnostic', 'Request Processed Successfully');
