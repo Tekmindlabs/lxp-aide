@@ -2,6 +2,12 @@ import { createTRPCClient, loggerLink, httpBatchLink } from "@trpc/client";
 import { type AppRouter } from "@/server/api/root";
 import superjson from "superjson";
 
+const getBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000';
+};
+
 export const api = createTRPCClient<AppRouter>({
   links: [
     loggerLink({
@@ -10,16 +16,13 @@ export const api = createTRPCClient<AppRouter>({
         (opts.direction === "down" && opts.result instanceof Error),
     }),
     httpBatchLink({
-      url: process.env.NODE_ENV === 'development' 
-        ? '/api/trpc'
-        : `${process.env.NEXT_PUBLIC_APP_URL}/api/trpc`,
+      url: `${getBaseUrl()}/api/trpc`,
       headers() {
         return {
-          'x-trpc-source': 'rsc',
+          'x-trpc-source': 'server',
         };
       },
       transformer: superjson,
-
     }),
   ],
 });

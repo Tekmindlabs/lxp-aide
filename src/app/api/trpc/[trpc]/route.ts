@@ -1,21 +1,19 @@
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { type NextRequest } from "next/server";
-import { env } from "@/env.mjs";
 import { appRouter } from "@/server/api/root";
 import { createTRPCContext } from "@/server/api/trpc";
+import { NextRequest } from "next/server";
 
 const handler = async (req: NextRequest) => {
+  console.log("TRPC request received:", req.url); // Add debugging
+
   try {
     const response = await fetchRequestHandler({
       endpoint: "/api/trpc",
       req,
       router: appRouter,
-      createContext: async () => createTRPCContext({ req }),
-      batching: {
-        enabled: true,
-      },
+      createContext: () => createTRPCContext({ req }),
       onError: ({ path, error }) => {
-        console.error(`[TRPC] Error in procedure ${path ?? "<no-path>"}: ${error.message}`);
+        console.error(`[TRPC] Error in ${path}:`, error);
       },
     });
 
@@ -32,7 +30,7 @@ const handler = async (req: NextRequest) => {
       headers
     });
   } catch (error) {
-    console.error('[TRPC] Unhandled error:', error);
+    console.error("[TRPC] Handler error:", error);
     return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
       headers: {
@@ -43,17 +41,18 @@ const handler = async (req: NextRequest) => {
   }
 };
 
-// Add OPTIONS handler for CORS preflight
+// Correct export format for Next.js App Router
+export const GET = (req: NextRequest) => handler(req);
+export const POST = (req: NextRequest) => handler(req);
+
+// Handle OPTIONS requests for CORS
 export async function OPTIONS() {
   return new Response(null, {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Request-Method': '*',
-      'Access-Control-Allow-Methods': 'OPTIONS, GET, POST',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': '*',
     },
   });
 }
-
-export { handler as GET, handler as POST };
