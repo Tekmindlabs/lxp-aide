@@ -1,15 +1,13 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
-import { getServerAuthSession } from "@/server/auth";
 import { prisma } from "@/server/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/server/auth";
+
 
 export const createTRPCContext = async (opts: { req: Request }) => {
-  const session = await getServerAuthSession();
-
-  if (!session) {
-    console.warn("No session found in createTRPCContext");
-  }
+  const session = await getServerSession(authOptions);
 
   return {
     prisma,
@@ -17,8 +15,6 @@ export const createTRPCContext = async (opts: { req: Request }) => {
     req: opts.req,
   };
 };
-
-
 
 
 

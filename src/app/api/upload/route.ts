@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerAuthSession } from '@/server/auth';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/server/auth";
 import { localStorage } from '@/lib/storage/local-storage';
 
 export async function POST(req: NextRequest) {
 	try {
-		const session = await getServerAuthSession();
+		const session = await getServerSession(authOptions);
 		if (!session?.user) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
 	try {
-		const session = await getServerAuthSession();
+		const session = await getServerSession(authOptions);
 		if (!session?.user) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
 	try {
-		const session = await getServerAuthSession();
+		const session = await getServerSession(authOptions);
 		if (!session?.user) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
