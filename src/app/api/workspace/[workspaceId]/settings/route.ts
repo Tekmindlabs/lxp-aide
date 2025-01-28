@@ -1,5 +1,6 @@
 import { prisma } from '@/server/db'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/server/auth'
 import { z } from 'zod'
 
 const settingsSchema = z.object({
@@ -12,7 +13,7 @@ const settingsSchema = z.object({
 
 export async function PUT(req: Request, { params }: { params: { workspaceId: string } }) {
 	try {
-		const session = await getServerSession()
+		const session = await getServerSession(authOptions)
 		if (!session?.user) {
 			return new Response('Unauthorized', { status: 401 })
 		}

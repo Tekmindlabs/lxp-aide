@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { getServerAuthSession } from "@/server/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/server/auth";
 import { DefaultRoles } from "@/utils/permissions";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +16,7 @@ export default async function RoleDashboard({
 }: {
   params: { role: string };
 }) {
-  const session = await getServerAuthSession();
+  const session = await getServerSession(authOptions);
   // Await the role parameter
   const role = await Promise.resolve(params.role);
 

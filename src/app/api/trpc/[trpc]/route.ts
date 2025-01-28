@@ -6,7 +6,8 @@ import { createTRPCContext } from "@/server/api/trpc";
 import { headers } from 'next/headers';
 
 const handler = async (req: NextRequest) => {
-	console.log(`Handling ${req.method} request to ${req.url}`);
+	console.log(`[TRPC] Handling ${req.method} request to ${req.url}`);
+	console.log(`[TRPC] Request headers: ${JSON.stringify(Object.fromEntries(req.headers))}`);
 
 	if (req.method === 'OPTIONS') {
 		return new Response(null, {
@@ -23,42 +24,45 @@ const handler = async (req: NextRequest) => {
 	const headersList = headers();
 	const cookieHeader = headersList.get('cookie') ?? '';
 
-	const response = await fetchRequestHandler({
-		endpoint: "/api/trpc",
-		req: new Request(req.url, {
-			method: req.method,
-			headers: {
-				...Object.fromEntries(req.headers),
-				cookie: cookieHeader,
-			},
-			body: req.body,
-		}),
-		router: appRouter,
-		createContext: async () => createTRPCContext({ 
+	try {
+		const response = await fetchRequestHandler({
+			endpoint: "/api/trpc",
 			req: new Request(req.url, {
+				method: req.method,
 				headers: {
 					...Object.fromEntries(req.headers),
 					cookie: cookieHeader,
 				},
-			})
-		}),
-		onError:
-			env.NODE_ENV === "development"
-				? ({ path, error }) => {
-						console.error(
-							`❌ tRPC failed on ${path ?? "<no-path>"}: ${error.message}`,
-							error
-						);
-					}
-				: undefined,
-	});
+				body: req.body,
+			}),
+			router: appRouter,
+			createContext: async () => createTRPCContext({ 
+				req: new Request(req.url, {
+					headers: {
+						...Object.fromEntries(req.headers),
+						cookie: cookieHeader,
+					},
+				})
+			}),
+			onError: ({ path, error }) => {
+				console.error(`[TRPC] Error in procedure ${path ?? "<no-path>"}: ${error.message}`);
+				console.error(error.stack);
+			},
+		});
 
-	response.headers.set('Access-Control-Allow-Origin', '*');
-	response.headers.set('Access-Control-Request-Method', '*');
-	response.headers.set('Access-Control-Allow-Methods', 'OPTIONS, GET, POST');
-	response.headers.set('Access-Control-Allow-Headers', '*');
+		response.headers.set('Access-Control-Allow-Origin', '*');
+		response.headers.set('Access-Control-Request-Method', '*');
+		response.headers.set('Access-Control-Allow-Methods', 'OPTIONS, GET, POST');
+		response.headers.set('Access-Control-Allow-Headers', '*');
 
-	return response;
+		return response;
+	} catch (error) {
+		console.error('[TRPC] Unhandled error in route handler:', error);
+		return new Response(JSON.stringify({ error: 'Internal Server Error' }), { 
+			status: 500,
+			headers: { 'Content-Type': 'application/json' }
+		});
+	}
 };
 
 export { handler as GET, handler as POST, handler as OPTIONS };

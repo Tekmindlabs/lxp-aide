@@ -3,5 +3,11 @@ import NextAuth from "next-auth"
 
 const handler = NextAuth(authOptions)
 
-export const GET = handler;
-export const POST = handler;
+// Export handler functions for App Router
+export async function GET(request: Request) {
+	return handler(request)
+}
+
+export async function POST(request: Request) {
+	return handler(request)
+}

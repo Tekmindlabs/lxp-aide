@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { getServerAuthSession } from "@/server/auth";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/server/auth";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
 
 const superAdminNavItems = [
@@ -169,7 +170,7 @@ export default async function RoleLayout({
 	children: React.ReactNode;
 	params: { role: string };
 }) {
-	const session = await getServerAuthSession();
+	const session = await getServerSession(authOptions);
 
 	if (!session) {
 		redirect("/auth/signin");

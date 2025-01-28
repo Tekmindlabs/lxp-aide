@@ -2,19 +2,21 @@
 
 import { AuthProvider } from "./auth-provider";
 import { ThemeProvider } from "./theme-provider";
-import { TRPCProvider } from "@/app/providers";
+import { Providers as TRPCProvider } from "@/app/providers";
 import { type Session } from "next-auth";
 
 export function Providers({ 
-  children,
-  session 
+  children, 
+  session, 
+  cookieHeader 
 }: { 
-  children: React.ReactNode;
-  session?: Session | null;
+  children: React.ReactNode, 
+  session: any,
+  cookieHeader: string
 }) {
   return (
     <AuthProvider session={session}>
-      <TRPCProvider>
+      <TRPCProvider session={session} cookieHeader={cookieHeader}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

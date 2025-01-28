@@ -4,7 +4,8 @@ import { Inter } from 'next/font/google'
 import { headers } from "next/headers"
 import { Toaster } from "@/components/ui/toaster"
 import { ConsentBanner } from '@/components/gdpr/consent-banner'
-import { getServerAuthSession } from '@/server/auth'
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/server/auth"
 import { Providers } from './providers' // Import Providers instead of TRPCProvider
 
 const inter = Inter({ subsets: ['latin'] })
@@ -19,7 +20,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const session = await getServerAuthSession();
+  const session = await getServerSession(authOptions);
   const headersList = await headers();
   const cookieHeader = headersList.get("cookie") ?? "";
 

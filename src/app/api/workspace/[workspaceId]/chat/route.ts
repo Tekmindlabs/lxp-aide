@@ -2,6 +2,7 @@ import { OpenAIStream, StreamingTextResponse } from 'ai'
 import { Configuration, OpenAIApi } from 'openai-edge'
 import { prisma } from '@/server/db'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/server/auth'
 
 const config = new Configuration({
 	apiKey: process.env.OPENAI_API_KEY,
@@ -11,7 +12,7 @@ const openai = new OpenAIApi(config)
 
 export async function POST(req: Request, { params }: { params: { workspaceId: string } }) {
 	try {
-		const session = await getServerSession()
+		const session = await getServerSession(authOptions)
 		if (!session?.user) {
 			return new Response('Unauthorized', { status: 401 })
 		}
