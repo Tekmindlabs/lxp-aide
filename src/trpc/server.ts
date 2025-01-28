@@ -19,7 +19,7 @@ export const api = createTRPCClient<AppRouter>({
         };
       },
       transformer: superjson,
-      batch: true, // Enable batching
+
     }),
   ],
 });
