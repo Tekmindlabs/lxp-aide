@@ -33,7 +33,9 @@ export function TRPCReactProvider(props: { children: React.ReactNode; cookies: s
 						(opts.direction === 'down' && opts.result instanceof Error),
 				}),
 				httpBatchLink({
-					url: '/api/trpc',
+					url: process.env.NODE_ENV === 'development' 
+						? '/api/trpc'
+						: `${process.env.NEXT_PUBLIC_APP_URL}/api/trpc`,
 					transformer: superjson,
 					headers() {
 						return {
