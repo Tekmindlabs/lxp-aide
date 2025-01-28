@@ -1,46 +1,74 @@
 'use client';
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { httpLink, loggerLink } from '@trpc/client';
+import { QueryClient, QueryClientProvider, QueryObserverOptions } from '@tanstack/react-query';
+import { httpBatchLink, loggerLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
 import { useState } from 'react';
 import { type AppRouter } from '@/server/api/root';
 import superjson from 'superjson';
+import { TRPCError } from '@trpc/server';
 
 const getBaseUrl = () => {
-	if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
-	return 'http://localhost:3000';
-  };
+	// Server-side rendering
+	if (typeof window === 'undefined') {
+		// Prioritize environment variable, then fallback
+		if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+		
+		// Detect vercel deployment or default to localhost
+		if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+		
+		return 'http://localhost:3000';
+	}
 
-const trpcReact = createTRPCReact<AppRouter>();
+	// Client-side: use current origin
+	return window.location.origin;
+};
 
-export function TRPCReactProvider(props: { children: React.ReactNode; cookies: string }) {
+export const trpc = createTRPCReact<AppRouter>();
+
+export function TRPCReactProvider({ children }: { children: React.ReactNode }) {
 	const [queryClient] = useState(() => new QueryClient({
 		defaultOptions: {
 			queries: {
 				staleTime: 30000,
-				gcTime: 60000,
-				retry: 1,
-				refetchOnWindowFocus: false,
-			},
+				retry: (failureCount, error) => {
+					if (error instanceof TRPCError) {
+						switch (error.code) {
+							case 'UNAUTHORIZED':
+							case 'FORBIDDEN':
+								return false;
+							default:
+								return failureCount < 1;
+						}
+					}
+					return failureCount < 1;
+				},
+				retryDelay: 500,
+				onError: (error: unknown) => {
+					console.error('Query Error', error);
+				},
+			} as QueryObserverOptions,
 		},
 	}));
 
 	const [trpcClient] = useState(() =>
-		trpcReact.createClient({
+		trpc.createClient({
 			links: [
 				loggerLink({
 					enabled: (opts) =>
 						process.env.NODE_ENV === 'development' ||
 						(opts.direction === 'down' && opts.result instanceof Error),
+					logger: (type, data) => {
+						console.log(`TRPC Link Logger (${type})`, data);
+					}
 				}),
-				httpLink({
+				httpBatchLink({
 					url: `${getBaseUrl()}/api/trpc`,
-					headers() {
-						return {
-							cookie: props.cookies,
-							'x-trpc-source': 'react',
-						};
+					fetch(url, options) {
+						return fetch(url, {
+							...options,
+							credentials: 'include',
+						});
 					},
 					transformer: superjson,
 				}),
@@ -50,11 +78,13 @@ export function TRPCReactProvider(props: { children: React.ReactNode; cookies: s
 
 	return (
 		<QueryClientProvider client={queryClient}>
-			<trpcReact.Provider client={trpcClient} queryClient={queryClient}>
-				{props.children}
-			</trpcReact.Provider>
+			<trpc.Provider client={trpcClient} queryClient={queryClient}>
+				{children}
+			</trpc.Provider>
 		</QueryClientProvider>
 	);
 }
 
-export const api = trpcReact;
+export const api = trpc;
+
+

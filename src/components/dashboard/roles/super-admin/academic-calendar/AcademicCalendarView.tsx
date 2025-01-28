@@ -16,6 +16,8 @@ import { EventType, Status, CalendarType, Visibility } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { CalendarForm } from "./CalendarForm";
 import { EventForm } from "./EventForm";
+import { TRPCError } from "@trpc/server";
+import type { RouterOutput } from "@/server/api/root";
 
 export const AcademicCalendarView = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -24,15 +26,31 @@ export const AcademicCalendarView = () => {
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
   const [isAddCalendarOpen, setIsAddCalendarOpen] = useState(false);
   const [isAddEventOpen, setIsAddEventOpen] = useState(false);
-  type CalendarEvent = NonNullable<typeof events>[number];
+  type Calendar = RouterOutput['academicCalendar']['getAllCalendars'][number];
+  type CalendarEvent = RouterOutput['academicCalendar']['getEventsByDateRange'][number];
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   const { toast } = useToast();
 
 
 
-  // Fetch calendars
-  const { data: calendars, refetch: refetchCalendars } = api.academicCalendar.getAllCalendars.useQuery();
+  // Fetch calendars with error handling
+  const { 
+    data: calendars, 
+    refetch: refetchCalendars, 
+    error: calendarsError, 
+    isLoading: isCalendarsLoading 
+  } = api.academicCalendar.getAllCalendars.useQuery(undefined, {
+    onError: (error: TRPCError) => {
+      console.error('Failed to fetch calendars:', error);
+      toast({ 
+        title: "Error", 
+        description: `Failed to load calendars: ${error.message}`, 
+        variant: "destructive" 
+      });
+    },
+    retry: 1  // Limit retry attempts
+  });
 
   // Create calendar mutation
   const createCalendar = api.academicCalendar.createCalendar.useMutation({
@@ -41,19 +59,38 @@ export const AcademicCalendarView = () => {
       setIsAddCalendarOpen(false);
       void refetchCalendars();
     },
-    onError: (error) => {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    onError: (error: TRPCError) => {
+      console.error('Failed to create calendar:', error);
+      toast({ 
+        title: "Error", 
+        description: `Failed to create calendar: ${error.message}`, 
+        variant: "destructive" 
+      });
     },
   });
 
-  // Fetch events based on date range
-  const { data: events, refetch: refetchEvents } = api.academicCalendar.getEventsByDateRange.useQuery({
+  // Fetch events with error handling
+  const { 
+    data: events, 
+    refetch: refetchEvents, 
+    error: eventsError, 
+    isLoading: isEventsLoading 
+  } = api.academicCalendar.getEventsByDateRange.useQuery({
     eventType: selectedEventType === 'ALL' ? undefined : selectedEventType,
     startDate: view === 'week' ? startOfWeek(selectedDate) : undefined,
     endDate: view === 'week' ? endOfWeek(selectedDate) : undefined,
     calendarId: selectedCalendarId
   }, {
     enabled: !!selectedCalendarId,
+    onError: (error: TRPCError) => {
+      console.error('Failed to fetch events:', error);
+      toast({ 
+        title: "Error", 
+        description: `Failed to load events: ${error.message}`, 
+        variant: "destructive" 
+      });
+    },
+    retry: 1  // Limit retry attempts
   });
 
 
@@ -67,7 +104,7 @@ export const AcademicCalendarView = () => {
       setIsAddEventOpen(false);
       void refetchEvents();
     },
-    onError: (error) => {
+    onError: (error: TRPCError) => {
       toast({
         title: "Error",
         description: error.message,
@@ -105,9 +142,9 @@ export const AcademicCalendarView = () => {
 
 
 
-  const getDayEvents = (date: Date) => {
+  const getDayEvents = (date: Date): CalendarEvent[] => {
     if (!events) return [];
-    return events.filter(event => {
+    return events.filter((event: CalendarEvent) => {
       const eventStart = new Date(event.startDate);
       const eventEnd = new Date(event.endDate);
       return date >= eventStart && date <= eventEnd;
@@ -168,27 +205,41 @@ export const AcademicCalendarView = () => {
           </Dialog>
         </CardHeader>
         <CardContent>
+          {isCalendarsLoading ? (
+          <div className="flex justify-center items-center h-40">
+            <p>Loading calendars...</p>
+          </div>
+          ) : calendarsError ? (
+          <div className="text-red-500 text-center p-4">
+            Error loading calendars: {calendarsError.message}
+          </div>
+          ) : calendars && calendars.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {calendars?.map((calendar) => (
-              <Card key={calendar.id} className="p-4">
-                <div className="flex flex-col space-y-2">
-                  <h3 className="font-semibold">{calendar.name}</h3>
-                  <p className="text-sm text-gray-500">{calendar.description}</p>
-                  <div className="flex items-center space-x-2">
-                    <Badge>{calendar.type}</Badge>
-                    <Badge variant="outline">{calendar.visibility}</Badge>
-                  </div>
-                  <Button
-                    variant={selectedCalendarId === calendar.id ? "default" : "outline"}
-                    className="w-full mt-2"
-                    onClick={() => setSelectedCalendarId(calendar.id)}
-                  >
-                    {selectedCalendarId === calendar.id ? "Selected" : "Select Calendar"}
-                  </Button>
-                </div>
-              </Card>
+            {calendars.map((calendar) => (
+            <Card key={calendar.id} className="p-4">
+              <div className="flex flex-col space-y-2">
+              <h3 className="font-semibold">{calendar.name}</h3>
+              <p className="text-sm text-gray-500">{calendar.description}</p>
+              <div className="flex items-center space-x-2">
+                <Badge>{calendar.type}</Badge>
+                <Badge variant="outline">{calendar.visibility}</Badge>
+              </div>
+              <Button
+                variant={selectedCalendarId === calendar.id ? "default" : "outline"}
+                className="w-full mt-2"
+                onClick={() => setSelectedCalendarId(calendar.id)}
+              >
+                {selectedCalendarId === calendar.id ? "Selected" : "Select Calendar"}
+              </Button>
+              </div>
+            </Card>
             ))}
           </div>
+          ) : (
+          <div className="text-center text-gray-500 p-4">
+            No calendars found. Create a new calendar to get started.
+          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -253,26 +304,36 @@ export const AcademicCalendarView = () => {
             </Select>
           </div>
 
-            {view === 'month' ? (
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              className="rounded-md border"
-              modifiers={{
-              event: (date) => isDateInEvent(date),
-              }}
+            {isEventsLoading ? (
+              <div className="flex justify-center items-center h-40">
+              <p>Loading events...</p>
+              </div>
+            ) : eventsError ? (
+              <div className="text-red-500 text-center p-4">
+              Error loading events: {eventsError.message}
+              </div>
+            ) : (
+              <>
+              {view === 'month' ? (
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                className="rounded-md border"
+                modifiers={{
+                event: (date) => isDateInEvent(date),
+                }}
                 modifiersStyles={{
                 event: getEventStyles(selectedDate)
                 }}
-              weekStartsOn={1}
-              showOutsideDays
-            />
-            ) : (
-            <div className="grid grid-cols-7 gap-2">
-              {calendarDays?.map((day) => {
-              const dayEvents = getDayEvents(day);
-              return (
+                weekStartsOn={1}
+                showOutsideDays
+              />
+              ) : (
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays?.map((day) => {
+                const dayEvents = getDayEvents(day);
+                return (
                 <div
                 key={day.toISOString()}
                 className={cn(
@@ -287,29 +348,32 @@ export const AcademicCalendarView = () => {
                 <div className="space-y-1">
                   {dayEvents.slice(0, 2).map((event, idx) => (
                   <div
-                    key={event.id}
-                    className="text-xs p-1 rounded bg-primary/20 truncate"
-                    title={event.title}
+                  key={event.id}
+                  className="text-xs p-1 rounded bg-primary/20 truncate"
+                  title={event.title}
                   >
-                    {event.title}
+                  {event.title}
                   </div>
                   ))}
                   {dayEvents.length > 2 && (
                   <div className="text-xs text-center text-muted-foreground">
-                    +{dayEvents.length - 2} more
+                  +{dayEvents.length - 2} more
                   </div>
                   )}
                 </div>
                 </div>
-              );
-              })}
-            </div>
-            )}
+                );
+                })}
+              </div>
+              )}
 
-            <div className="mt-4">
-            <h3 className="text-lg font-medium mb-4">Events on {format(selectedDate, 'MMMM d, yyyy')}</h3>
-            <div className="grid gap-4">
-              {getDayEvents(selectedDate).map(event => (
+              <div className="mt-4">
+              <h3 className="text-lg font-medium mb-4">Events on {format(selectedDate, 'MMMM d, yyyy')}</h3>
+              <div className="grid gap-4">
+                {getDayEvents(selectedDate).length === 0 ? (
+                <p className="text-center text-gray-500">No events on this day</p>
+                ) : (
+                getDayEvents(selectedDate).map(event => (
                 <Card 
                 key={event.id} 
                 className="p-4 hover:shadow-md transition-shadow cursor-pointer"
@@ -330,10 +394,13 @@ export const AcademicCalendarView = () => {
                   {format(new Date(event.startDate), 'MMM d, yyyy')} - {format(new Date(event.endDate), 'MMM d, yyyy')}
                 </span>
                 </div>
-              </Card>
-              ))}
-            </div>
-            </div>
+                </Card>
+                ))
+                )}
+              </div>
+              </div>
+              </>
+            )}
         </div>
       </CardContent>
     </Card>

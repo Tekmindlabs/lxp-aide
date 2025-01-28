@@ -35,24 +35,72 @@ declare module "next-auth" {
 
 export const authOptions: NextAuthOptions = {
   debug: true,
+  logger: {
+    error(code, metadata) {
+      console.error('NextAuth Error:', code, metadata);
+    },
+    warn(code) {
+      console.warn('NextAuth Warning:', code);
+    },
+  },
   callbacks: {
-    jwt: async ({ token, user }) => {
+    jwt: async ({ token, user, trigger, session }) => {
+      // Add more detailed logging for JWT callback
+      console.log('JWT Callback triggered:', {
+        userProvided: !!user,
+        tokenBefore: { ...token },
+        trigger
+      });
+
       if (user) {
         token.id = user.id;
-        token.roles = user.roles;
-        token.permissions = user.permissions;
+        token.roles = user.roles || [];
+        token.permissions = user.permissions || [];
       }
+
+      // Handle token update scenarios
+      if (trigger === 'update') {
+        token = { ...token, ...session };
+      }
+
+      console.log('JWT Callback result:', { 
+        tokenAfter: { ...token, permissions: token.permissions?.length } 
+      });
+
       return token;
     },
     session: async ({ session, token }) => {
+      // Add more detailed logging for session callback
+      console.log('Session Callback triggered:', {
+        tokenProvided: !!token,
+        sessionBefore: { 
+          user: session.user ? { 
+            id: session.user.id, 
+            roles: session.user.roles?.length, 
+            permissions: session.user.permissions?.length 
+          } : null 
+        }
+      });
+
       if (token) {
         session.user = {
           ...session.user,
           id: token.id as string,
-          roles: token.roles as string[],
-          permissions: token.permissions as string[],
+          roles: (token.roles as string[]) || [],
+          permissions: (token.permissions as string[]) || [],
         };
       }
+
+      console.log('Session Callback result:', { 
+        sessionAfter: { 
+          user: { 
+            id: session.user.id, 
+            roles: session.user.roles?.length, 
+            permissions: session.user.permissions?.length 
+          } 
+        } 
+      });
+
       return session;
     },
   },
@@ -143,10 +191,23 @@ export const authOptions: NextAuthOptions = {
 
 export const getServerAuthSession = async () => {
   try {
+    console.log('Attempting to retrieve server session with detailed logging');
     const session = await getServerSession(authOptions);
+    
+    console.log('Server Session Retrieved:', {
+      sessionExists: !!session,
+      userId: session?.user?.id,
+      roles: session?.user?.roles?.length,
+      permissions: session?.user?.permissions?.length
+    });
+
     return session;
   } catch (error) {
-    console.error("Error getting session:", error);
+    console.error('Comprehensive Session Retrieval Error:', {
+      errorName: error instanceof Error ? error.name : 'Unknown Error',
+      errorMessage: error instanceof Error ? error.message : 'No error details',
+      errorStack: error instanceof Error ? error.stack : 'No stack trace'
+    });
     return null;
   }
 };
