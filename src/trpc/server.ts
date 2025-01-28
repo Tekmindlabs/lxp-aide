@@ -14,7 +14,7 @@ export const api = createTRPCClient<AppRouter>({
         process.env.NODE_ENV === "development" ||
         (opts.direction === "down" && opts.result instanceof Error),
     }),
-    httpLink({
+    httpBatchLink({
       url: `${getBaseUrl()}/api/trpc`,
       headers() {
         return {
