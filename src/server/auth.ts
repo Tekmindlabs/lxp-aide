@@ -1,6 +1,7 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { type GetServerSidePropsContext } from "next";
+import { type UserRole, type Role, type RolePermission, type Permission } from "@prisma/client";
 import {
+
   getServerSession,
   type DefaultSession,
   type NextAuthOptions,
@@ -10,6 +11,22 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import EmailProvider from "next-auth/providers/email";
 import bcrypt from "bcryptjs";
 import { env } from "@/env.mjs";
+
+// Type for user with permissions
+type UserWithPermissions = {
+  userRoles: (UserRole & {
+    role: Role & {
+      permissions: (RolePermission & {
+        permission: Permission
+      })[]
+    }
+  })[]
+} & {
+  id: string;
+  email: string | null;
+  name: string | null;
+  password: string | null;
+};
 
 declare module "next-auth" {
   interface Session extends DefaultSession {
@@ -45,62 +62,88 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     jwt: async ({ token, user, trigger, session }) => {
-      // Add more detailed logging for JWT callback
       console.log('JWT Callback triggered:', {
         userProvided: !!user,
         tokenBefore: { ...token },
-        trigger
+        trigger,
+        timestamp: new Date().toISOString()
       });
 
       if (user) {
-        token.id = user.id;
-        token.roles = user.roles || [];
-        token.permissions = user.permissions || [];
+        // Fetch user with roles and permissions
+        const userWithPermissions = await prisma.user.findUnique({
+          where: { id: user.id },
+              include: {
+              userRoles: {
+                include: {
+                role: {
+                  include: {
+                  permissions: {
+                    include: {
+                    permission: true
+                    }
+                  }
+                  }
+                }
+                }
+              }
+              }
+        });
+
+        if (userWithPermissions) {
+              const typedUser = userWithPermissions as UserWithPermissions;
+              const roles = typedUser.userRoles.map(ur => ur.role.name);
+              const permissions = typedUser.userRoles.flatMap(ur => 
+              ur.role.permissions.map(rp => rp.permission.name)
+              );
+
+
+
+          console.log('User Permissions Loaded:', {
+            userId: user.id,
+            roles: roles.length,
+            permissions: permissions.length,
+            timestamp: new Date().toISOString()
+          });
+
+          token.id = user.id;
+          token.roles = roles;
+          token.permissions = permissions;
+        }
       }
 
       // Handle token update scenarios
-      if (trigger === 'update') {
+      if (trigger === 'update' && session) {
         token = { ...token, ...session };
       }
 
-      console.log('JWT Callback result:', { 
-        tokenAfter: { ...token, permissions: token.permissions?.length } 
+      console.log('JWT Token Updated:', {
+        tokenAfter: {
+          id: token.id,
+          roles: Array.isArray(token.roles) ? token.roles.length : 0,
+          permissions: Array.isArray(token.permissions) ? token.permissions.length : 0
+        },
+        timestamp: new Date().toISOString()
       });
 
       return token;
     },
     session: async ({ session, token }) => {
-      // Add more detailed logging for session callback
-      console.log('Session Callback triggered:', {
-        tokenProvided: !!token,
-        sessionBefore: { 
-          user: session.user ? { 
-            id: session.user.id, 
-            roles: session.user.roles?.length, 
-            permissions: session.user.permissions?.length 
-          } : null 
-        }
-      });
-
       if (token) {
         session.user = {
           ...session.user,
           id: token.id as string,
           roles: (token.roles as string[]) || [],
-          permissions: (token.permissions as string[]) || [],
+          permissions: (token.permissions as string[]) || []
         };
+
+        console.log('Session Updated:', {
+          userId: session.user.id,
+          roles: session.user.roles.length,
+          permissions: session.user.permissions.length,
+          timestamp: new Date().toISOString()
+        });
       }
-
-      console.log('Session Callback result:', { 
-        sessionAfter: { 
-          user: { 
-            id: session.user.id, 
-            roles: session.user.roles?.length, 
-            permissions: session.user.permissions?.length 
-          } 
-        } 
-      });
-
       return session;
     },
   },
@@ -113,29 +156,29 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+        async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Invalid credentials");
         }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: {
-            userRoles: {
               include: {
+              userRoles: {
+                include: {
                 role: {
                   include: {
-                    permissions: {
-                      include: {
-                        permission: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
+                  permissions: {
+                    include: {
+                    permission: true
+                    }
+                  }
+                  }
+                }
+                }
+              }
+              }
+        });
         
         if (!user || !user.password) {
           throw new Error("Invalid credentials");
@@ -147,12 +190,22 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Invalid credentials");
         }
         
-        // Extract roles and permissions
-        const roles = user.userRoles.map((ur) => ur.role.name);
-        const permissions = user.userRoles
-          .flatMap((ur) => ur.role.permissions)
-          .map((rp) => rp.permission.name);
+        // Extract roles and permissions with proper type annotations
+        const typedUser = user as UserWithPermissions;
+        const roles = typedUser.userRoles.map(ur => ur.role.name);
+        const permissions = typedUser.userRoles.flatMap(ur => 
+          ur.role.permissions.map(rp => rp.permission.name)
+        );
+
+
         
+        console.log('User Authentication Successful:', {
+          userId: user.id,
+          roles: roles.length,
+          permissions: permissions.length,
+          timestamp: new Date().toISOString()
+        });
+
         return {
           id: user.id,
           email: user.email,

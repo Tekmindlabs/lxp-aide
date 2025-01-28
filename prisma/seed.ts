@@ -1,63 +1,76 @@
 import { PrismaClient, UserType } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { DefaultRoles } from '../src/utils/permissions';
+import { DefaultRoles, Permissions, RolePermissions, Permission } from '../src/utils/permissions';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // First, create the roles with their permissions
-  const roles = await Promise.all([
-    prisma.role.upsert({
-      where: { name: DefaultRoles.SUPER_ADMIN },
-      update: {},
-      create: {
-        name: DefaultRoles.SUPER_ADMIN,
-        description: 'Super Administrator with full access',
-      },
-    }),
-    prisma.role.upsert({
-      where: { name: DefaultRoles.ADMIN },
-      update: {},
-      create: {
-        name: DefaultRoles.ADMIN,
-        description: 'Administrator with elevated access',
-      },
-    }),
-    prisma.role.upsert({
-      where: { name: DefaultRoles.PROGRAM_COORDINATOR },
-      update: {},
-      create: {
-        name: DefaultRoles.PROGRAM_COORDINATOR,
-        description: 'Program Coordinator role',
-      },
-    }),
-    prisma.role.upsert({
-      where: { name: DefaultRoles.TEACHER },
-      update: {},
-      create: {
-        name: DefaultRoles.TEACHER,
-        description: 'Teacher role',
-      },
-    }),
-    prisma.role.upsert({
-      where: { name: DefaultRoles.STUDENT },
-      update: {},
-      create: {
-        name: DefaultRoles.STUDENT,
-        description: 'Student role',
-      },
-    }),
-    prisma.role.upsert({
-      where: { name: DefaultRoles.PARENT },
-      update: {},
-      create: {
-        name: DefaultRoles.PARENT,
-        description: 'Parent role',
-      },
-    }),
-  ]);
+  console.log('Starting seed process...');
 
-  // Updated demo users with userType
+  // Create all permissions first
+  console.log('Creating permissions...');
+  const permissionPromises = Object.values(Permissions).map(permissionName =>
+    prisma.permission.upsert({
+      where: { name: permissionName },
+      update: {},
+      create: {
+        name: permissionName,
+        description: `Permission to ${permissionName.replace(':', ' ')}`
+      }
+    })
+  );
+
+  const createdPermissions = await Promise.all(permissionPromises);
+  console.log(`Created ${createdPermissions.length} permissions`);
+
+  // Create roles and assign permissions
+  console.log('Creating roles and assigning permissions...');
+  const roles = await Promise.all(
+    Object.entries(DefaultRoles).map(async ([_, roleName]) => {
+        const role = await prisma.role.upsert({
+        where: { name: roleName },
+        update: {},
+        create: {
+          name: roleName,
+          description: `${roleName.replace('_', ' ')} role`,
+        }
+        });
+
+        // Get permissions for this role
+        const rolePermissions = RolePermissions[roleName];
+        const permissionRecords = createdPermissions.filter(p => 
+        rolePermissions.includes(p.name as Permission)
+        );
+
+        console.log(`Role ${roleName} permissions:`, permissionRecords.map(p => p.name));
+
+        // Create role-permission associations
+        await Promise.all(
+        permissionRecords.map(permission =>
+          prisma.rolePermission.upsert({
+          where: {
+            roleId_permissionId: {
+            roleId: role.id,
+            permissionId: permission.id
+            }
+          },
+          update: {},
+          create: {
+            roleId: role.id,
+            permissionId: permission.id
+          }
+          })
+        )
+        );
+
+      console.log(`Assigned ${permissionRecords.length} permissions to ${roleName}`);
+      return role;
+    })
+  );
+
+  // Create demo users
+  console.log('Creating demo users...');
+
   const demoUsers = [
     {
       email: 'superadmin@example.com',
