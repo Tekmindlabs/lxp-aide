@@ -72,22 +72,24 @@ export const authOptions: NextAuthOptions = {
         timestamp: new Date().toISOString()
       });
 
-      // If we don't have a userId, return the token as-is
       if (!userId) {
         console.warn('No userId in token or user object');
         return token;
       }
 
-      // Keep existing token data if user not found
-      if (!user && token.roles && token.permissions) {
-        console.log('Using existing token data:', {
-        userId,
-        roleCount: token.roles.length,
-        permissionCount: token.permissions.length
-        });
-        return token;
+      // If we have user data from sign in, use that
+      if (user) {
+        return {
+        ...token,
+        id: user.id,
+        roles: user.roles,
+        permissions: user.permissions,
+        email: user.email,
+        name: user.name
+        };
       }
 
+      // Otherwise fetch fresh user data
       const userWithPermissions = await prisma.user.findUnique({
         where: { id: userId },
         include: {
@@ -108,15 +110,8 @@ export const authOptions: NextAuthOptions = {
       });
 
       if (!userWithPermissions) {
-        console.error('User not found, maintaining existing token:', {
-        userId,
-        existingRoles: token.roles,
-        existingPermissions: token.permissions
-        });
-        return {
-        ...token,
-        error: 'User not found in database'
-        };
+        console.error('User not found:', { userId });
+        return token;
       }
 
       const typedUser = userWithPermissions as UserWithPermissions;
@@ -125,7 +120,14 @@ export const authOptions: NextAuthOptions = {
         ur.role.permissions.map(rp => rp.permission.name)
       );
 
-      const updatedToken = {
+      console.log('JWT Token Updated:', {
+        userId,
+        roles,
+        permissionCount: permissions.length,
+        timestamp: new Date().toISOString()
+      });
+
+      return {
         ...token,
         id: userId,
         roles,
@@ -133,41 +135,31 @@ export const authOptions: NextAuthOptions = {
         email: userWithPermissions.email,
         name: userWithPermissions.name
       };
-
-      console.log('JWT Token Updated:', {
-        userId,
-        roleCount: roles.length,
-        permissionCount: permissions.length,
-        timestamp: new Date().toISOString()
-      });
-
-      return updatedToken;
       } catch (error) {
       console.error('JWT Callback Error:', {
         error: error instanceof Error ? error.message : 'Unknown error',
         userId: token.id,
         timestamp: new Date().toISOString()
       });
-      
-      // Maintain existing token data on error
       return token;
       }
     },
+
     session: async ({ session, token }) => {
       if (token) {
-        session.user = {
-          ...session.user,
-          id: token.id as string,
-          roles: (token.roles as string[]) || [],
-          permissions: (token.permissions as string[]) || []
-        };
+      session.user = {
+        ...session.user,
+        id: token.id as string,
+        roles: Array.isArray(token.roles) ? token.roles : [],
+        permissions: Array.isArray(token.permissions) ? token.permissions : []
+      };
 
-        console.log('Session Updated:', {
-          userId: session.user.id,
-          roles: session.user.roles.length,
-          permissions: session.user.permissions.length,
-          timestamp: new Date().toISOString()
-        });
+      console.log('Session Updated:', {
+        userId: session.user.id,
+        roles: session.user.roles,
+        permissions: session.user.permissions,
+        timestamp: new Date().toISOString()
+      });
       }
       return session;
     },
@@ -182,62 +174,61 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
         async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+          if (!credentials?.email || !credentials?.password) {
           throw new Error("Invalid credentials");
-        }
+          }
 
-        const user = await prisma.user.findUnique({
+          const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          include: {
+            userRoles: {
+            include: {
+              role: {
               include: {
-              userRoles: {
+                permissions: {
                 include: {
-                role: {
-                  include: {
-                  permissions: {
-                    include: {
-                    permission: true
-                    }
-                  }
-                  }
+                  permission: true
                 }
                 }
               }
               }
-        });
-        
-        if (!user || !user.password) {
+            }
+            }
+          }
+          });
+          
+          if (!user || !user.password) {
           throw new Error("Invalid credentials");
-        }
-        
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        
-        if (!isValid) {
+          }
+          
+          const isValid = await bcrypt.compare(credentials.password, user.password);
+          
+          if (!isValid) {
           throw new Error("Invalid credentials");
-        }
-        
-        // Extract roles and permissions with proper type annotations
-        const typedUser = user as UserWithPermissions;
-        const roles = typedUser.userRoles.map(ur => ur.role.name);
-        const permissions = typedUser.userRoles.flatMap(ur => 
+          }
+          
+          const typedUser = user as UserWithPermissions;
+          const roles = typedUser.userRoles.map(ur => ur.role.name);
+          const permissions = typedUser.userRoles.flatMap(ur => 
           ur.role.permissions.map(rp => rp.permission.name)
-        );
+          );
 
-
-        
-        console.log('User Authentication Successful:', {
+          console.log('User Authentication Details:', {
           userId: user.id,
-          roles: roles.length,
-          permissions: permissions.length,
+          email: user.email,
+          roles,
+          permissions,
           timestamp: new Date().toISOString()
-        });
+          });
 
-        return {
+          return {
           id: user.id,
           email: user.email,
           name: user.name,
-          roles: roles,
-          permissions: permissions
-        };
+          roles,
+          permissions
+          };
+
       },
     }),
     EmailProvider({

@@ -176,18 +176,16 @@ export default async function RoleLayout({
 		redirect("/auth/signin");
 	}
 
-        // Extract role from params
-        const { role } = await params;
-        const userRoles = session.user.roles.map((r) => r.toLowerCase());
-        const currentRole = role?.toLowerCase() || '';  
+	const role = params.role;
+	const userRoles = session.user.roles.map((r) => r.toLowerCase());
+	const currentRole = role.toLowerCase();
 
 	if (!userRoles.includes(currentRole)) {
 		redirect(`/dashboard/${session.user.roles[0].toLowerCase()}`);
 	}
 
-	// Get nav items based on role
-	const getNavItems = (role: string) => {
-		switch (role) {
+	const navItems = (() => {
+		switch (currentRole) {
 			case 'super_admin':
 				return superAdminNavItems;
 			case 'coordinator':
@@ -199,17 +197,18 @@ export default async function RoleLayout({
 			default:
 				return [];
 		}
-	};
+	})();
 
-	const navItems = getNavItems(currentRole);
 
 	return (
-		<div className="container">
+		<div className="container flex-1">
 			<div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0 pt-6">
 				<aside className="lg:w-1/5">
 					<SidebarNav items={navItems} />
 				</aside>
-				<div className="flex-1">{children}</div>
+				<div className="flex-1">
+					{children}
+				</div>
 			</div>
 		</div>
 	);

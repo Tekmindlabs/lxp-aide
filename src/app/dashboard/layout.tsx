@@ -1,9 +1,11 @@
 "use client";
 
-import { DashboardNav } from "@/components/dashboard/nav";
-import { UserNav } from "@/components/dashboard/user-nav";
 import { useSession } from "next-auth/react";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { DashboardNav } from "@/components/dashboard/nav";
+import { UserNav } from "@/components/dashboard/user-nav";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import Link from "next/link";
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -19,7 +21,7 @@ export default function DashboardLayout({
 }) {
   return (
     <AuthProvider>
-      <DashboardContent children={children} />
+      <DashboardContent>{children}</DashboardContent>
     </AuthProvider>
   );
 }
@@ -28,19 +30,21 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const greeting = getGreeting();
 
+  const dashboardLink = session?.user?.roles?.[0] 
+    ? `/dashboard/${session.user.roles[0].toLowerCase()}` 
+    : "/dashboard";
+
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between">
           <div className="flex items-center space-x-4">
-            <a 
-              href={session?.user?.roles?.[0] 
-                ? `/dashboard/${session.user.roles[0].toLowerCase()}` 
-                : "/dashboard"} 
-              className="font-bold"
+            <Link 
+              href={dashboardLink}
+              className="font-bold hover:text-primary"
             >
-              RBAC Dashboard
-            </a>
+              LXP AIDE
+            </Link>
             <DashboardNav />
           </div>
           
@@ -48,20 +52,21 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             <div className="flex items-center space-x-4">
               <span className="text-sm text-muted-foreground">
                 {greeting}, {session.user.name}
-                {session.user.roles && session.user.roles.length > 0 && (
-                  <span className="ml-1 text-xs">
-                    ({session.user.roles[0]})
+                {session.user.roles?.[0] && (
+                  <span className="ml-1 text-xs capitalize">
+                    ({session.user.roles[0].replace('_', ' ')})
                   </span>
                 )}
               </span>
+              <ThemeToggle />
               <UserNav />
             </div>
           )}
         </div>
       </header>
-      <div className="flex-1">
+      <main className="flex-1">
         {children}
-      </div>
+      </main>
     </div>
   );
 }
