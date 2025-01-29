@@ -62,72 +62,52 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     jwt: async ({ token, user, trigger, session }) => {
-      console.log('JWT Callback triggered:', {
-        userProvided: !!user,
-        tokenBefore: { ...token },
-        trigger,
-        timestamp: new Date().toISOString()
-      });
-
-      if (user) {
-        // Fetch user with roles and permissions
-        const userWithPermissions = await prisma.user.findUnique({
-          where: { id: user.id },
+    // Always fetch fresh user data with permissions, not just on initial login
+    const userId = token.id || user?.id;
+    if (!userId) {
+      return token;
+    }
+    const userWithPermissions = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: {
+          include: {
+            role: {
               include: {
-              userRoles: {
-                include: {
-                role: {
+                permissions: {
                   include: {
-                  permissions: {
-                    include: {
                     permission: true
-                    }
-                  }
                   }
                 }
-                }
               }
-              }
-        });
-
-        if (userWithPermissions) {
-              const typedUser = userWithPermissions as UserWithPermissions;
-              const roles = typedUser.userRoles.map(ur => ur.role.name);
-              const permissions = typedUser.userRoles.flatMap(ur => 
-              ur.role.permissions.map(rp => rp.permission.name)
-              );
-
-
-
-          console.log('User Permissions Loaded:', {
-            userId: user.id,
-            roles: roles.length,
-            permissions: permissions.length,
-            timestamp: new Date().toISOString()
-          });
-
-          token.id = user.id;
-          token.roles = roles;
-          token.permissions = permissions;
+            }
+          }
         }
       }
+    });
 
-      // Handle token update scenarios
-      if (trigger === 'update' && session) {
-        token = { ...token, ...session };
-      }
+    if (userWithPermissions) {
+      const typedUser = userWithPermissions as UserWithPermissions;
+      const roles = typedUser.userRoles.map(ur => ur.role.name);
+      const permissions = typedUser.userRoles.flatMap(ur =>
+        ur.role.permissions.map(rp => rp.permission.name)
+      );
 
-      console.log('JWT Token Updated:', {
-        tokenAfter: {
-          id: token.id,
-          roles: Array.isArray(token.roles) ? token.roles.length : 0,
-          permissions: Array.isArray(token.permissions) ? token.permissions.length : 0
-        },
+      // Always update token with fresh permissions
+      token.id = token.id || user?.id;
+      token.roles = roles;
+      token.permissions = permissions;
+
+      console.log('User Permissions Refreshed:', {
+        userId: token.id,
+        roles: roles.length,
+        permissions: permissions.length,
         timestamp: new Date().toISOString()
       });
+    }
 
-      return token;
-    },
+    return token;
+  },
     session: async ({ session, token }) => {
       if (token) {
         session.user = {
@@ -264,6 +244,3 @@ export const getServerAuthSession = async () => {
     return null;
   }
 };
-
-
-

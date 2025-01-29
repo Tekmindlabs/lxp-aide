@@ -125,6 +125,15 @@ const enforceUserHasPermission = (requiredPermission: string) =>
       });
     }
 
+    // Special case for super_admin role
+    if (ctx.session.user.roles.includes('super_admin')) {
+      return next({
+        ctx: {
+          session: { ...ctx.session, user: ctx.session.user },
+        },
+      });
+    }
+
     if (!ctx.session.user.permissions.includes(requiredPermission)) {
       throw new TRPCError({
         code: "FORBIDDEN",
