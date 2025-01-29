@@ -1,7 +1,21 @@
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
-import { NotificationType, UserType } from "@prisma/client";
+import { NotificationType, UserType, Status, type Program, type ClassGroup, type Class, type StudentProfile, type TeacherClass } from "@prisma/client";
+
+// Add type interfaces
+interface ProgramWithRelations extends Program {
+	classGroups: (ClassGroup & {
+		classes: (Class & {
+			students: StudentProfile[];
+			teachers: (TeacherClass & {
+				teacher: {
+					userId: string;
+				};
+			})[];
+		})[];
+	})[];
+}
 
 export const notificationRouter = createTRPCRouter({
 	create: protectedProcedure
@@ -21,8 +35,12 @@ export const notificationRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Check user permissions based on role
-			const user = await ctx.prisma.user.findUnique({
-				where: { id: ctx.session.user.id },
+			const user = await ctx.prisma.user.findFirst({
+				where: { 
+					id: ctx.session.user.id,
+					deleted: null,
+					status: 'ACTIVE'
+				},
 				include: {
 					userRoles: {
 						include: { role: true },
@@ -39,7 +57,7 @@ export const notificationRouter = createTRPCRouter({
 			if (!user) {
 				throw new TRPCError({
 					code: "UNAUTHORIZED",
-					message: "User not found",
+					message: "User not found or inactive",
 				});
 			}
 
@@ -62,7 +80,7 @@ export const notificationRouter = createTRPCRouter({
 							},
 							{
 								// Admin can send to any program
-								id: user.userType === "ADMIN" ? undefined : null,
+								id: user.userType === "ADMIN" ? undefined : user.coordinatorProfile?.programs[0]?.id,
 							},
 						],
 					},
@@ -84,11 +102,13 @@ export const notificationRouter = createTRPCRouter({
 					},
 				});
 
-				programs.forEach((program) => {
-					program.classGroups.forEach((group) => {
-						group.classes.forEach((cls) => {
-							cls.students.forEach((student) => recipientUsers.add(student.userId));
-							cls.teachers.forEach((teacher) => recipientUsers.add(teacher.teacher.userId));
+				programs.forEach((program: ProgramWithRelations) => {
+					program.classGroups.forEach((group: ProgramWithRelations['classGroups'][0]) => {
+						group.classes.forEach((cls: ProgramWithRelations['classGroups'][0]['classes'][0]) => {
+							cls.students.forEach((student: StudentProfile) => recipientUsers.add(student.userId));
+							cls.teachers.forEach((teacher: TeacherClass & { teacher: { userId: string } }) => 
+								recipientUsers.add(teacher.teacher.userId)
+							);
 						});
 					});
 				});
@@ -328,8 +348,12 @@ export const notificationRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Verify sender has permission
-			const user = await ctx.prisma.user.findUnique({
-				where: { id: ctx.session.user.id },
+			const user = await ctx.prisma.user.findFirst({
+				where: { 
+					id: ctx.session.user.id,
+					deleted: null,
+					status: 'ACTIVE'
+				},
 				include: { userRoles: { include: { role: true } } },
 			});
 
@@ -344,6 +368,10 @@ export const notificationRouter = createTRPCRouter({
 			const recipientsWithSettings = await ctx.prisma.notificationSettings.findMany({
 				where: {
 					userId: { in: input.recipientIds },
+					user: {
+						deleted: null,
+						status: 'ACTIVE'
+					},
 					OR: [
 						{ doNotDisturb: false },
 						{

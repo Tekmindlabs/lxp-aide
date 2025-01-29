@@ -160,94 +160,73 @@ export const teacherRouter = createTRPCRouter({
 	getTeacher: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.prisma.user.findUnique({
-				where: { id: input },
-				include: {
-					teacherProfile: {
-						include: {
-							subjects: {
-								include: {
-									subject: true,
-								},
-							},
-							classes: {
-								include: {
-									class: {
-										include: {
-											classGroup: true,
-										},
-									},
-								},
-							},
-						},
-					},
+			return ctx.prisma.user.findFirst({
+				where: { 
+					id: input,
+					deleted: null,
+					status: 'ACTIVE',
+					userType: 'TEACHER'
 				},
+				include: {
+					teacherProfile: true,
+					userRoles: {
+						include: {
+							role: true
+						}
+					}
+				}
 			});
 		}),
+
 
 	searchTeachers: protectedProcedure
 		.input(z.object({
-			search: z.string().optional(),
-			subjectId: z.string().optional(),
-			classId: z.string().optional(),
-			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).optional(),
+			query: z.string(),
+			page: z.number().min(1).default(1),
+			limit: z.number().min(1).max(100).default(10),
 		}))
 		.query(async ({ ctx, input }) => {
-			const { search, subjectId, classId, status } = input;
+			const skip = (input.page - 1) * input.limit;
 
-			return ctx.prisma.user.findMany({
+			const teachers = await ctx.prisma.user.findMany({
 				where: {
-					userType: UserType.TEACHER,
-					...(search && {
-						OR: [
-							{ name: { contains: search, mode: 'insensitive' } },
-							{ email: { contains: search, mode: 'insensitive' } },
-							{
-								teacherProfile: {
-									specialization: { contains: search, mode: 'insensitive' },
-								},
-							},
-						],
-					}),
-					...(subjectId && {
-						teacherProfile: {
-							subjects: {
-								some: { subjectId },
-							},
-						},
-					}),
-					...(classId && {
-						teacherProfile: {
-							classes: {
-								some: { classId },
-							},
-						},
-					}),
-					...(status && { status }),
+					deleted: null,
+					status: 'ACTIVE',
+					userType: 'TEACHER',
+					OR: [
+						{ name: { contains: input.query, mode: 'insensitive' } },
+						{ email: { contains: input.query, mode: 'insensitive' } },
+					],
 				},
 				include: {
-					teacherProfile: {
+					teacherProfile: true,
+					userRoles: {
 						include: {
-							subjects: {
-								include: {
-									subject: true,
-								},
-							},
-							classes: {
-								include: {
-									class: {
-										include: {
-											classGroup: true,
-										},
-									},
-								},
-							},
-						},
-					},
+							role: true
+						}
+					}
 				},
-				orderBy: {
-					name: 'asc',
+				skip,
+				take: input.limit,
+			});
+
+			const total = await ctx.prisma.user.count({
+				where: {
+					deleted: null,
+					status: 'ACTIVE',
+					userType: 'TEACHER',
+					OR: [
+						{ name: { contains: input.query, mode: 'insensitive' } },
+						{ email: { contains: input.query, mode: 'insensitive' } },
+					],
 				},
 			});
+
+			return {
+				teachers,
+				total,
+				pages: Math.ceil(total / input.limit),
+			};
 		}),
+
 });

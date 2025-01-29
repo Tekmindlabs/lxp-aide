@@ -15,6 +15,10 @@ export const userRouter = createTRPCRouter({
   getAll: permissionProtectedProcedure(Permissions.USER_READ)
     .query(async ({ ctx }) => {
       return ctx.prisma.user.findMany({
+        where: {
+          deleted: null,
+          status: 'ACTIVE'
+        },
         include: {
           userRoles: {
             include: {
@@ -28,19 +32,34 @@ export const userRouter = createTRPCRouter({
   getById: permissionProtectedProcedure(Permissions.USER_READ)
     .input(z.string())
     .query(async ({ ctx, input }) => {
-      const user = await ctx.prisma.user.findUnique({
-        where: { id: input },
+      const user = await ctx.prisma.user.findFirst({
+        where: { 
+          id: input,
+          deleted: null,
+          status: 'ACTIVE'
+        },
         include: {
           userRoles: {
             include: {
-              role: true,
-            },
-          },
-        },
+              role: {
+                include: {
+                  permissions: {
+                    include: {
+                      permission: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       });
 
       if (!user) {
-        throw new TRPCError({ code: "NOT_FOUND" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found or inactive",
+        });
       }
 
       return user;
@@ -117,42 +136,62 @@ export const userRouter = createTRPCRouter({
 
   searchUsers: permissionProtectedProcedure(Permissions.USER_READ)
     .input(z.object({
-      search: z.string(),
+      query: z.string(),
+      page: z.number().min(1).default(1),
+      limit: z.number().min(1).max(100).default(10),
       excludeIds: z.array(z.string()).optional(),
       roles: z.array(z.string()).optional(),
     }))
     .query(async ({ ctx, input }) => {
-      return ctx.prisma.user.findMany({
-        where: {
-          AND: [
-            {
-              OR: [
-                { name: { contains: input.search, mode: 'insensitive' } },
-                { email: { contains: input.search, mode: 'insensitive' } },
-              ],
-            },
-            input.excludeIds ? { id: { notIn: input.excludeIds } } : {},
-            input.roles ? {
-              userRoles: {
-                some: {
-                  role: {
-                    name: { in: input.roles },
-                  },
+      const skip = (input.page - 1) * input.limit;
+
+      const whereClause = {
+        AND: [
+          { deleted: null },
+          { status: 'ACTIVE' },
+          {
+            OR: [
+              { name: { contains: input.query, mode: 'insensitive' } },
+              { email: { contains: input.query, mode: 'insensitive' } },
+            ],
+          },
+          input.excludeIds ? { id: { notIn: input.excludeIds } } : {},
+          input.roles ? {
+            userRoles: {
+              some: {
+                role: {
+                  name: { in: input.roles },
                 },
               },
-            } : {},
-          ],
-        },
+            },
+          } : {},
+        ],
+      };
+
+      const users = await ctx.prisma.user.findMany({
+        where: whereClause,
         include: {
           userRoles: {
             include: {
-              role: true,
-            },
-          },
+              role: true
+            }
+          }
         },
         orderBy: {
           name: 'asc',
         },
+        skip,
+        take: input.limit,
       });
+
+      const total = await ctx.prisma.user.count({
+        where: whereClause,
+      });
+
+      return {
+        users,
+        total,
+        pages: Math.ceil(total / input.limit),
+      };
     }),
 });

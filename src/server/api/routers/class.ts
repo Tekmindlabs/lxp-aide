@@ -173,12 +173,19 @@ export const classRouter = createTRPCRouter({
 					...(classGroupId && { classGroupId }),
 					...(teacherId && {
 						teachers: {
-							some: { teacherId }
+							some: { 
+								teacherId,
+								teacher: {
+									user: {
+										deleted: null,
+										status: 'ACTIVE'
+									}
+								}
+							}
 						}
 					}),
 					...(status && { status })
 				},
-
 				include: {
 					classGroup: {
 						include: {
@@ -189,12 +196,24 @@ export const classRouter = createTRPCRouter({
 						include: {
 							teacher: {
 								include: {
-									user: true,
+									user: {
+										where: {
+											deleted: null,
+											status: 'ACTIVE'
+										}
+									},
 								},
 							},
 						},
 					},
-					students: true,
+					students: {
+						where: {
+							user: {
+								deleted: null,
+								status: 'ACTIVE'
+							}
+						}
+					},
 				},
 				orderBy: {
 					name: 'asc',
@@ -257,14 +276,31 @@ export const classRouter = createTRPCRouter({
 
 	getTeacherClasses: protectedProcedure
 		.query(async ({ ctx }) => {
-			if (!ctx.session || !ctx.session.user || !ctx.session.user.id) {
-				return [];
+			const user = await ctx.prisma.user.findFirst({
+				where: {
+					id: ctx.session.user.id,
+					deleted: null,
+					status: 'ACTIVE',
+					userType: 'TEACHER'
+				}
+			});
+
+			if (!user) {
+				throw new TRPCError({
+					code: "UNAUTHORIZED",
+					message: "Teacher not found or inactive",
+				});
 			}
 
 			const teacherProfile = await ctx.prisma.teacherProfile.findUnique({
-				where: { userId: ctx.session.user.id },
+				where: { userId: user.id },
 				include: {
 					classes: {
+						where: {
+							class: {
+								status: 'ACTIVE'
+							}
+						},
 						include: {
 							class: {
 								include: {
@@ -280,11 +316,11 @@ export const classRouter = createTRPCRouter({
 				return [];
 			}
 
-			return teacherProfile?.classes.map(tc => ({
+			return teacherProfile.classes.map(tc => ({
 				id: tc.class.id,
 				name: tc.class.name,
 				classGroup: tc.class.classGroup
-			})) ?? [];
+			}));
 		}),
 
 	getClassStudents: protectedProcedure

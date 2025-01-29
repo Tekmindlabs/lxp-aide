@@ -26,29 +26,30 @@ type UserWithPermissions = {
   email: string | null;
   name: string | null;
   password: string | null;
+  isSuperAdmin?: boolean;
 };
 
+// Define a more explicit User type that matches NextAuth expectations
+type CustomUser = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  image?: string | null;
+  roles: string[];
+  permissions: string[];
+  isSuperAdmin: boolean;
+};
+
+// Update type declarations
 declare module "next-auth" {
   interface Session extends DefaultSession {
-    user: {
-      id: string;
-      roles: string[];
-      permissions: string[];
-    } & DefaultSession["user"];
+    user: CustomUser & DefaultSession["user"];
   }
 
-  interface User {
-    id: string;
-    roles: string[];
-    permissions: string[];
-  }
-
-  interface JWT {
-    id: string;
-    roles: string[];
-    permissions: string[];
-  }
+  interface User extends CustomUser {}
+  interface JWT extends CustomUser {}
 }
+
 
 export const authOptions: NextAuthOptions = {
   debug: true,
@@ -61,70 +62,124 @@ export const authOptions: NextAuthOptions = {
     },
   },
   callbacks: {
-    jwt: async ({ token, user, trigger, session }) => {
-    // Always fetch fresh user data with permissions, not just on initial login
-    const userId = token.id || user?.id;
-    if (!userId) {
+    jwt: async ({ token, user, trigger: _trigger, session: _session }) => {
+      const userId = token.id || user?.id;
+      if (!userId) {
+      console.error('JWT Callback: No userId found in token or user');
       return token;
-    }
-    const userWithPermissions = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
+      }
+
+      try {
+      // First check if user exists without status check
+      const userExists = await prisma.user.findUnique({
+        where: { 
+        id: userId as string
+        },
+        select: { id: true, status: true, deleted: true }
+      });
+
+      console.log('User Existence Check:', {
+        userId,
+        exists: !!userExists,
+        status: userExists?.status,
+        deleted: userExists?.deleted,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!userExists) {
+        console.error('JWT Callback: User not found:', userId);
+        return token;
+      }
+
+      // Then get full user data with permissions
+      const userWithPermissions = await prisma.user.findFirst({
+        where: { 
+        id: userId as string,
+        deleted: null
+        },
+        include: {
         userRoles: {
           include: {
-            role: {
+          role: {
+            include: {
+            permissions: {
               include: {
-                permissions: {
-                  include: {
-                    permission: true
-                  }
-                }
+              permission: true
               }
             }
+            }
+          }
           }
         }
-      }
-    });
+        }
+      });
 
-    if (userWithPermissions) {
+      if (!userWithPermissions) {
+        console.error('JWT Callback: User not found with permissions:', userId);
+        return token;
+      }
+
       const typedUser = userWithPermissions as UserWithPermissions;
       const roles = typedUser.userRoles.map(ur => ur.role.name);
       const permissions = typedUser.userRoles.flatMap(ur =>
         ur.role.permissions.map(rp => rp.permission.name)
       );
 
-      // Always update token with fresh permissions
-      token.id = token.id || user?.id;
-      token.roles = roles;
-      token.permissions = permissions;
+      const isSuperAdmin = roles.includes('super_admin');
 
-      console.log('User Permissions Refreshed:', {
-        userId: token.id,
-        roles: roles.length,
-        permissions: permissions.length,
+      console.log('User Permissions Found:', {
+        userId,
+        roles,
+        isSuperAdmin,
+        status: userWithPermissions.status,
         timestamp: new Date().toISOString()
       });
-    }
 
-    return token;
-  },
-    session: async ({ session, token }) => {
-      if (token) {
-        session.user = {
-          ...session.user,
-          id: token.id as string,
-          roles: (token.roles as string[]) || [],
-          permissions: (token.permissions as string[]) || []
-        };
+      const customUserToken: CustomUser = {
+        id: userId as string,
+        email: userWithPermissions.email,
+        name: userWithPermissions.name,
+        image: userWithPermissions.image || undefined,
+        roles,
+        permissions,
+        isSuperAdmin
+      };
 
-        console.log('Session Updated:', {
-          userId: session.user.id,
-          roles: session.user.roles.length,
-          permissions: session.user.permissions.length,
-          timestamp: new Date().toISOString()
-        });
+      return {
+        ...token,
+        ...customUserToken,
+        updated: new Date().toISOString()
+      };
+
+      } catch (error) {
+      console.error('JWT Callback Error:', error);
+      return token;
       }
+    },
+    session: async ({ session, token }) => {
+      try {
+      if (!token) {
+        console.error('Session Callback: No token available');
+        return session;
+      }
+
+      // Explicitly type and set isSuperAdmin
+      const isSuperAdmin = token.isSuperAdmin === true;
+
+      session.user = {
+        ...session.user,
+        id: token.id as string,
+        roles: (token.roles as string[]) || [],
+        permissions: (token.permissions as string[]) || [],
+        isSuperAdmin,
+        updated: token.updated as string
+      } as CustomUser;
+
       return session;
+      } catch (error) {
+      console.error('Session Callback Error:', error);
+      return session;
+      }
     },
   },
 
@@ -137,63 +192,76 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
         async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+          if (!credentials?.email || !credentials?.password) {
           throw new Error("Invalid credentials");
-        }
+          }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          const user = await prisma.user.findFirst({
+          where: { 
+            email: credentials.email,
+            deleted: null,
+            status: 'ACTIVE'
+          },
+          include: {
+            userRoles: {
+            include: {
+              role: {
               include: {
-              userRoles: {
+                permissions: {
                 include: {
-                role: {
-                  include: {
-                  permissions: {
-                    include: {
-                    permission: true
-                    }
-                  }
-                  }
+                  permission: true
                 }
                 }
               }
               }
-        });
-        
-        if (!user || !user.password) {
+            }
+            }
+          }
+          });
+          
+          if (!user || !user.password) {
           throw new Error("Invalid credentials");
-        }
-        
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        
-        if (!isValid) {
+          }
+          
+          const isValid = await bcrypt.compare(credentials.password, user.password);
+          
+          if (!isValid) {
           throw new Error("Invalid credentials");
-        }
-        
-        // Extract roles and permissions with proper type annotations
-        const typedUser = user as UserWithPermissions;
-        const roles = typedUser.userRoles.map(ur => ur.role.name);
-        const permissions = typedUser.userRoles.flatMap(ur => 
-          ur.role.permissions.map(rp => rp.permission.name)
-        );
+          }
 
-
-        
-        console.log('User Authentication Successful:', {
+          // Debug log for user check
+          console.log('User Authentication Check:', {
           userId: user.id,
-          roles: roles.length,
-          permissions: permissions.length,
+          status: user.status,
+          deleted: user.deleted,
           timestamp: new Date().toISOString()
-        });
+          });
+          
+          const typedUser = user as UserWithPermissions;
+          const roles = typedUser.userRoles.map(ur => ur.role.name);
+          const permissions = typedUser.userRoles.flatMap(ur => 
+          ur.role.permissions.map(rp => rp.permission.name)
+          );
 
-        return {
+          const isSuperAdmin = roles.includes('super_admin');
+
+          // Debug log for role check
+          console.log('Role Check:', {
+          roles,
+          isSuperAdmin,
+          timestamp: new Date().toISOString()
+          });
+
+          return {
           id: user.id,
           email: user.email,
           name: user.name,
-          roles: roles,
-          permissions: permissions
-        };
-      },
+          image: user.image,
+          roles,
+          permissions,
+          isSuperAdmin
+          } as CustomUser;
+        },
     }),
     EmailProvider({
       server: {

@@ -4,6 +4,7 @@ import { ZodError } from "zod";
 import { prisma } from "@/server/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
+import { DefaultRoles } from "@/utils/permissions";
 
 export const createTRPCContext = async (opts: { req: Request }) => {
   try {
@@ -68,23 +69,42 @@ export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure;
 
 const enforceUserIsAuthed = t.middleware(async ({ ctx, next }) => {
-  console.log('Authentication Middleware Triggered', {
-    sessionExists: !!ctx.session,
-    userExists: !!ctx.session?.user,
-    userId: ctx.session?.user?.id,
-    timestamp: new Date().toISOString()
-  });
-  
   if (!ctx.session?.user) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: "Authentication is required. Please log in.",
+      message: "Authentication required",
     });
   }
 
-  // Fetch user with roles and permissions
-  const user = await ctx.prisma.user.findUnique({
-    where: { id: ctx.session.user.id },
+  // First check if user exists
+  const userExists = await ctx.prisma.user.findUnique({
+    where: { 
+      id: ctx.session.user.id
+    },
+    select: { id: true, status: true, deleted: true }
+  });
+
+  console.log('TRPC Middleware - User Check:', {
+    userId: ctx.session.user.id,
+    exists: !!userExists,
+    status: userExists?.status,
+    deleted: userExists?.deleted,
+    timestamp: new Date().toISOString()
+  });
+
+  if (!userExists) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "User not found",
+    });
+  }
+
+  // Then get full user data with permissions
+  const user = await ctx.prisma.user.findFirst({
+    where: { 
+      id: ctx.session.user.id,
+      deleted: null
+    },
     include: {
       userRoles: {
         include: {
@@ -105,11 +125,10 @@ const enforceUserIsAuthed = t.middleware(async ({ ctx, next }) => {
   if (!user) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: "User not found",
+      message: "User not found with permissions",
     });
   }
 
-  // Extract permissions from roles
   const permissions = new Set<string>();
   user.userRoles.forEach(userRole => {
     userRole.role.permissions.forEach(rolePermission => {
@@ -117,9 +136,16 @@ const enforceUserIsAuthed = t.middleware(async ({ ctx, next }) => {
     });
   });
 
-  // Special case for super_admin
   const isSuperAdmin = user.userRoles.some(ur => ur.role.name === 'super_admin');
   
+  console.log('TRPC Middleware - User Permissions:', {
+    userId: user.id,
+    roles: user.userRoles.map(ur => ur.role.name),
+    isSuperAdmin,
+    permissionsCount: permissions.size,
+    timestamp: new Date().toISOString()
+  });
+
   return next({
     ctx: {
       session: {
@@ -133,6 +159,7 @@ const enforceUserIsAuthed = t.middleware(async ({ ctx, next }) => {
       }
     }
   });
+
 });
 
 export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);

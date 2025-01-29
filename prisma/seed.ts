@@ -27,14 +27,14 @@ async function main() {
   console.log('Creating roles and assigning permissions...');
   const roles = await Promise.all(
     Object.entries(DefaultRoles).map(async ([_, roleName]) => {
-        const role = await prisma.role.upsert({
+      const role = await prisma.role.upsert({
         where: { name: roleName },
         update: {},
         create: {
           name: roleName,
           description: `${roleName.replace('_', ' ')} role`,
         }
-        });
+      });
 
         // Get permissions for this role
         const rolePermissions = RolePermissions[roleName];

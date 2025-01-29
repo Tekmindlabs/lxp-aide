@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
+import { DefaultRoles } from "@/utils/permissions";
 
 const superAdminNavItems = [
 	{
@@ -176,32 +177,43 @@ export default async function RoleLayout({
 		redirect("/auth/signin");
 	}
 
-        // Extract role from params
-        const { role } = await params;
-        const userRoles = session.user.roles.map((r) => r.toLowerCase());
-        const currentRole = role?.toLowerCase() || '';  
+	// Extract role from params and normalize
+	const { role } = params;
+	const normalizedRole = role === 'super_admin' ? DefaultRoles.SUPER_ADMIN : role;
+	const userRoles = session.user.roles;
 
-	if (!userRoles.includes(currentRole)) {
-		redirect(`/dashboard/${session.user.roles[0].toLowerCase()}`);
+	// Debug log for role check
+	console.log('Role Layout Check:', {
+		paramRole: role,
+		normalizedRole,
+		userRoles,
+		timestamp: new Date().toISOString()
+	});
+
+	if (!userRoles.includes(normalizedRole)) {
+		const defaultRole = userRoles[0]?.toLowerCase() === DefaultRoles.SUPER_ADMIN.toLowerCase() 
+			? 'super_admin' 
+			: userRoles[0]?.toLowerCase();
+		redirect(`/dashboard/${defaultRole}`);
 	}
 
-	// Get nav items based on role
+	// Get nav items based on normalized role
 	const getNavItems = (role: string) => {
-		switch (role) {
-			case 'super_admin':
+		switch (role.toLowerCase()) {
+			case DefaultRoles.SUPER_ADMIN.toLowerCase():
 				return superAdminNavItems;
-			case 'coordinator':
+			case DefaultRoles.PROGRAM_COORDINATOR.toLowerCase():
 				return coordinatorNavItems;
-			case 'teacher':
+			case DefaultRoles.TEACHER.toLowerCase():
 				return teacherNavItems;
-			case 'student':
+			case DefaultRoles.STUDENT.toLowerCase():
 				return studentNavItems;
 			default:
 				return [];
 		}
 	};
 
-	const navItems = getNavItems(currentRole);
+	const navItems = getNavItems(normalizedRole);
 
 	return (
 		<div className="container">

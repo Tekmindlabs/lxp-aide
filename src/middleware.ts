@@ -2,10 +2,12 @@ import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import type { DefaultJWT } from "next-auth/jwt";
+import { DefaultRoles } from "@/utils/permissions";
 
 interface CustomJWT extends DefaultJWT {
   roles: string[];
   permissions: string[];
+  isSuperAdmin: boolean;
 }
 
 export default withAuth(
@@ -21,6 +23,15 @@ export default withAuth(
       req.nextUrl.pathname.startsWith('/api/trpc') ||
       isApiAuthRoute;
 
+    // Debug log for token and roles
+    console.log('Middleware Check:', {
+      path: req.nextUrl.pathname,
+      isAuth,
+      roles: token?.roles,
+      isSuperAdmin: token?.isSuperAdmin,
+      timestamp: new Date().toISOString()
+    });
+
     // Allow all API and public routes
     if (isPublicRoute) {
       return NextResponse.next();
@@ -28,7 +39,8 @@ export default withAuth(
 
     // Redirect authenticated users away from auth pages
     if (isAuth && isAuthPage) {
-      const role = token.roles?.[0] || 'user';
+      const isSuperAdmin = token.roles.includes(DefaultRoles.SUPER_ADMIN);
+      const role = isSuperAdmin ? 'super_admin' : token.roles[0] || 'user';
       return NextResponse.redirect(new URL(`/dashboard/${role}`, req.url));
     }
 
@@ -40,9 +52,17 @@ export default withAuth(
       );
     }
 
-    // Allow access to auth pages for unauthenticated users
-    if (!isAuth && isAuthPage) {
-      return NextResponse.next();
+    // Check role-based access for dashboard routes
+    if (isAuth && isDashboardPage) {
+      const path = req.nextUrl.pathname;
+      const roleFromPath = path.split('/')[2]; // e.g., /dashboard/super_admin
+      const hasRole = token.roles.includes(roleFromPath === 'super_admin' ? DefaultRoles.SUPER_ADMIN : roleFromPath);
+      
+      if (!hasRole) {
+        // Redirect to the appropriate dashboard based on user's role
+        const defaultRole = token.roles[0] || 'user';
+        return NextResponse.redirect(new URL(`/dashboard/${defaultRole}`, req.url));
+      }
     }
 
     return NextResponse.next();
