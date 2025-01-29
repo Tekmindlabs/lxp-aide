@@ -73,22 +73,31 @@ export const RolePermissions: Record<Role, Permission[]> = {
     Permissions.SETTINGS_MANAGE,
     Permissions.CLASS_GROUP_VIEW,
     Permissions.CLASS_GROUP_MANAGE,
+    Permissions.ACADEMIC_CALENDAR_VIEW,
+    Permissions.ACADEMIC_CALENDAR_MANAGE,
+    Permissions.ACADEMIC_YEAR_MANAGE,
+    Permissions.EVENT_MANAGE,
   ],
   [DefaultRoles.PROGRAM_COORDINATOR]: [
     Permissions.USER_READ,
     Permissions.USER_UPDATE,
     Permissions.CLASS_GROUP_VIEW,
     Permissions.CLASS_GROUP_MANAGE,
+    Permissions.ACADEMIC_CALENDAR_VIEW,
+    Permissions.ACADEMIC_CALENDAR_MANAGE,
   ],
   [DefaultRoles.TEACHER]: [
     Permissions.USER_READ,
     Permissions.CLASS_GROUP_VIEW,
+    Permissions.ACADEMIC_CALENDAR_VIEW,
   ],
   [DefaultRoles.STUDENT]: [
     Permissions.USER_READ,
     Permissions.CLASS_GROUP_VIEW,
+    Permissions.ACADEMIC_CALENDAR_VIEW,
   ],
   [DefaultRoles.PARENT]: [
     Permissions.USER_READ,
+    Permissions.ACADEMIC_CALENDAR_VIEW,
   ],
 };

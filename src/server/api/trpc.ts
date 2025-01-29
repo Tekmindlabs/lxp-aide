@@ -7,42 +7,38 @@ import { authOptions } from "@/server/auth";
 
 export const createTRPCContext = async (opts: { req: Request }) => {
   try {
-    console.log('TRPC Context Creation Attempt', {
-      method: opts.req.method,
-      url: opts.req.url,
-      headers: Object.fromEntries(opts.req.headers.entries()),
-      timestamp: new Date().toISOString()
-    });
-    
     const session = await getServerSession(authOptions);
     
-    console.log('Session Retrieval Result', {
-      sessionExists: !!session,
+    // Debug session state
+    console.log('TRPC Context Session State:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
       userId: session?.user?.id,
-      userRoles: session?.user?.roles,
+      path: opts.req.url,
       timestamp: new Date().toISOString()
     });
-    
+
+    // Don't throw error for missing session - let middleware handle auth
     return {
       prisma,
-      session,
+      session: session || null, // Explicitly handle null case
       req: opts.req,
     };
   } catch (error) {
-    console.error('TRPC Context Creation Critical Error', {
+    console.error('TRPC Context Creation Error:', {
       errorType: error instanceof Error ? error.name : 'Unknown Error',
       errorMessage: error instanceof Error ? error.message : 'No details',
-      errorStack: error instanceof Error ? error.stack : 'No stack trace',
+      path: opts.req.url,
       timestamp: new Date().toISOString()
     });
     
-    return {
-      prisma,
-      session: null,
-      req: opts.req,
-    };
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Failed to create TRPC context'
+    });
   }
 };
+
 
 const t = initTRPC.context<typeof createTRPCContext>().create({
   transformer: superjson,
@@ -68,114 +64,186 @@ export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure;
 
 const enforceUserIsAuthed = t.middleware(async ({ ctx, next }) => {
-  console.log('Authentication Middleware Triggered', {
-    sessionExists: !!ctx.session,
-    userExists: !!ctx.session?.user,
-    userId: ctx.session?.user?.id,
+  console.log('Auth Middleware Check:', {
+    hasSession: !!ctx.session,
+    hasUser: !!ctx.session?.user,
+    path: ctx.req.url,
     timestamp: new Date().toISOString()
   });
   
-  if (!ctx.session?.user) {
+  if (!ctx.session || !ctx.session.user) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: "Authentication is required. Please log in.",
+      message: "Authentication required",
+      cause: {
+        path: ctx.req.url,
+        timestamp: new Date().toISOString()
+      }
     });
   }
 
-  // Fetch user with roles and permissions
-  const user = await ctx.prisma.user.findUnique({
-    where: { id: ctx.session.user.id },
-    include: {
-      userRoles: {
-        include: {
-          role: {
-            include: {
-              permissions: {
-                include: {
-                  permission: true
+  try {
+    // Fetch user with roles and permissions
+    const user = await ctx.prisma.user.findUnique({
+      where: { id: ctx.session.user.id },
+      include: {
+        userRoles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true
+                  }
                 }
               }
             }
           }
         }
       }
+    });
+
+    if (!user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "User not found in database",
+        cause: {
+          userId: ctx.session.user.id,
+          path: ctx.req.url
+        }
+      });
     }
-  });
 
-  if (!user) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "User not found",
+    // Extract permissions from roles
+    const permissions = new Set<string>();
+    user.userRoles.forEach(userRole => {
+      userRole.role.permissions.forEach(rolePermission => {
+        permissions.add(rolePermission.permission.name);
+      });
     });
-  }
 
-  // Extract permissions from roles
-  const permissions = new Set<string>();
-  user.userRoles.forEach(userRole => {
-    userRole.role.permissions.forEach(rolePermission => {
-      permissions.add(rolePermission.permission.name);
+    const isSuperAdmin = user.userRoles.some(ur => ur.role.name === 'super_admin');
+    
+    console.log('Auth Middleware Success:', {
+      userId: user.id,
+      roleCount: user.userRoles.length,
+      permissionCount: permissions.size,
+      isSuperAdmin,
+      path: ctx.req.url
     });
-  });
 
-  // Special case for super_admin
-  const isSuperAdmin = user.userRoles.some(ur => ur.role.name === 'super_admin');
-  
-  return next({
-    ctx: {
-      session: {
-        ...ctx.session,
-        user: {
-          ...ctx.session.user,
-          roles: user.userRoles.map(ur => ur.role.name),
-          permissions: isSuperAdmin ? ['*'] : Array.from(permissions),
-          isSuperAdmin
+    return next({
+      ctx: {
+        ...ctx,
+        session: {
+          ...ctx.session,
+          user: {
+            ...ctx.session.user,
+            roles: user.userRoles.map(ur => ur.role.name),
+            permissions: isSuperAdmin ? ['*'] : Array.from(permissions),
+            isSuperAdmin
+          }
         }
       }
-    }
-  });
+    });
+  } catch (error) {
+    if (error instanceof TRPCError) throw error;
+    
+    console.error('Auth Middleware Error:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      userId: ctx.session.user.id,
+      path: ctx.req.url
+    });
+    
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to validate user permissions",
+      cause: error
+    });
+  }
 });
 
 export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
 
 const enforceUserHasPermission = (requiredPermission: string) =>
-  t.middleware(({ ctx, next }) => {
-    console.log('Permission Check:', {
-      requiredPermission,
-      userRoles: ctx.session?.user?.roles,
-      userPermissions: ctx.session?.user?.permissions,
-      isSuperAdmin: ctx.session?.user?.isSuperAdmin,
-      timestamp: new Date().toISOString()
-    });
-
+  t.middleware(async ({ ctx, next }) => {
     if (!ctx.session?.user) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
-        message: "Authentication required for this action",
+        message: "Authentication required",
       });
     }
 
-    // Super admin bypass
-    if (ctx.session.user.isSuperAdmin) {
+    try {
+      // Always fetch fresh user data
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: ctx.session.user.id },
+        include: {
+          userRoles: {
+            include: {
+              role: {
+                include: {
+                  permissions: {
+                    include: {
+                      permission: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "User not found in database",
+          cause: {
+            userId: ctx.session.user.id
+          }
+        });
+      }
+
+      const permissions = new Set<string>();
+      user.userRoles.forEach(userRole => {
+        userRole.role.permissions.forEach(rolePermission => {
+          permissions.add(rolePermission.permission.name);
+        });
+      });
+
+      const isSuperAdmin = user.userRoles.some(ur => ur.role.name === 'super_admin');
+
+      if (!isSuperAdmin && !permissions.has(requiredPermission)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `Missing required permission: ${requiredPermission}`,
+        });
+      }
+
       return next({
         ctx: {
-          session: { ...ctx.session, user: ctx.session.user },
-        },
+          ...ctx,
+          session: {
+            ...ctx.session,
+            user: {
+              ...ctx.session.user,
+              roles: user.userRoles.map(ur => ur.role.name),
+              permissions: isSuperAdmin ? ['*'] : Array.from(permissions),
+              isSuperAdmin
+            }
+          }
+        }
       });
-    }
-
-    // Check specific permission
-    if (!ctx.session.user.permissions?.includes(requiredPermission)) {
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+      
       throw new TRPCError({
-        code: "FORBIDDEN",
-        message: `Insufficient permissions. ${requiredPermission} access required.`,
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to validate permissions",
+        cause: error
       });
     }
-
-    return next({
-      ctx: {
-        session: { ...ctx.session, user: ctx.session.user },
-      },
-    });
   });
 
 export const permissionProtectedProcedure = (permission: string) =>
