@@ -112,8 +112,9 @@ export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
 
 const enforceUserHasPermission = (requiredPermission: string) =>
   t.middleware(({ ctx, next }) => {
-    console.log('Permission Check Middleware', {
+    console.log('Permission Check:', {
       requiredPermission,
+      userRoles: ctx.session?.user?.roles,
       userPermissions: ctx.session?.user?.permissions,
       timestamp: new Date().toISOString()
     });
@@ -134,7 +135,7 @@ const enforceUserHasPermission = (requiredPermission: string) =>
       });
     }
 
-    if (!ctx.session.user.permissions.includes(requiredPermission)) {
+    if (!ctx.session.user.permissions?.includes(requiredPermission)) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: `Insufficient permissions. ${requiredPermission} access required.`,
