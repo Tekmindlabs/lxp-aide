@@ -67,7 +67,7 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
 export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure;
 
-const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
+const enforceUserIsAuthed = t.middleware(async ({ ctx, next }) => {
   console.log('Authentication Middleware Triggered', {
     sessionExists: !!ctx.session,
     userExists: !!ctx.session?.user,
@@ -76,35 +76,62 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
   });
   
   if (!ctx.session?.user) {
-    console.warn('Unauthorized Access Attempt', {
-      requestDetails: {
-        url: ctx.req?.url,
-        method: ctx.req?.method
-      },
-      timestamp: new Date().toISOString()
-    });
-    
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "Authentication is required. Please log in.",
-      cause: { 
-        reason: !ctx.session ? 'No session found' : 'No user in session',
-        timestamp: new Date().toISOString()
-      }
     });
   }
+
+  // Fetch user with roles and permissions
+  const user = await ctx.prisma.user.findUnique({
+    where: { id: ctx.session.user.id },
+    include: {
+      userRoles: {
+        include: {
+          role: {
+            include: {
+              permissions: {
+                include: {
+                  permission: true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!user) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "User not found",
+    });
+  }
+
+  // Extract permissions from roles
+  const permissions = new Set<string>();
+  user.userRoles.forEach(userRole => {
+    userRole.role.permissions.forEach(rolePermission => {
+      permissions.add(rolePermission.permission.name);
+    });
+  });
+
+  // Special case for super_admin
+  const isSuperAdmin = user.userRoles.some(ur => ur.role.name === 'super_admin');
   
   return next({
     ctx: {
-      session: { 
-        ...ctx.session, 
+      session: {
+        ...ctx.session,
         user: {
           ...ctx.session.user,
-          roles: ctx.session.user.roles || [],
-          permissions: ctx.session.user.permissions || []
-        } 
-      },
-    },
+          roles: user.userRoles.map(ur => ur.role.name),
+          permissions: isSuperAdmin ? ['*'] : Array.from(permissions),
+          isSuperAdmin
+        }
+      }
+    }
   });
 });
 
@@ -116,6 +143,7 @@ const enforceUserHasPermission = (requiredPermission: string) =>
       requiredPermission,
       userRoles: ctx.session?.user?.roles,
       userPermissions: ctx.session?.user?.permissions,
+      isSuperAdmin: ctx.session?.user?.isSuperAdmin,
       timestamp: new Date().toISOString()
     });
 
@@ -126,8 +154,8 @@ const enforceUserHasPermission = (requiredPermission: string) =>
       });
     }
 
-    // Special case for super_admin role
-    if (ctx.session.user.roles.includes('super_admin')) {
+    // Super admin bypass
+    if (ctx.session.user.isSuperAdmin) {
       return next({
         ctx: {
           session: { ...ctx.session, user: ctx.session.user },
@@ -135,6 +163,7 @@ const enforceUserHasPermission = (requiredPermission: string) =>
       });
     }
 
+    // Check specific permission
     if (!ctx.session.user.permissions?.includes(requiredPermission)) {
       throw new TRPCError({
         code: "FORBIDDEN",
