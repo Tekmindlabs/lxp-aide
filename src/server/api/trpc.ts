@@ -67,7 +67,7 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
 export const createTRPCRouter = t.router;
 export const publicProcedure = t.procedure;
 
-const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
+const enforceUserIsAuthed = t.middleware(async ({ ctx, next }) => {
   console.log('Authentication Middleware Triggered', {
     sessionExists: !!ctx.session,
     userExists: !!ctx.session?.user,
@@ -93,25 +93,52 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
       }
     });
   }
+
+  // If permissions are not in session, fetch them
+  if (!ctx.session.user.permissions?.length) {
+    const userWithPermissions = await ctx.prisma.user.findUnique({
+      where: { id: ctx.session.user.id },
+      include: {
+        userRoles: {
+          include: {
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const permissions = userWithPermissions?.userRoles.flatMap(ur => 
+      ur.role.rolePermissions.map(rp => rp.permission.name)
+    ) || [];
+
+    return next({
+      ctx: {
+        session: {
+          ...ctx.session,
+          user: {
+            ...ctx.session.user,
+            permissions
+          }
+        }
+      }
+    });
+  }
   
-  return next({
-    ctx: {
-      session: { 
-        ...ctx.session, 
-        user: {
-          ...ctx.session.user,
-          roles: ctx.session.user.roles || [],
-          permissions: ctx.session.user.permissions || []
-        } 
-      },
-    },
-  });
+  return next({ ctx });
 });
 
 export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
 
 const enforceUserHasPermission = (requiredPermission: string) =>
-  t.middleware(({ ctx, next }) => {
+  t.middleware(async ({ ctx, next }) => {
     console.log('Permission Check Middleware', {
       requiredPermission,
       userPermissions: ctx.session?.user?.permissions,
@@ -126,9 +153,15 @@ const enforceUserHasPermission = (requiredPermission: string) =>
     }
 
     if (!ctx.session.user.permissions.includes(requiredPermission)) {
+      console.warn('Permission denied', {
+        userId: ctx.session.user.id,
+        requiredPermission,
+        userPermissions: ctx.session.user.permissions
+      });
+      
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: `Insufficient permissions. ${requiredPermission} access required.`,
+        message: `Insufficient permissions. ${requiredPermission} required.`,
       });
     }
 
