@@ -133,75 +133,99 @@ export const studentRouter = createTRPCRouter({
 	getStudent: protectedProcedure
 		.input(z.string())
 		.query(async ({ ctx, input }) => {
-			return ctx.prisma.user.findFirst({
-				where: { 
-					id: input,
-					deleted: null,
-					status: 'ACTIVE',
-					userType: 'STUDENT'
-				},
+			return ctx.prisma.user.findUnique({
+				where: { id: input },
 				include: {
-					studentProfile: true,
-					userRoles: {
+					studentProfile: {
 						include: {
-							role: true
-						}
-					}
-				}
+							class: {
+								include: {
+									classGroup: {
+										include: {
+											program: true,
+										},
+									},
+								},
+							},
+							parent: {
+								include: {
+									user: true,
+								},
+							},
+							activities: {
+								include: {
+									activity: true,
+								},
+							},
+							attendance: true,
+						},
+					},
+				},
 			});
 		}),
-
 
 	searchStudents: protectedProcedure
 		.input(z.object({
-			query: z.string(),
-			page: z.number().min(1).default(1),
-			limit: z.number().min(1).max(100).default(10),
+			search: z.string().optional(),
+			classId: z.string().optional(),
+			programId: z.string().optional(),
+			status: z.enum([Status.ACTIVE, Status.INACTIVE, Status.ARCHIVED]).optional(),
 		}))
 		.query(async ({ ctx, input }) => {
-			const skip = (input.page - 1) * input.limit;
+			const { search, classId, programId, status } = input;
 
-			const students = await ctx.prisma.user.findMany({
+			return ctx.prisma.user.findMany({
 				where: {
-					deleted: null,
-					status: 'ACTIVE',
-					userType: 'STUDENT',
-					OR: [
-						{ name: { contains: input.query, mode: 'insensitive' } },
-						{ email: { contains: input.query, mode: 'insensitive' } },
-					],
+					userType: UserType.STUDENT,
+					...(search && {
+						OR: [
+							{ name: { contains: search, mode: 'insensitive' } },
+							{ email: { contains: search, mode: 'insensitive' } },
+						],
+					}),
+					studentProfile: {
+						...(classId && { classId }),
+						...(programId && {
+							class: {
+								classGroup: {
+									programId,
+								},
+							},
+						}),
+					},
+					...(status && { status }),
 				},
 				include: {
-					studentProfile: true,
-					userRoles: {
+					studentProfile: {
 						include: {
-							role: true
-						}
-					}
+							class: {
+								include: {
+									classGroup: {
+										include: {
+											program: true,
+										},
+									},
+								},
+							},
+							parent: {
+								include: {
+									user: true,
+								},
+							},
+							activities: {
+								include: {
+									activity: true,
+								},
+							},
+							attendance: true,
+						},
+					},
 				},
-				skip,
-				take: input.limit,
-			});
-
-			const total = await ctx.prisma.user.count({
-				where: {
-					deleted: null,
-					status: 'ACTIVE',
-					userType: 'STUDENT',
-					OR: [
-						{ name: { contains: input.query, mode: 'insensitive' } },
-						{ email: { contains: input.query, mode: 'insensitive' } },
-					],
+				orderBy: {
+					name: 'asc',
 				},
 			});
-
-			return {
-				students,
-				total,
-				pages: Math.ceil(total / input.limit),
-			};
 		}),
-
 
 	getStudentPerformance: protectedProcedure
 		.input(z.string())

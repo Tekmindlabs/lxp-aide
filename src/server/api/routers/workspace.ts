@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 import { WorkspaceSchema } from "../../../lib/workspace/types";
 import { workspaceService } from "../../../lib/workspace/workspace-service";
@@ -14,40 +13,41 @@ export const workspaceRouter = createTRPCRouter({
 			workspaceId: z.string(),
 		}))
 		.query(async ({ ctx, input }) => {
-			const user = await ctx.prisma.user.findFirst({
-				where: {
-					id: ctx.session.user.id,
-					deleted: null,
-					status: 'ACTIVE'
-				}
-			});
-
-			if (!user) {
-				throw new TRPCError({
-					code: "UNAUTHORIZED",
-					message: "User not found or inactive",
-				});
-			}
-
-			const workspace = await ctx.prisma.workspace.findUnique({
-				where: { id: input.workspaceId },
+			const workspace = await ctx.prisma.workspaceDocument.findMany({
+				where: { workspaceId: input.workspaceId },
 				include: {
-					settings: true,
-					documents: true,
-					knowledgeBase: true
-				}
+					sourceDocument: true,
+				},
 			});
 
-			if (!workspace) {
-				throw new TRPCError({
-					code: "NOT_FOUND",
-					message: "Workspace not found",
-				});
-			}
+			const settings = await ctx.prisma.workspaceSettings.findUnique({
+				where: { workspaceId: input.workspaceId },
+			});
 
-			return workspace;
+			const chat = await ctx.prisma.workspaceChat.findFirst({
+				where: {
+					workspaceId: input.workspaceId,
+					userId: ctx.session.user.id,
+				},
+			});
+
+			return {
+				id: input.workspaceId,
+				documents: workspace,
+				settings: settings || {
+					id: '',
+					workspaceId: input.workspaceId,
+					messageLimit: 100,
+					aiProvider: 'openai',
+					aiModel: 'gpt-3.5-turbo',
+					maxTokens: 2000,
+					temperature: 0.7,
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				},
+				chat,
+			};
 		}),
-
 
 	createWorkspace: protectedProcedure
 		.input(WorkspaceSchema.omit({ id: true }))

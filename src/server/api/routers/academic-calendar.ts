@@ -1,11 +1,12 @@
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "../trpc";
+import { createTRPCRouter, protectedProcedure, permissionProtectedProcedure } from "../trpc";
 import { TRPCError } from "@trpc/server";
 import { EventType, Status } from "@prisma/client";
+import { Permissions } from "@/utils/permissions";
 
 export const academicCalendarRouter = createTRPCRouter({
 	// Calendar Operations
-	createCalendar: protectedProcedure
+	createCalendar: permissionProtectedProcedure(Permissions.ACADEMIC_CALENDAR_MANAGE)
 		.input(z.object({
 			name: z.string(),
 			description: z.string().optional(),
@@ -26,74 +27,51 @@ export const academicCalendarRouter = createTRPCRouter({
 			});
 		}),
 
-	getAllCalendars: protectedProcedure
+	getAllCalendars: permissionProtectedProcedure(Permissions.ACADEMIC_CALENDAR_VIEW)
 		.query(async ({ ctx }) => {
-			console.log('getAllCalendars TRPC Procedure Called', {
-				sessionExists: !!ctx.session,
+			console.log('getAllCalendars Procedure Start:', {
 				userId: ctx.session?.user?.id,
-				userRoles: ctx.session?.user?.roles,
+				userRoles: ctx.session?.user?.roles || [],
+				hasViewPermission: ctx.session?.user?.permissions?.includes(Permissions.ACADEMIC_CALENDAR_VIEW),
 				timestamp: new Date().toISOString()
 			});
-
-			// Explicit session validation
-			if (!ctx.session) {
-				console.error('No session found in getAllCalendars');
-				throw new TRPCError({
-					code: "UNAUTHORIZED", 
-					message: "No active session. Please log in.",
-					cause: { 
-						timestamp: new Date().toISOString(),
-						context: 'getAllCalendars'
-					}
-				});
-			}
-
-			if (!ctx.session.user) {
-				console.error('No user in session for getAllCalendars');
-				throw new TRPCError({
-					code: "FORBIDDEN",
-					message: "User information is missing from the session.",
-					cause: { 
-						timestamp: new Date().toISOString(),
-						context: 'getAllCalendars'
-					}
-				});
-			}
 
 			try {
 				const calendars = await ctx.prisma.calendar.findMany({
 					include: {
 						events: {
-							take: 10, // Limit events to prevent overwhelming response
+							take: 10,
 							orderBy: { startDate: 'asc' }
 						}
 					},
-					take: 50, // Limit total calendars
+					take: 50,
 					orderBy: { createdAt: 'desc' }
 				});
 
-				console.log('Calendars Retrieved Successfully', {
-					totalCalendars: calendars.length,
+				console.log('Calendars Retrieved:', {
+					count: calendars.length,
+					userId: ctx.session.user.id,
 					timestamp: new Date().toISOString()
 				});
 
 				return calendars;
 			} catch (error) {
-				console.error('Database Query Error in getAllCalendars', {
-					errorName: error instanceof Error ? error.name : 'Unknown Error',
-					errorMessage: error instanceof Error ? error.message : 'No error details',
+				console.error('Calendar Retrieval Error:', {
+					error: error instanceof Error ? error.message : 'Unknown error',
+					userId: ctx.session.user.id,
 					timestamp: new Date().toISOString()
 				});
 
 				throw new TRPCError({
 					code: "INTERNAL_SERVER_ERROR",
-					message: "Failed to retrieve calendars. Please try again later.",
+					message: "Failed to retrieve calendars",
 					cause: error
 				});
 			}
 		}),
 
-	getCalendarById: protectedProcedure
+
+	getCalendarById: permissionProtectedProcedure(Permissions.ACADEMIC_CALENDAR_VIEW)
 		.input(z.object({
 			id: z.string(),
 		}))
@@ -106,7 +84,7 @@ export const academicCalendarRouter = createTRPCRouter({
 			});
 		}),
 
-	updateCalendar: protectedProcedure
+	updateCalendar: permissionProtectedProcedure(Permissions.ACADEMIC_CALENDAR_MANAGE)
 		.input(z.object({
 			id: z.string(),
 			name: z.string().optional(),

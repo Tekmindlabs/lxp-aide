@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth";
 import { SidebarNav } from "@/components/dashboard/sidebar-nav";
-import { DefaultRoles } from "@/utils/permissions";
 
 const superAdminNavItems = [
 	{
@@ -177,51 +176,39 @@ export default async function RoleLayout({
 		redirect("/auth/signin");
 	}
 
-	// Extract role from params and normalize
-	const { role } = params;
-	const normalizedRole = role === 'super_admin' ? DefaultRoles.SUPER_ADMIN : role;
-	const userRoles = session.user.roles;
+	const role = params.role;
+	const userRoles = session.user.roles.map((r) => r.toLowerCase());
+	const currentRole = role.toLowerCase();
 
-	// Debug log for role check
-	console.log('Role Layout Check:', {
-		paramRole: role,
-		normalizedRole,
-		userRoles,
-		timestamp: new Date().toISOString()
-	});
-
-	if (!userRoles.includes(normalizedRole)) {
-		const defaultRole = userRoles[0]?.toLowerCase() === DefaultRoles.SUPER_ADMIN.toLowerCase() 
-			? 'super_admin' 
-			: userRoles[0]?.toLowerCase();
-		redirect(`/dashboard/${defaultRole}`);
+	if (!userRoles.includes(currentRole)) {
+		redirect(`/dashboard/${session.user.roles[0].toLowerCase()}`);
 	}
 
-	// Get nav items based on normalized role
-	const getNavItems = (role: string) => {
-		switch (role.toLowerCase()) {
-			case DefaultRoles.SUPER_ADMIN.toLowerCase():
+	const navItems = (() => {
+		switch (currentRole) {
+			case 'super_admin':
 				return superAdminNavItems;
-			case DefaultRoles.PROGRAM_COORDINATOR.toLowerCase():
+			case 'coordinator':
 				return coordinatorNavItems;
-			case DefaultRoles.TEACHER.toLowerCase():
+			case 'teacher':
 				return teacherNavItems;
-			case DefaultRoles.STUDENT.toLowerCase():
+			case 'student':
 				return studentNavItems;
 			default:
 				return [];
 		}
-	};
+	})();
 
-	const navItems = getNavItems(normalizedRole);
 
 	return (
-		<div className="container">
+		<div className="container flex-1">
 			<div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0 pt-6">
 				<aside className="lg:w-1/5">
 					<SidebarNav items={navItems} />
 				</aside>
-				<div className="flex-1">{children}</div>
+				<div className="flex-1">
+					{children}
+				</div>
 			</div>
 		</div>
 	);

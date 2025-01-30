@@ -58,50 +58,16 @@ export const messageRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// Get sender's role
-			const sender = await ctx.prisma.user.findFirst({
-				where: { 
-					id: ctx.session.user.id,
-					deleted: null,
-					status: 'ACTIVE'
-				},
-				include: { 
-					userRoles: { 
-						include: { 
-							role: true 
-						} 
-					} 
-				}
+			const sender = await ctx.prisma.user.findUnique({
+				where: { id: ctx.session!.user.id },
+				include: { userRoles: { include: { role: true } } },
 			});
-
-			if (!sender) {
-				throw new TRPCError({
-					code: "UNAUTHORIZED",
-					message: "User not found or inactive",
-				});
-			}
 
 			// Get recipients' roles
 			const recipients = await ctx.prisma.user.findMany({
-				where: { 
-					id: { in: input.participantIds },
-					deleted: null,
-					status: 'ACTIVE'
-				},
-				include: { 
-					userRoles: { 
-						include: { 
-							role: true 
-						} 
-					} 
-				}
+				where: { id: { in: input.participantIds } },
+				include: { userRoles: { include: { role: true } } },
 			});
-
-			if (recipients.length !== input.participantIds.length) {
-				throw new TRPCError({
-					code: "BAD_REQUEST", 
-					message: "One or more recipients not found or inactive",
-				});
-			}
 
 			// Check if sender can message all recipients
 			const senderRole = sender?.userType;
@@ -167,36 +133,10 @@ export const messageRouter = createTRPCRouter({
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
-			// Check if user is participant and active
-			const sender = await ctx.prisma.user.findFirst({
-				where: { 
-					id: ctx.session.user.id,
-					deleted: null,
-					status: 'ACTIVE'
-				}
-			});
-
-			if (!sender) {
-				throw new TRPCError({
-					code: "UNAUTHORIZED",
-					message: "User not found or inactive",
-				});
-			}
-
+			// Check if user is participant
 			const conversation = await ctx.prisma.conversation.findUnique({
 				where: { id: input.conversationId },
-				include: { 
-					participants: {
-						include: {
-							user: {
-								where: {
-									deleted: null,
-									status: 'ACTIVE'
-								}
-							}
-						}
-					} 
-				},
+				include: { participants: true },
 			});
 
 			if (!conversation) {

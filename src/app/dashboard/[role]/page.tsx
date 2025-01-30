@@ -119,21 +119,21 @@ export default async function RoleDashboard({
 }) {
   const session = await getServerSession(authOptions);
 
-  const role = params.role.toLowerCase();
-  const normalizedRole = params.role.toUpperCase().replace(/-/g, '_');
-
   if (!session?.user) {
     redirect('/auth/signin');
   }
 
+  const currentRole = params.role.toLowerCase();
+  const normalizedRole = params.role.toUpperCase().replace(/-/g, '_');
   const userRoles = session.user.roles.map(r => r.toLowerCase());
-  if (!userRoles.includes(role)) {
-    redirect(`/dashboard/${session.user.roles[0]}`);
+
+  if (!userRoles.includes(currentRole)) {
+    redirect(`/dashboard/${session.user.roles[0].toLowerCase()}`);
   }
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      {role === 'coordinator' ? (
+      {currentRole === 'coordinator' ? (
         <CoordinatorDashboardUI />
       ) : (
         <DashboardContent role={normalizedRole as keyof typeof DefaultRoles} />

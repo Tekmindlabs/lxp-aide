@@ -1,20 +1,20 @@
 import { DefaultRoles } from "@/utils/permissions";
 import { DashboardFeature } from "@/types/dashboard";
 
-export const DashboardFeatures = {
-  "super_admin": [
+export const DashboardFeatures: Record<keyof typeof DefaultRoles, DashboardFeature[]> = {
+  "SUPER_ADMIN": [
     'system-metrics',
     'user-management',
     'role-management',
     'audit-logs',
-    'program-management',
-    'class-management',
-    'student-progress',
+    'advanced-settings',
+    'academic-calendar',
+    'timetable-management',
     'classroom-management',
     'class-activity-management',
     'knowledge-base'
   ],
-  "admin": [
+  "ADMIN": [
     'user-management',
     'audit-logs',
     'timetable-management',
@@ -22,14 +22,14 @@ export const DashboardFeatures = {
     'class-activity-management',
     'knowledge-base'
   ],
-  "program_coordinator": [
+  "PROGRAM_COORDINATOR": [
     'class-management',
     'student-progress',
     'timetable-management',
     'class-activity-management',
     'knowledge-base'
   ],
-  "teacher": [
+  "TEACHER": [
     'class-management',
     'student-progress',
     'assignments',
@@ -37,27 +37,14 @@ export const DashboardFeatures = {
     'class-activity-management',
     'knowledge-base'
   ],
-  "student": [
+  "STUDENT": [
     'assignments',
     'student-progress',
     'class-activities',
     'knowledge-base'
   ],
-  "parent": [
+  "PARENT": [
     'student-progress',
     'class-activities'
   ]
-} as const;
-
-// Add debug logging for feature access
-export const getFeaturesByRole = (role: string) => {
-  const normalizedRole = role.toLowerCase();
-  
-  console.log('Getting features for role:', {
-    role,
-    normalizedRole,
-    timestamp: new Date().toISOString()
-  });
-  
-  return DashboardFeatures[normalizedRole as keyof typeof DashboardFeatures] || [];
 };

@@ -8,7 +8,7 @@ export default function SuperAdminLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="container">
+		<div className="container flex-1">
 			<div className="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0 pt-6">
 				<aside className="lg:w-1/5">
 					<SuperAdminSidebar />
@@ -18,5 +18,6 @@ export default function SuperAdminLayout({
 				</div>
 			</div>
 		</div>
+
 	);
 }
